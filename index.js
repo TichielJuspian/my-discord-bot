@@ -27,13 +27,15 @@ client.on("messageCreate", async (message) => {
   // DM, 봇 메시지는 무시
   if (!message.guild || message.author.bot) return;
 
+  console.log("메시지 감지:", `"${message.content}"`, "from", message.author.tag);
+
   // 테스트용 ping
-  if (message.content === "!ping") {
+  if (message.content.toLowerCase().startsWith("!ping")) {
     return message.reply("Pong!");
   }
 
-  // 규칙 패널 설치 명령어
-  if (message.content === "!setupjoin") {
+  // 규칙 패널 설치 명령어 (!setupjoin 으로 시작하면 전부 허용)
+  if (message.content.toLowerCase().startsWith("!setupjoin")) {
     console.log("!setupjoin 명령어 감지됨, 채널:", message.channel.id);
 
     try {
@@ -90,11 +92,12 @@ client.on("messageCreate", async (message) => {
 
       await message.channel.send({ embeds: [embed], components: [row] });
 
-      // 명령어 친 사람에게 확인용 메시지
       await message.reply("✅ 규칙 패널을 이 채널에 생성했어요.");
     } catch (err) {
       console.error("!setupjoin 처리 중 에러:", err);
-      await message.reply("⚠ 규칙 패널 생성 중 에러가 발생했어요. 콘솔 로그를 확인해 주세요.");
+      await message.reply(
+        "⚠ 규칙 패널 생성 중 에러가 발생했어요. Render 로그를 확인해주세요."
+      );
     }
   }
 });
