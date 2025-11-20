@@ -14,7 +14,7 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
 } = require("discord.js");
-const fs = require('fs'); // 파일 시스템 모듈
+const fs = require('fs'); // File system module
 
 // ----------------------------------------------------
 // FILE PATH CONSTANT
@@ -22,17 +22,17 @@ const fs = require('fs'); // 파일 시스템 모듈
 const BLACKLIST_FILE_PATH = 'blacklist.json';
 
 // ----------------------------------------------------
-// ROLE IDs (❗ 서버 ID에 맞게 수정 필수 ❗)
+// ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
-const GOSU_ROLE = "496717793388134410";      // 기본 Gosu 입장 롤 (Agree To Rules)
-const MOD_ROLE = "495727371140202506";       // Moderator
-const ADMIN_ROLE = "495718851288236032";     // Admin / Developer
-const SUB_ROLE = "497654614729031681";       // Live 알림 구독 롤
+const GOSU_ROLE = "496717793388134410";      // Main Gosu Role (Given after Agree To Rules)
+const MOD_ROLE = "495727371140202506";       // Moderator Role
+const ADMIN_ROLE = "495718851288236032";     // Admin / Developer Role
+const SUB_ROLE = "497654614729031681";       // Live Notification Subscriber Role
 
 // ----------------------------------------------------
 // CHAT FILTER CONFIG
 // ----------------------------------------------------
-let BLACKLISTED_WORDS = []; // 전역 금지어 배열
+let BLACKLISTED_WORDS = []; // Global array for blocked words
 
 const FILTER_EXEMPT_ROLES = [
   MOD_ROLE, 
@@ -40,11 +40,11 @@ const FILTER_EXEMPT_ROLES = [
 ];
 
 // ----------------------------------------------------
-// Helper: JSON 파일 저장 함수 (배열 변경 시 자동 호출)
+// Helper: Function to save JSON file (Called automatically when array changes)
 // ----------------------------------------------------
 function saveBlacklist() {
     try {
-        // 배열을 JSON 문자열로 변환하고 파일에 덮어씁니다.
+        // Convert array to JSON string and overwrite the file.
         const jsonString = JSON.stringify(BLACKLISTED_WORDS, null, 2);
         fs.writeFileSync(BLACKLIST_FILE_PATH, jsonString, 'utf8');
         console.log(`Successfully saved ${BLACKLISTED_WORDS.length} blacklisted words to ${BLACKLIST_FILE_PATH}.`);
@@ -54,19 +54,19 @@ function saveBlacklist() {
 }
 
 // ----------------------------------------------------
-// Helper: JSON 파일 읽기 함수 (봇 시작, 리로드 명령 시 호출)
+// Helper: Function to load JSON file (Called on bot start or reload command)
 // ----------------------------------------------------
 function loadBlacklist() {
     try {
         const data = fs.readFileSync(BLACKLIST_FILE_PATH, 'utf8');
-        // 읽어온 데이터를 소문자로 변환하여 전역 배열에 저장합니다.
+        // Convert read data to lowercase and store in the global array.
         BLACKLISTED_WORDS = JSON.parse(data).map(word => String(word).toLowerCase());
         console.log(`Loaded ${BLACKLISTED_WORDS.length} blacklisted words from ${BLACKLIST_FILE_PATH}.`);
     } catch (err) {
         if (err.code === 'ENOENT') {
             console.error(`Error: ${BLACKLIST_FILE_PATH} file not found. Creating a new one.`);
-            BLACKLISTED_WORDS = []; // 파일이 없으면 빈 배열로 시작
-            saveBlacklist(); // 빈 파일을 생성하여 에러 방지
+            BLACKLISTED_WORDS = []; // Start with an empty array if file is missing
+            saveBlacklist(); // Create an empty file to prevent errors
         } else {
             console.error("Error loading blacklist.json:", err.message);
             BLACKLISTED_WORDS = [];
@@ -74,7 +74,7 @@ function loadBlacklist() {
     }
 }
 
-// 봇 시작 시 금지어 로드
+// Load blacklisted words when the bot starts
 loadBlacklist();
 
 
@@ -89,7 +89,7 @@ const NOTIFICATION_BANNER_URL =
   "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c985f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
 
 
-// 컬러 역할들 (역할 ID 수정 필요)
+// Color Roles (Role IDs must be modified)
 const COLOR_ROLES = [
   {
     customId: "color_icey",
@@ -177,44 +177,44 @@ client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
   // ---------------------------
-  // 1. CHAT FILTER LOGIC (가장 먼저 실행)
+  // 1. CHAT FILTER LOGIC (Runs first)
   // ---------------------------
   const content = message.content.toLowerCase();
   const member = message.member;
 
-  // 필터 면제 역할 확인 (관리자/모더레이터는 필터 무시)
+  // Check for filter exempt roles (Admins/Moderators bypass the filter)
   const isExempt = FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId));
 
   if (!isExempt) {
-    // 메시지 내용을 소문자로 변환하여 금지어 리스트와 비교
+    // Convert message content to lowercase and compare with the blacklisted words
     const foundWord = BLACKLISTED_WORDS.find(word => content.includes(word));
 
     if (foundWord) {
-      // 메시지 삭제
+      // Delete message
       if (!message.deleted) {
         message.delete().catch(() => {
           console.error(`Failed to delete message: ${message.id}`);
         });
       }
 
-      // 사용자에게 경고 메시지 전송 (3초 후 삭제)
+      // Send warning message to user (deletes after 3 seconds)
       const warningMessage = await message.channel.send(
         `🚫 ${member} **Watch your language!** The word (**${foundWord}**) is not allowed here.`
       );
       setTimeout(() => warningMessage.delete().catch(() => {}), 3000);
 
-      // 금지어 발견 시 이후의 다른 명령어 처리를 중단하고 리턴
+      // Stop processing other commands after a blacklisted word is found
       return; 
     }
   }
   
   // ---------------------------
-  // 2. COMMAND LOGIC (필터 통과 후 실행)
+  // 2. COMMAND LOGIC (Runs after filter check)
   // ---------------------------
   const args = message.content.trim().split(/ +/g);
   const cmd = args[0]?.toLowerCase();
 
-  // ---- 모든 !명령어는 1초 후 자동 삭제 ----
+  // ---- All !commands are auto-deleted after 1 second ----
   if (cmd && cmd.startsWith("!")) {
     setTimeout(() => {
       if (!message.deleted) {
@@ -224,10 +224,9 @@ client.on("messageCreate", async (message) => {
   }
 
   // ---------------------------
-  // Permission Checks (권한 수정 완료)
+  // Permission Checks
   // ---------------------------
-  // !subscriber가 Admin Only로 이동했습니다.
-  const adminOnly = ["!setupjoin", "!color", "!welcome", "!reloadblacklist", "!addword", "!removeword", "!listwords", "!subscriber"]; 
+  const adminOnly = ["!setupjoin", "!color", "!welcome", "!reloadblacklist", "!addword", "!removeword", "!listwords", "!subscriber"]; 
   if (adminOnly.includes(cmd)) {
     if (!isAdmin(message.member)) {
       return message.reply("⛔ Only **Admins/Developers** can use this command.");
@@ -236,7 +235,7 @@ client.on("messageCreate", async (message) => {
 
   const modOnly = [
     "!ban", "!kick", "!mute", "!unmute", "!prune", 
-    "!addrole", "!removerole", 
+    "!addrole", "!removerole", 
   ];
   if (modOnly.includes(cmd)) {
     if (!isModerator(message.member)) {
@@ -259,12 +258,12 @@ client.on("messageCreate", async (message) => {
     if (!newWord) return message.reply("Usage: `!addword [word]`");
 
     if (BLACKLISTED_WORDS.includes(newWord)) {
-      return message.reply(`⚠ **${newWord}** (은)는 이미 금지어 목록에 있습니다.`);
+      return message.reply(`⚠ **${newWord}** is already in the blacklist.`);
     }
 
     BLACKLISTED_WORDS.push(newWord);
-    saveBlacklist(); // 파일에 저장
-    return message.reply(`✅ 금지어 **${newWord}** (을)를 목록에 추가했습니다. (총 ${BLACKLISTED_WORDS.length}개)`);
+    saveBlacklist(); // Save to file
+    return message.reply(`✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`);
   }
 
   // ========== !removeword ==========
@@ -273,15 +272,15 @@ client.on("messageCreate", async (message) => {
     if (!wordToRemove) return message.reply("Usage: `!removeword [word]`");
 
     const initialLength = BLACKLISTED_WORDS.length;
-    // 해당 단어를 제외한 새 배열을 만듭니다.
+    // Create a new array excluding the word
     BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(word => word !== wordToRemove);
     
     if (BLACKLISTED_WORDS.length === initialLength) {
-      return message.reply(`⚠ **${wordToRemove}** (은)는 금지어 목록에 없습니다.`);
+      return message.reply(`⚠ **${wordToRemove}** was not found in the blacklist.`);
     }
 
-    saveBlacklist(); // 파일에 저장
-    return message.reply(`✅ 금지어 **${wordToRemove}** (을)를 목록에서 제거했습니다. (총 ${BLACKLISTED_WORDS.length}개)`);
+    saveBlacklist(); // Save to file
+    return message.reply(`✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`);
   }
 
   // ========== !listwords ==========
@@ -294,12 +293,12 @@ client.on("messageCreate", async (message) => {
           ? BLACKLISTED_WORDS.slice(0, 50).join(", ") + (BLACKLISTED_WORDS.length > 50 ? "..." : "")
           : "No words currently blacklisted."
       )
-      .setFooter({ text: "50개까지만 표시됩니다." });
+      .setFooter({ text: "Showing the first 50 words." });
 
     return message.reply({ embeds: [listEmbed] });
   }
 
-  // ========== !reloadblacklist (파일에서 다시 읽기) ==========
+  // ========== !reloadblacklist (Reload from file) ==========
   if (cmd === "!reloadblacklist") {
         loadBlacklist(); 
         message.reply(`✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from blacklist.json.`);
@@ -311,17 +310,16 @@ client.on("messageCreate", async (message) => {
   // PANEL SETUP COMMANDS (Admin Only)
   // =====================================================
 
- // ========== !setupjoin (Join Panel): 규칙 패널 - ⭐레이아웃 복원 완료⭐ ==========
+ // ========== !setupjoin (Rules Panel) ==========
   if (cmd === "!setupjoin") {
-    
+    
     const joinEmbed = new EmbedBuilder()
       .setColor("#1e90ff")
       .setTitle("✨ Welcome to the Gosu General TV Community!")
       .setDescription(
         [
-          // 텍스트 중복 제거됨          
           "Here you can join events, get updates, talk with the community, and enjoy the content together.",
-          "",        
+          "",        
           "--------------------------------------------------------",
           "### 📜 Server Rules",
           "✨ **1 – Be Respectful**",
@@ -346,26 +344,26 @@ client.on("messageCreate", async (message) => {
         ].join("\n")
       );
 
-    // 'Agree To Rules' 버튼을 만듭니다.
+    // Create the 'Agree To Rules' button
     const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId("agree_rules") // 버튼 상호작용(interaction) ID
+        .setCustomId("agree_rules") // Button interaction ID
         .setLabel("Agree To Rules")
         .setStyle(ButtonStyle.Success)
     );
 
-    // 1단계: MUST READ 이미지를 첨부 파일로 먼저 전송 (배너 이미지)
+    // Step 1: Send the MUST READ image banner as an attachment first
     await message.channel.send({ 
         files: [{ attachment: RULES_BANNER_URL, name: 'must_read.png' }]
     }); 
 
-    // 2단계: 임베드와 버튼을 전송합니다.
+    // Step 2: Send the embed and button.
     await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
     return;
   }
-  // ========== !setupjoin (Join Panel) 명령어 끝 ==========
+  // ========== !setupjoin (Rules Panel) End ==========
 
-  // ========== !welcome (Welcome Panel) - ⭐레이아웃 복원 완료⭐ ==========
+  // ========== !welcome (Welcome Panel) ==========
   if (cmd === "!welcome") {
     const welcomeEmbed = new EmbedBuilder()
       .setColor("#1e90ff")
@@ -417,12 +415,12 @@ client.on("messageCreate", async (message) => {
         .setURL("https://discord.gg/gosugeneral")
     );
 
-    // 1단계: WELCOME 배너 이미지를 '첨부 파일'로 먼저 전송 (배너 이미지)
+    // Step 1: Send the WELCOME banner image as an attachment first
     await message.channel.send({ 
         files: [{ attachment: WELCOME_BANNER_URL, name: 'welcome.png' }]
     }); 
 
-    // 2단계: 이미지 다음에 임베드와 버튼을 전송합니다.
+    // Step 2: Send the embed and buttons after the image.
     await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
     return;
   }
@@ -459,8 +457,8 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // ========== !subscriber (Live Notification Panel - Admin+) - ⭐레이아웃 복원 및 권한 수정 완료⭐ ==========
-  // 권한: Admin/Developer Only
+  // ========== !subscriber (Live Notification Panel - Admin+) ==========
+  // Permission: Admin/Developer Only
   if (cmd === "!subscriber") {
     const subEmbed = new EmbedBuilder()
       .setColor("#FFCC33")
@@ -483,12 +481,12 @@ client.on("messageCreate", async (message) => {
         .setStyle(ButtonStyle.Success)
     );
 
-    // 1단계: DON'T MISS 배너 이미지를 '첨부 파일'로 먼저 전송
+    // Step 1: Send the DON'T MISS banner image as an attachment first
     await message.channel.send({ 
         files: [{ attachment: NOTIFICATION_BANNER_URL, name: 'notification_banner.png' }]
     }); 
 
-    // 2단계: 임베드 멘트와 버튼만 전송합니다.
+    // Step 2: Send the embed message and button.
     await message.channel.send({ embeds: [subEmbed], components: [row] });
     return;
   }
@@ -655,10 +653,10 @@ client.on("messageCreate", async (message) => {
           "**Admin / Developer**",
           "`!setupjoin` — Create the rules panel.",
           "`!welcome` — Create the main welcome panel.",
-          "`!subscriber` — Create the live notification panel.", // Admin Only
+          "`!subscriber` — Create the live notification panel.",
           "`!color` — Create the Color 3 role panel.",
-          "`!addword [단어]` — Add a word to the filter list.",
-          "`!removeword [단어]` — Remove a word from the filter list.",
+          "`!addword [word]` — Add a word to the filter list.",
+          "`!removeword [word]` — Remove a word from the filter list.",
           "`!listwords` — Show the current blacklisted words.",
           "`!reloadblacklist` — Reload the filter words from the JSON file.",
         ].join("\n")
@@ -708,7 +706,7 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
-  // -------- Subscribe / Unsubscribe Toggle Button (상호 배타적 로직) --------
+  // -------- Subscribe / Unsubscribe Toggle Button (Mutually Exclusive Logic) --------
   if (customId === "sub_subscribe") {
     const subRole = guild.roles.cache.get(SUB_ROLE);
     const gosuRole = guild.roles.cache.get(GOSU_ROLE);
@@ -721,9 +719,9 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     try {
-      // 1. 현재 구독 역할(SUB_ROLE)을 가지고 있는지 확인 (-> 구독 해제)
+      // 1. Check if member currently has the subscription role (-> Unsubscribe)
       if (member.roles.cache.has(SUB_ROLE)) {
-        // 2. 구독 해제 (SUB_ROLE 제거 및 GOSU_ROLE 부여)
+        // 2. Unsubscribe (Remove SUB_ROLE and Add GOSU_ROLE back)
         await member.roles.remove(subRole);
         await member.roles.add(gosuRole);
         return interaction.reply({
@@ -731,8 +729,8 @@ client.on("interactionCreate", async (interaction) => {
           ephemeral: true,
         });
       } else {
-        // 3. 구독 (SUB_ROLE 부여 및 GOSU_ROLE 제거)
-        // Gosu Role을 가지고 있다면 제거합니다. (상호 배타적)
+        // 3. Subscribe (Add SUB_ROLE and Remove GOSU_ROLE)
+        // Remove Gosu Role if they have it (mutually exclusive)
         if (member.roles.cache.has(GOSU_ROLE)) {
           await member.roles.remove(gosuRole);
         }
@@ -752,7 +750,7 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
-  // -------- Color buttons (상호 배타적 로직) --------
+  // -------- Color buttons (Mutually Exclusive Logic) --------
   const colorConfig = COLOR_ROLES.find((c) => c.customId === customId);
   if (colorConfig) {
     const role = guild.roles.cache.get(colorConfig.roleId);
@@ -772,10 +770,10 @@ client.on("interactionCreate", async (interaction) => {
 
     try {
       const colorRoleIds = COLOR_ROLES.map((c) => c.roleId);
-      // 현재 멤버가 가지고 있는 컬러 역할들을 찾습니다.
+      // Find all color roles the current member has.
       const toRemove = member.roles.cache.filter((r) => colorRoleIds.includes(r.id));
 
-      // 이미 이 색을 갖고 있으면 → 제거
+      // If they already have this color -> Remove it
       if (member.roles.cache.has(role.id)) {
         await member.roles.remove(role);
         return interaction.reply({
@@ -784,7 +782,7 @@ client.on("interactionCreate", async (interaction) => {
         });
       }
 
-      // 다른 색들 모두 제거 후 새 색 부여 (하나만 가질 수 있도록)
+      // Remove all other colors, then add the new one (ensures only one color is held)
       if (toRemove.size > 0) {
         await member.roles.remove(toRemove);
       }
