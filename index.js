@@ -20,8 +20,8 @@ const fs = require('fs'); // File system module
 // FILE PATH CONSTANT
 // ----------------------------------------------------
 const BLACKLIST_FILE_PATH = 'blacklist.json';
-const CONFIG_FILE_PATH = 'config.json'; // ⬅️ 추가: 로그 채널 설정 파일
-let BOT_CONFIG = {}; // ⬅️ 추가: 로그 채널 ID를 저장할 변수
+const CONFIG_FILE_PATH = 'config.json'; // ⬅️ 로그 채널 설정 파일
+let BOT_CONFIG = {}; // ⬅️ 로그 채널 ID를 저장할 변수
 
 // ----------------------------------------------------
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
@@ -78,7 +78,7 @@ function loadBlacklist() {
 }
 
 // ----------------------------------------------------
-// Helper: Function to save config.json (Log Channel Settings) ⬅️ 추가
+// Helper: Function to save config.json (Log Channel Settings)
 // ----------------------------------------------------
 function saveConfig() {
     try {
@@ -90,7 +90,7 @@ function saveConfig() {
 }
 
 // ----------------------------------------------------
-// Helper: Function to load ALL configs (Log Channels, Blacklist) ⬅️ 추가
+// Helper: Function to load ALL configs (Log Channels, Blacklist)
 // ----------------------------------------------------
 function loadConfigAndBlacklist() {
     // 1. Log Channel Config 로드
@@ -117,7 +117,7 @@ function loadConfigAndBlacklist() {
 }
 
 // ----------------------------------------------------
-// Helper: Function to send Moderation Log ⬅️ 추가
+// Helper: Function to send Moderation Log
 // ----------------------------------------------------
 async function sendModLog(guild, user, action, moderator, reason, duration) {
     if (!BOT_CONFIG.modLogChannelId) return;
@@ -244,18 +244,18 @@ function isAdmin(member) {
 // --------------------
 client.once("ready", () => {
     console.log(`[BOT] Bot logged in as ${client.user.tag}`);
-    loadConfigAndBlacklist(); // ⬅️ 추가: 봇 시작 시 설정 및 금지어 로드
+    loadConfigAndBlacklist(); // ⬅️ 봇 시작 시 설정 및 금지어 로드
 });
 
 // =====================================================
-// PREFIX COMMANDS & CHAT FILTER (중복 선언 제거 및 로직 통합)
+// PREFIX COMMANDS & CHAT FILTER
 // =====================================================
 
 client.on("messageCreate", async (message) => {
     if (!message.guild || message.author.bot) return;
 
 // ---------------------------
-// 0. COMMAND PARSING (단일 선언)
+// 0. COMMAND PARSING
 // ---------------------------
     const args = message.content.trim().split(/ +/g);
     const cmd = args[0]?.toLowerCase();
@@ -264,7 +264,7 @@ client.on("messageCreate", async (message) => {
 
     
 // ---------------------------
-// 1. CHAT FILTER LOGIC (개선된 로직 및 Admin/Mod 예외 처리)
+// 1. CHAT FILTER LOGIC
 // ---------------------------
     // 명령어 사용자와 필터 면제 역할을 가진 멤버는 필터링을 건너뜁니다.
     const isExempt = isCommand || FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId));
@@ -308,7 +308,7 @@ client.on("messageCreate", async (message) => {
         }
 
         if (foundWord) {
-            // MSG LOG 기록 ⬅️ 추가
+            // MSG LOG 기록
             if (BOT_CONFIG.msgLogChannelId) {
                 const logChannel = message.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId);
                 if (logChannel) {
@@ -375,7 +375,7 @@ client.on("messageCreate", async (message) => {
     // Admin Only Commands
     const adminOnly = [
         "!setupjoin", "!color", "!welcome", "!subscriber",
-        // Log Setting Commands ⬅️ 추가
+        // Log Setting Commands ⬅️ 이 명령어들은 모두 Admin Only로 설정됨
         "!setactionlog", "!clearactionlog", 
         "!setmsglog", "!clearmsglog", 
         "!setmodlog", "!clearmodlog"
@@ -403,7 +403,7 @@ client.on("messageCreate", async (message) => {
     }
 
     // =====================================================
-    // LOG SETTING & CLEARING COMMANDS (Admin Only) ⬅️ 추가
+    // LOG SETTING & CLEARING COMMANDS (Admin Only)
     // =====================================================
     const logCommands = {
         "!setactionlog": { key: 'actionLogChannelId', type: 'ACTION' },
@@ -415,6 +415,7 @@ client.on("messageCreate", async (message) => {
     };
 
     if (logCommands[cmd]) {
+        // 이미 위에 adminOnly 체크 로직이 있으므로 추가적인 권한 체크는 필요 없습니다.
         const { key, type } = logCommands[cmd];
         
         if (cmd.startsWith("!set")) {
@@ -729,7 +730,7 @@ client.on("messageCreate", async (message) => {
         const reason = args.slice(2).join(" ") || "No reason provided";
         try {
             await user.ban({ reason });
-            sendModLog(message.guild, user.user, 'BAN', message.author, reason); // ⬅️ 추가
+            sendModLog(message.guild, user.user, 'BAN', message.author, reason);
             const reply = await message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
             return; // Reply stays
         } catch (err) {
@@ -750,7 +751,7 @@ client.on("messageCreate", async (message) => {
         const reason = args.slice(2).join(" ") || "No reason provided";
         try {
             await user.kick(reason);
-            sendModLog(message.guild, user.user, 'KICK', message.author, reason); // ⬅️ 추가
+            sendModLog(message.guild, user.user, 'KICK', message.author, reason);
             const reply = await message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
             return; // Reply stays
         } catch (err) {
@@ -772,7 +773,7 @@ client.on("messageCreate", async (message) => {
         try {
             const reason = args.slice(3).join(" ") || `Muted by ${message.author.tag}`; // 사유를 포함하도록 수정
             await user.timeout(minutes * 60 * 1000, reason);
-            sendModLog(message.guild, user.user, 'MUTE', message.author, reason, minutes); // ⬅️ 추가
+            sendModLog(message.guild, user.user, 'MUTE', message.author, reason, minutes);
             const reply = await message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
             return; // Reply stays
         } catch (err) {
@@ -792,7 +793,7 @@ client.on("messageCreate", async (message) => {
 
         try {
             await user.timeout(null, `Unmuted by ${message.author.tag}`);
-            sendModLog(message.guild, user.user, 'UNMUTE', message.author, 'Manual Unmute'); // ⬅️ 추가
+            sendModLog(message.guild, user.user, 'UNMUTE', message.author, 'Manual Unmute');
             const reply = await message.reply(`🔊 Unmuted **${user.user.tag}**.`);
             return; // Reply stays
         } catch (err) {
@@ -893,13 +894,13 @@ client.on("messageCreate", async (message) => {
                     "`!invite` — Show the server invite link. (Reply deletes after 1s)",
                     "",
                     "**Moderation / Filter Management (Moderator+)**",
-                    // Log Setting Commands ⬅️ 추가
-                    "`!setactionlog [#channel]` — Set channel for Join/Leave/Role changes log. (Reply deletes after 3s)",
-                    "`!clearactionlog` — Clear the Action Log channel setting. (Reply deletes after 3s)",
-                    "`!setmsglog [#channel]` — Set channel for Message Delete/Edit/Filter log. (Reply deletes after 3s)",
-                    "`!clearmsglog` — Clear the Message Log channel setting. (Reply deletes after 3s)",
-                    "`!setmodlog [#channel]` — Set channel for Ban/Kick/Mute log. (Reply deletes after 3s)",
-                    "`!clearmodlog` — Clear the Moderation Log channel setting. (Reply deletes after 3s)",
+                    // Log Setting Commands ⬅️ Admin 전용
+                    "`!setactionlog [#channel]` — Set channel for Join/Leave/Role changes log. (**Admin Only**)",
+                    "`!clearactionlog` — Clear the Action Log channel setting. (**Admin Only**)",
+                    "`!setmsglog [#channel]` — Set channel for Message Delete/Edit/Filter log. (**Admin Only**)",
+                    "`!clearmsglog` — Clear the Message Log channel setting. (**Admin Only**)",
+                    "`!setmodlog [#channel]` — Set channel for Ban/Kick/Mute log. (**Admin Only**)",
+                    "`!clearmodlog` — Clear the Moderation Log channel setting. (**Admin Only**)",
                     "`!ban @user [reason]` — Ban a user. (Reply stays)",
                     "`!kick @user [reason]` — Kick a user. (Reply stays)",
                     "`!mute @user [minutes] [reason]` — Timeout a user. (Reply stays)",
@@ -926,7 +927,7 @@ client.on("messageCreate", async (message) => {
 });
 
 // =====================================================
-// NEW: MESSAGE UPDATE/DELETE EVENTS (MSG Log) ⬅️ 추가
+// NEW: MESSAGE UPDATE/DELETE EVENTS (MSG Log)
 // =====================================================
 
 client.on("messageDelete", async (message) => {
@@ -979,7 +980,7 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
 });
 
 // ===================================================== 
-// NEW: SERVER ACTIVITY EVENTS (ACTION Log) ⬅️ 추가
+// NEW: SERVER ACTIVITY EVENTS (ACTION Log)
 // =====================================================
 
 client.on("guildMemberUpdate", async (oldMember, newMember) => {
