@@ -158,33 +158,39 @@ client.on("messageCreate", async (message) => {
   // =====================================================
   // JOIN PANEL: !setupjoin
   // =====================================================
-  if (cmd === "!setupjoin") {
+if (cmd === "!setupjoin") {
     await message.delete().catch(() => {});
 
     const joinEmbed = new EmbedBuilder()
-      .setColor("#5865F2")
-      .setTitle("Welcome to the Gosu Server")
+      .setColor("#ff003c")
+      .setTitle("🌟 Welcome to the Gosu General TV Discord!")
+      .setImage(
+        "https://media.discordapp.net/attachments/495719121686626323/1440885187482353799/Gosu.png?ex=691fc867&is=691e76e7&hm=0f6717344521242a0f959d9c3cfa3ea6e10fd77aa56c1ff9a196ae574ead94f3&=&format=webp&quality=lossless&width=1223&height=288"
+      )
       .setDescription(
         [
-          "**Rule 1 — Respect Everyone**",
-          "Treat all members with respect. No harassment, personal attacks, discrimination, or toxic behavior.",
+          "🎮 **Welcome to the official Gosu General TV Community!**",
+          "Here you can chat, join events, receive updates, and be part of the community.",
           "",
-          "**Rule 2 — No Spam or Excessive Mentions**",
-          "Do not spam messages, images, emojis, links, or ping people excessively.",
+          "Please make sure to read the rules below and press **Agree To Rules** to gain access to all channels.",
           "",
-          "**Rule 3 — No NSFW or Harmful Content**",
-          "Absolutely no NSFW, gore, shock content, or anything unsafe for the community.",
+          "----------------------------------------------",
+          "### 📜 **Server Rules**",
           "",
-          "**Rule 4 — No Unauthorized Advertising**",
-          "No self-promo, invite links, or advertisements unless approved by staff.",
+          "✨ **1 — Be Respectful**\nTreat everyone with respect. Toxicity, harassment, bullying, or personal attacks are not allowed.",
           "",
-          "**Rule 5 — Keep Conversations Clean**",
-          "No hate speech, slurs, extreme drama, or unnecessary arguing.",
+          "✨ **2 — No Spam**\nAvoid spamming text, emojis, images, or unnecessary mentions.",
           "",
-          "**Rule 6 — Follow Staff Directions**",
-          "Staff decisions are final. If there’s an issue, contact staff instead of escalating.",
+          "✨ **3 — No NSFW or Harmful Content**\nAbsolutely no NSFW, gore, disturbing, or dangerous content.",
           "",
-          "*Press **Agree To Rules** to receive access to the server.*",
+          "✨ **4 — No Self-Promo or Ads**\nDo not advertise other servers, channels, or personal content without permission.",
+          "",
+          "✨ **5 — Keep Conversations Clean**\nNo hate speech, slurs, excessive drama, or discrimination.",
+          "",
+          "✨ **6 — Follow Staff Instructions**\nIf staff gives a direction, follow it. If you believe something is unfair, contact staff privately.",
+          "",
+          "----------------------------------------------",
+          "Press **Agree To Rules** below to get access to the server. Enjoy your stay! 🎉",
         ].join("\n")
       );
 
@@ -196,8 +202,8 @@ client.on("messageCreate", async (message) => {
     );
 
     await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
-    return message.channel.send("✅ Rules panel has been created in this channel.");
-  }
+}
+
 
   // =====================================================
   // COLOR PANEL: !color (Admin only)
@@ -622,5 +628,6 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.TOKEN);
+
 
 
