@@ -311,54 +311,59 @@ client.on("messageCreate", async (message) => {
   // PANEL SETUP COMMANDS (Admin Only)
   // =====================================================
 
-  // ========== !setupjoin (Rules Panel) ==========
+ // ========== !setupjoin (Join Panel) 명령어 시작 ==========
   if (cmd === "!setupjoin") {
+    // ⚠️ 주의: JOIN_BANNER_URL 변수는 코드 상단에 이미지 URL을 넣어 미리 정의되어 있어야 합니다.
+    // 예시: const JOIN_BANNER_URL = 'https://link-to-your-welcome-banner.png';
+    
     const joinEmbed = new EmbedBuilder()
-      .setColor("#3498db")
-      .setTitle("🌟 Welcome to the Gosu General TV Community!")
+      .setColor("#1e90ff")
+      .setTitle("✨ Welcome to the Gosu General TV Community!")
       .setDescription(
         [
-          "👋 **Welcome to the official Gosu General TV Discord Server!**",
-          "",
+          "Welcome to the official **Gosu General TV** Discord Server!",
           "Here you can join events, get updates, talk with the community, and enjoy the content together.",
+          "",
           "Please make sure to read the rules below and press **Agree To Rules** to gain full access.",
+          "--------------------------------------------------------",
+          "### 📜 Server Rules",
+          "✨ **1 – Be Respectful**",
+          "Treat everyone kindly. No harassment, bullying, or toxicity.",
           "",
-          "----------------------------------------------",
-          "### 📜 **Server Rules**",
+          "✨ **2 – No Spam**",
+          "Avoid repeated messages, emoji spam, or unnecessary mentions.",
           "",
-          "✨ **1 — Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.",
+          "✨ **3 – No NSFW or Harmful Content**",
+          "No adult content, gore, or anything unsafe.",
           "",
-          "✨ **2 — No Spam**\nAvoid repeated messages, emoji spam, or unnecessary mentions.",
+          "✨ **4 – No Advertising**",
+          "No links, promos, or self-promotion without staff approval.",
           "",
-          "✨ **3 — No NSFW or Harmful Content**\nNo adult content, gore, or anything unsafe.",
+          "✨ **5 – Keep it Clean**",
+          "No hate speech, slurs, or extreme drama.",
           "",
-          "✨ **4 — No Advertising**\nNo links, promos, or self-promotion without staff approval.",
-          "",
-          "✨ **5 — Keep it Clean**\nNo hate speech, slurs, or extreme drama.",
-          "",
-          "✨ **6 — Follow Staff Instructions**\nIf staff gives instructions, please follow them.",
-          "",
-          "----------------------------------------------",
-          "Press **Agree To Rules** below to enter and enjoy the server! 🎉",
+          "✨ **6 – Follow Staff Instructions**",
+          "If staff gives instructions, please follow them.",
+          "--------------------------------------------------------",
+          "Press **Agree To Rules** below to enter and enjoy the server! 🎊",
         ].join("\n")
-      );
+      )
+      // 이미지 중복 출력을 방지하기 위해, 여기서 이미지를 임베드 안에 한 번만 삽입합니다.
+      .setImage(JOIN_BANNER_URL); // 
 
+    // 'Agree To Rules' 버튼을 만듭니다.
     const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId("agree_rules")
+        .setCustomId("agree_to_rules") // 버튼 상호작용(interaction) ID
         .setLabel("Agree To Rules")
         .setStyle(ButtonStyle.Success)
     );
 
-    // 1단계: 이미지를 '첨부 파일'로 먼저 전송
-    await message.channel.send({ 
-        files: [{ attachment: RULES_BANNER_URL, name: 'must_read.png' }]
-    }); 
-    
-    // 2단계: 이어서 임베드와 버튼을 전송합니다.
+    // 임베드와 버튼을 단일 메시지로 전송하여 중복 출력을 방지합니다.
     await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
     return;
   }
+  // ========== !setupjoin (Join Panel) 명령어 끝 ==========
 
   // ========== !welcome (Welcome Panel) ==========
   if (cmd === "!welcome") {
@@ -802,3 +807,4 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
+
