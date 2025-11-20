@@ -174,15 +174,14 @@ client.on("messageCreate", async (message) => {
     const joinEmbed = new EmbedBuilder()
       .setColor("#3498db")
       .setTitle("🌟 Welcome to the Gosu General TV Community!")
-      .setDescription(
+     .setDescription(
         [
           "👋 **Welcome to the official Gosu General TV Discord Server!**",
           "",
           "Here you can join events, get updates, talk with the community, and enjoy the content together.",
-          "Please make sure to read the rules below and press **Agree To Rules** to gain full access.",
           "",
           "----------------------------------------------",
-          "### 📜 **Server Rules**",
+          "### 📜 **Server Rules**", // Markdown 헤딩으로 규칙 강조
           "",
           "✨ **1 — Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.",
           "",
@@ -198,7 +197,7 @@ client.on("messageCreate", async (message) => {
           "",
           "----------------------------------------------",
           "Press **Agree To Rules** below to enter and enjoy the server! 🎉",
-        ].join("\n")
+        ].join("\n") // 각 줄을 줄바꿈 문자로 연결
       );
 
     const buttons = new ActionRowBuilder().addComponents(
@@ -694,3 +693,4 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
+
