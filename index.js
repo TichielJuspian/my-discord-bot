@@ -112,6 +112,15 @@ client.on("messageCreate", async (message) => {
   const args = message.content.trim().split(/ +/g);
   const cmd = args[0]?.toLowerCase();
 
+  // ---- 모든 !명령어는 2초 후 자동으로 원본 메시지 삭제 ----
+  if (cmd && cmd.startsWith("!")) {
+    setTimeout(() => {
+      if (!message.deleted) {
+        message.delete().catch(() => {});
+      }
+    }, 1000); // 2000ms = 2초 (원하면 1000, 3000 등으로 바꿔도 됨)
+  }
+
   // ---------------------------
   // Developer / Admin Only Commands
   // ---------------------------
@@ -613,4 +622,5 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.TOKEN);
+
 
