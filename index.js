@@ -1,5 +1,5 @@
 // ===============================
-// Gosu Custom Discord Bot (FINAL BUILD - All features & !help restored)
+// Gosu Custom Discord Bot (Final Build - All Features Merged)
 // Discord.js v14
 // ===================================
 
@@ -13,9 +13,6 @@ const {
   ButtonStyle,
   ActionRowBuilder,
   ButtonBuilder,
-  ChannelType,
-  codeBlock,
-  userMention,
 } = require("discord.js");
 const fs = require('fs'); // 파일 시스템 모듈
 
@@ -25,19 +22,12 @@ const fs = require('fs'); // 파일 시스템 모듈
 const BLACKLIST_FILE_PATH = 'blacklist.json';
 
 // ----------------------------------------------------
-// ROLE & CHANNEL IDs (❗ 서버 ID에 맞게 수정 필수 ❗)
+// ROLE IDs (❗ 서버 ID에 맞게 수정 필수 ❗)
 // ----------------------------------------------------
 const GOSU_ROLE = "496717793388134410";      // 기본 Gosu 입장 롤 (Agree To Rules)
 const MOD_ROLE = "495727371140202506";       // Moderator
 const ADMIN_ROLE = "495718851288236032";     // Admin / Developer
 const SUB_ROLE = "497654614729031681";       // Live 알림 구독 롤
-
-// --- 미러링 기능 설정 (최종 요청 반영) ---
-const ANNOUNCEMENT_CHANNEL_SOURCE_ID = "515637717460058113"; // 공지 작성 채널 (원본)
-const ANNOUNCEMENT_CHANNEL_TARGET_ID = "1440995023972859956"; // 라이브 알림 채널 (대상)
-
-// --- 티켓 기능 설정 (카테고리 ID 수정 필수) ---
-const TICKET_CATEGORY_ID = "YOUR_TICKET_CATEGORY_ID_HERE"; // 티켓 채널이 생성될 카테고리 ID
 
 // ----------------------------------------------------
 // CHAT FILTER CONFIG
@@ -50,51 +40,57 @@ const FILTER_EXEMPT_ROLES = [
 ];
 
 // ----------------------------------------------------
-// Helper: JSON 파일 저장/읽기 함수
+// Helper: JSON 파일 저장 함수 (배열 변경 시 자동 호출)
 // ----------------------------------------------------
 function saveBlacklist() {
     try {
+        // 배열을 JSON 문자열로 변환하고 파일에 덮어씁니다.
         const jsonString = JSON.stringify(BLACKLISTED_WORDS, null, 2);
         fs.writeFileSync(BLACKLIST_FILE_PATH, jsonString, 'utf8');
-        console.log(`Successfully saved ${BLACKLISTED_WORDS.length} blacklisted words.`);
+        console.log(`Successfully saved ${BLACKLISTED_WORDS.length} blacklisted words to ${BLACKLIST_FILE_PATH}.`);
     } catch (err) {
         console.error("Error saving blacklist.json:", err.message);
     }
 }
 
+// ----------------------------------------------------
+// Helper: JSON 파일 읽기 함수 (봇 시작, 리로드 명령 시 호출)
+// ----------------------------------------------------
 function loadBlacklist() {
     try {
         const data = fs.readFileSync(BLACKLIST_FILE_PATH, 'utf8');
+        // 읽어온 데이터를 소문자로 변환하여 전역 배열에 저장합니다.
         BLACKLISTED_WORDS = JSON.parse(data).map(word => String(word).toLowerCase());
         console.log(`Loaded ${BLACKLISTED_WORDS.length} blacklisted words from ${BLACKLIST_FILE_PATH}.`);
     } catch (err) {
         if (err.code === 'ENOENT') {
             console.error(`Error: ${BLACKLIST_FILE_PATH} file not found. Creating a new one.`);
-            BLACKLISTED_WORDS = [];
-            saveBlacklist();
+            BLACKLISTED_WORDS = []; // 파일이 없으면 빈 배열로 시작
+            saveBlacklist(); // 빈 파일을 생성하여 에러 방지
         } else {
             console.error("Error loading blacklist.json:", err.message);
             BLACKLISTED_WORDS = [];
         }
     }
 }
+
+// 봇 시작 시 금지어 로드
 loadBlacklist();
 
 
 // ----------------------------------------------------
 // WELCOME / RULES / NOTIFICATION BANNERS
 // ----------------------------------------------------
+// ❗❗❗ 이곳을 요청하신 새 이미지 링크로 교체했습니다 ❗❗❗
 const RULES_BANNER_URL =
   "https://cdn.discordapp.com/attachments/495719121686626323/1440992642761752656/must_read.png?ex=69202c7a&is=691edafa&hm=0dd8a2b0a189b4bec6947c05877c17b0b9408dd8f99cb7eee8de4336122f67d4&";
 const WELCOME_BANNER_URL =
   "https://cdn.discordapp.com/attachments/495719121686626323/1440988230492225646/welcome.png?ex=6920285e&is=691ed6de&hm=74ea90a10d279092b01dcccfaf0fd40fbbdf78308606f362bf2fe15e20c64b86&";
 const NOTIFICATION_BANNER_URL =
-  "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c983f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
-// 라이브 배너 URL
-const LIVE_BANNER_URL = "https://cdn.discordapp.com/attachments/495719121686626323/1440994729591308318/Gosu.png?ex=69202e6b&is=691edceb&hm=4407182f4bd0416c947e41c5558f22899c2514864134a2b813b2c4e75d62d681&"; 
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c985f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
 
 
-// 컬러 역할들 (역할 ID 수정 필요) (예시 코드)
+// 컬러 역할들 (역할 ID 수정 필요)
 const COLOR_ROLES = [
   {
     customId: "color_icey",
@@ -143,9 +139,8 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildPresences,
   ],
-  partials: [Partials.Channel, Partials.GuildMember],
+  partials: [Partials.Channel],
 });
 
 // --------------------
@@ -171,20 +166,19 @@ function isAdmin(member) {
 // --------------------
 // Bot Ready
 // --------------------
-client.once("ready", async () => {
+client.once("ready", () => {
   console.log(`Bot logged in as ${client.user.tag}`);
 });
 
-
 // =====================================================
-// MESSAGE CREATE & COMMANDS
+// PREFIX COMMANDS & CHAT FILTER
 // =====================================================
 
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
   // ---------------------------
-  // 1. CHAT FILTER LOGIC
+  // 1. CHAT FILTER LOGIC (가장 먼저 실행)
   // ---------------------------
   const content = message.content.toLowerCase();
   const member = message.member;
@@ -193,44 +187,47 @@ client.on("messageCreate", async (message) => {
   const isExempt = FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId));
 
   if (!isExempt) {
+    // 메시지 내용을 소문자로 변환하여 금지어 리스트와 비교
     const foundWord = BLACKLISTED_WORDS.find(word => content.includes(word));
 
     if (foundWord) {
+      // 메시지 삭제
       if (!message.deleted) {
         message.delete().catch(() => {
           console.error(`Failed to delete message: ${message.id}`);
         });
       }
+
+      // 사용자에게 경고 메시지 전송 (3초 후 삭제)
       const warningMessage = await message.channel.send(
         `🚫 ${member} **Watch your language!** The word (**${foundWord}**) is not allowed here.`
       );
       setTimeout(() => warningMessage.delete().catch(() => {}), 3000);
+
+      // 금지어 발견 시 이후의 다른 명령어 처리를 중단하고 리턴
       return; 
     }
   }
   
   // ---------------------------
-  // 2. COMMAND LOGIC
+  // 2. COMMAND LOGIC (필터 통과 후 실행)
   // ---------------------------
   const args = message.content.trim().split(/ +/g);
   const cmd = args[0]?.toLowerCase();
 
-  // ---- 모든 !명령어는 1초 후 자동 삭제 (반영 완료) ----
+  // ---- 모든 !명령어는 1초 후 자동 삭제 ----
   if (cmd && cmd.startsWith("!")) {
     setTimeout(() => {
       if (!message.deleted) {
         message.delete().catch(() => {});
       }
-    }, 1000); 
+    }, 1000);
   }
 
   // ---------------------------
   // Permission Checks
   // ---------------------------
-  const adminOnly = [
-    "!setupjoin", "!color", "!welcome", "!reloadblacklist", "!addword", 
-    "!removeword", "!listwords", "!setupmirror", "!setupticket"
-  ];
+  const adminOnly = ["!setupjoin", "!color", "!welcome", "!reloadblacklist", "!addword", "!removeword", "!listwords"];
   if (adminOnly.includes(cmd)) {
     if (!isAdmin(message.member)) {
       return message.reply("⛔ Only **Admins/Developers** can use this command.");
@@ -239,7 +236,7 @@ client.on("messageCreate", async (message) => {
 
   const modOnly = [
     "!ban", "!kick", "!mute", "!unmute", "!prune", 
-    "!addrole", "!removerole", "!subscriber", "!userinfo"
+    "!addrole", "!removerole", "!subscriber",
   ];
   if (modOnly.includes(cmd)) {
     if (!isModerator(message.member)) {
@@ -251,57 +248,43 @@ client.on("messageCreate", async (message) => {
   if (cmd === "!ping") {
     return message.reply("Pong!");
   }
-  
-  // ========== !HELP (복원 완료) ==========
-  if (cmd === "!help") {
-    const helpEmbed = new EmbedBuilder()
-      .setColor("#3498DB")
-      .setTitle("🤖 Gosu General TV Bot Commands")
-      .setDescription("Commands start with `!` and are deleted after 1 second for a cleaner chat.")
-      .addFields(
-        { 
-          name: "✨ Public Commands (누구나 사용 가능)", 
-          value: "`!help`: 이 메시지를 보여줍니다.\n`!ping`: 봇의 응답 속도를 확인합니다.\n`!stats`: 서버 통계를 확인합니다." 
-        },
-        { 
-          name: "🛠️ Moderation Commands (Moderator+)", 
-          value: "`!userinfo @유저`: 특정 유저의 상세 정보를 확인합니다.\n`!kick @유저 [이유]`: 유저를 추방합니다.\n`!ban @유저 [이유]`: 유저를 차단합니다.\n`!prune [숫자]`: 메시지를 대량 삭제합니다. (1~100)\n`!addrole @유저 @역할`, `!removerole @유저 @역할`" 
-        },
-        { 
-          name: "⚙️ Admin Setup Commands (Admin+)", 
-          value: "`!setupjoin`: 규칙 동의 패널을 설치합니다.\n`!welcome`: 서버 정보/링크 패널을 설치합니다.\n`!subscriber`: 라이브 알림 구독 패널을 설치합니다.\n`!color`: 컬러 역할 선택 패널을 설치합니다.\n`!setupticket`: 티켓 생성 패널을 설치합니다." 
-        },
-        {
-          name: "🚫 Blacklist Management (Admin+)",
-          value: "`!addword [단어]`: 금지어를 추가합니다.\n`!removeword [단어]`: 금지어를 제거합니다.\n`!listwords`: 현재 금지어 목록을 표시합니다."
-        }
-      );
-    
-    return message.reply({ embeds: [helpEmbed] });
-  }
+  
+  // =====================================================
+  // BLACKLIST MANAGEMENT COMMANDS (Admin Only)
+  // =====================================================
 
-  // =====================================================
-  // BLACKLIST MANAGEMENT COMMANDS (Admin Only) (유지 완료)
-  // =====================================================
+  // ========== !addword ==========
   if (cmd === "!addword") {
     const newWord = args.slice(1).join(" ").toLowerCase().trim();
     if (!newWord) return message.reply("Usage: `!addword [단어]`");
-    if (BLACKLISTED_WORDS.includes(newWord)) return message.reply(`⚠ **${newWord}** (은)는 이미 금지어 목록에 있습니다.`);
+
+    if (BLACKLISTED_WORDS.includes(newWord)) {
+      return message.reply(`⚠ **${newWord}** (은)는 이미 금지어 목록에 있습니다.`);
+    }
+
     BLACKLISTED_WORDS.push(newWord);
-    saveBlacklist();
+    saveBlacklist(); // 파일에 저장
     return message.reply(`✅ 금지어 **${newWord}** (을)를 목록에 추가했습니다. (총 ${BLACKLISTED_WORDS.length}개)`);
   }
 
+  // ========== !removeword ==========
   if (cmd === "!removeword") {
     const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
     if (!wordToRemove) return message.reply("Usage: `!removeword [단어]`");
+
     const initialLength = BLACKLISTED_WORDS.length;
+    // 해당 단어를 제외한 새 배열을 만듭니다.
     BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(word => word !== wordToRemove);
-    if (BLACKLISTED_WORDS.length === initialLength) return message.reply(`⚠ **${wordToRemove}** (은)는 금지어 목록에 없습니다.`);
-    saveBlacklist();
+    
+    if (BLACKLISTED_WORDS.length === initialLength) {
+      return message.reply(`⚠ **${wordToRemove}** (은)는 금지어 목록에 없습니다.`);
+    }
+
+    saveBlacklist(); // 파일에 저장
     return message.reply(`✅ 금지어 **${wordToRemove}** (을)를 목록에서 제거했습니다. (총 ${BLACKLISTED_WORDS.length}개)`);
   }
 
+  // ========== !listwords ==========
   if (cmd === "!listwords") {
     const listEmbed = new EmbedBuilder()
       .setColor("#FF0000")
@@ -312,218 +295,156 @@ client.on("messageCreate", async (message) => {
           : "No words currently blacklisted."
       )
       .setFooter({ text: "50개까지만 표시됩니다." });
+
     return message.reply({ embeds: [listEmbed] });
   }
 
+  // ========== !reloadblacklist (파일에서 다시 읽기) ==========
   if (cmd === "!reloadblacklist") {
         loadBlacklist(); 
         message.reply(`✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from blacklist.json.`);
         return;
   }
 
-  // =====================================================
-  // MODERATION COMMANDS (Moderator+) (유지 완료)
-  // =====================================================
-  // 이 부분에 !ban, !kick, !mute, !unmute, !prune, !addrole, !removerole 로직이 포함됩니다. 
-  // (이전 코드에서 누락 없이 유지되었다고 가정합니다.)
 
   // =====================================================
-  // STATS & INFO COMMANDS (Design Improved) (유지 완료)
-  // =====================================================
-
-  // ========== !stats (Server Statistics) ==========
-  if (cmd === "!stats") {
-    const guild = message.guild;
-    await guild.members.fetch();
-
-    const online = guild.members.cache.filter(m => m.presence?.status === 'online' && !m.user.bot).size;
-    const totalHumans = guild.members.cache.filter(m => !m.user.bot).size;
-    const totalBots = guild.members.cache.filter(m => m.user.bot).size;
-    const textChannels = guild.channels.cache.filter(c => c.type === ChannelType.GuildText).size;
-    const voiceChannels = guild.channels.cache.filter(c => c.type === ChannelType.GuildVoice).size;
-
-    const statsEmbed = new EmbedBuilder()
-      .setColor("#956FE6") 
-      .setTitle(`📊 ${guild.name} 서버 통계`)
-      .setThumbnail(guild.iconURL({ dynamic: true }))
-      .addFields(
-        { 
-          name: "👥 총 멤버", 
-          value: `**${guild.memberCount.toLocaleString()}** 명`, 
-          inline: true 
-        },
-        { 
-          name: "🟢 현재 온라인", 
-          value: `**${online.toLocaleString()}** 명`, 
-          inline: true 
-        },
-        { name: "\u200B", value: "\u200B", inline: true },
-
-        { 
-          name: "👤 인원 구분", 
-          value: `인간: ${totalHumans}\n봇: ${totalBots}`, 
-          inline: true 
-        },
-        { 
-          name: "🔊 채널 수", 
-          value: `텍스트: ${textChannels}\n음성: ${voiceChannels}`, 
-          inline: true 
-        },
-        { 
-          name: "✨ 부스팅", 
-          value: `레벨: ${guild.premiumTier}\n부스트 수: ${guild.premiumSubscriptionCount || 0}`, 
-          inline: true 
-        }
-      )
-      .setFooter({ text: `서버 생성일: ${new Date(guild.createdTimestamp).toLocaleDateString()}` });
-      
-    return message.reply({ embeds: [statsEmbed] });
-  }
-
-  // ========== !userinfo (User Information) ==========
-  if (cmd === "!userinfo") {
-    const target = message.mentions.members?.first() || message.member;
-    if (!target) return message.reply("Usage: `!userinfo @user`");
-
-    const roles = target.roles.cache
-      .filter(r => r.id !== message.guild.id)
-      .sort((a, b) => b.position - a.position)
-      .map(r => r.toString());
-    
-    const rolesList = roles.slice(0, 5).join(", ") + (roles.length > 5 ? `... (and ${roles.length - 5} more)` : "");
-
-
-    const userInfoEmbed = new EmbedBuilder()
-      .setColor(target.displayHexColor === '#000000' ? '#956FE6' : target.displayHexColor)
-      .setTitle(`👤 ${target.user.tag} 정보`)
-      .setThumbnail(target.user.displayAvatarURL({ dynamic: true }))
-      .addFields(
-        { name: "디스코드 ID", value: codeBlock(target.id), inline: false },
-        { name: "봇 계정 여부", value: target.user.bot ? "✅ Yes" : "❌ No", inline: true },
-        { name: "현재 상태", value: target.presence?.status || "offline", inline: true },
-        { name: "\u200B", value: "\u200B", inline: true },
-
-        { 
-          name: "서버 가입일", 
-          value: `<t:${Math.floor(target.joinedTimestamp / 1000)}:F>\n(<t:${Math.floor(target.joinedTimestamp / 1000)}:R>)`, 
-          inline: true 
-        },
-        { 
-          name: "계정 생성일", 
-          value: `<t:${Math.floor(target.user.createdTimestamp / 1000)}:F>\n(<t:${Math.floor(target.user.createdTimestamp / 1000)}:R>)`, 
-          inline: true 
-        },
-        { name: "\u200B", value: "\u200B", inline: true },
-
-        { 
-          name: `보유 역할 (${roles.length})`, 
-          value: roles.length > 0 ? rolesList : "없음", 
-          inline: false 
-        }
-      );
-    return message.reply({ embeds: [userInfoEmbed] });
-  }
-  
-  // =====================================================
-  // PANEL SETUP COMMANDS (Design Improved) (유지 완료)
+  // PANEL SETUP COMMANDS (Admin Only)
   // =====================================================
 
   // ========== !setupjoin (Rules Panel) ==========
   if (cmd === "!setupjoin") {
     const joinEmbed = new EmbedBuilder()
-      .setColor("#84CC16")
-      .setImage(WELCOME_BANNER_URL)
-      .setTitle("✨ **Welcome to the Gosu General TV Community!**")
+      .setColor("#3498db")
+      .setTitle("🌟 Welcome to the Gosu General TV Community!")
       .setDescription(
         [
-          "Welcome to the official Gosu General TV Discord Server! Here you can join events, get updates, talk with the community, and enjoy the content together.",
+          "👋 **Welcome to the official Gosu General TV Discord Server!**",
+          "",
+          "Here you can join events, get updates, talk with the community, and enjoy the content together.",
           "Please make sure to read the rules below and press **Agree To Rules** to gain full access.",
-          "---",
-          "📜 **Server Rules**",
-          "1. **Be Respectful:** Treat everyone kindly. No harassment, bullying, or toxicity.",
-          "2. **No Spam:** Avoid repeated messages, emoji spam, or unnecessary mentions.",
-          "3. **No NSFW or Harmful Content**",
-          "4. **No Advertising**",
-          "5. **Keep it Clean:** No hate speech, slurs, or extreme drama.",
-          "6. **Follow Staff Instructions**",
-          "---",
-          "Press **Agree To Rules** below to enter and enjoy the server! 🎊"
-        ].join('\n')
+          "",
+          "----------------------------------------------",
+          "### 📜 **Server Rules**",
+          "",
+          "✨ **1 — Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.",
+          "",
+          "✨ **2 — No Spam**\nAvoid repeated messages, emoji spam, or unnecessary mentions.",
+          "",
+          "✨ **3 — No NSFW or Harmful Content**\nNo adult content, gore, or anything unsafe.",
+          "",
+          "✨ **4 — No Advertising**\nNo links, promos, or self-promotion without staff approval.",
+          "",
+          "✨ **5 — Keep it Clean**\nNo hate speech, slurs, or extreme drama.",
+          "",
+          "✨ **6 — Follow Staff Instructions**\nIf staff gives instructions, please follow them.",
+          "",
+          "----------------------------------------------",
+          "Press **Agree To Rules** below to enter and enjoy the server! 🎉",
+        ].join("\n")
       );
 
-    const row = new ActionRowBuilder().addComponents(
+    const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("agree_rules")
         .setLabel("Agree To Rules")
         .setStyle(ButtonStyle.Success)
-        .setEmoji("✅")
     );
-    
-    await message.channel.send({ embeds: [joinEmbed], components: [row] });
+
+    // 1단계: 이미지를 '첨부 파일'로 먼저 전송
+    await message.channel.send({ 
+        files: [{ attachment: RULES_BANNER_URL, name: 'must_read.png' }]
+    }); 
+    
+    // 2단계: 이어서 임베드와 버튼을 전송합니다.
+    await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
     return;
   }
 
-  // ========== !welcome (Info Panel) ==========
+  // ========== !welcome (Welcome Panel) ==========
   if (cmd === "!welcome") {
     const welcomeEmbed = new EmbedBuilder()
-      .setColor("#956FE6") 
-      .setImage(WELCOME_BANNER_URL)
-      .setTitle("✨ **Welcome to the Gosu General TV Discord Server!**")
+      .setColor("#1e90ff")
+      .setTitle("✨ Welcome to the Gosu General TV Discord Server!")
       .setDescription(
         [
-          "Greetings, adventurer!",
-          "Welcome to the Gosu General TV community server. Here you can hang out with the community, share plays, ask questions, receive announcements, and join events together.",
-          "Please make sure to read our server rules in the rules/join channel, and press **Agree To Rules** there to gain full access.",
+          "Greetings, adventurer!", 
+          "",
+          "Welcome to the **Gosu General TV** community server.",
+          "Here you can hang out with the community, share plays, ask questions,",
+          "receive announcements, and join events together.",
+          "",
           "---",
-          "📌 **What you can find here**",
-          "* Live stream notifications & announcements",
-          "* Game discussions and guides",
-          "* Clips, highlights, and community content",
-          "* Chill chat with other Gosu viewers",
+          "### 📌 What you can find here",
+          "• Live stream notifications & announcements",
+          "• Game discussions and guides",
+          "• Clips, highlights, and community content",
+          "• Chill chat with other Gosu viewers",
+          "",
           "---",
-          "🔗 **Official Links**",
-          "YouTube — <https://youtube.com/@GosuGeneral>",
-          "Enjoy your stay and have fun! 💙"
-        ].join('\n')
+          "Enjoy your stay and have fun! 💙",
+        ].join("\n")
+      )
+      .addFields(
+        {
+          name: "Official Links", 
+          value: "📺 [YouTube](https://youtube.com/@Teamgosu)\n🟣 [Twitch](https://www.twitch.tv/gosugeneraltv)",
+          inline: true, 
+        },
+        {
+          name: "Discord Invite Link", 
+          value: "🔗 [Invite Link](https://discord.gg/gosugeneral)",
+          inline: true, 
+        }
       );
 
-    const row = new ActionRowBuilder().addComponents(
+    const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setLabel("YouTube Channel")
         .setStyle(ButtonStyle.Link)
-        .setURL("https://youtube.com/@GosuGeneral")
-        .setEmoji("▶️"),
-
+        .setURL("https://youtube.com/@Teamgosu"), 
       new ButtonBuilder()
-        .setLabel("Discord Invite Link")
+        .setLabel("Twitch Channel")
         .setStyle(ButtonStyle.Link)
-        .setURL("YOUR_DISCORD_INVITE_LINK_HERE") 
-        .setEmoji("🔗")
+        .setURL("https://www.twitch.tv/gosugeneraltv"), 
+      new ButtonBuilder()
+        .setLabel("Invite Link")
+        .setStyle(ButtonStyle.Link)
+        .setURL("https://discord.gg/gosugeneral")
     );
 
-    await message.channel.send({ embeds: [welcomeEmbed], components: [row] });
+    // 1단계: 이미지를 '첨부 파일'로 먼저 전송
+    await message.channel.send({ 
+        files: [{ attachment: WELCOME_BANNER_URL, name: 'welcome.png' }]
+    }); 
+
+    // 2단계: 이미지 다음에 임베드와 버튼을 전송합니다.
+    await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
     return;
   }
 
-  // ========== !color (Color Role Panel) (유지 완료) ==========
+  // ========== !color (Color Role Panel) ==========
   if (cmd === "!color") {
     const colorEmbed = new EmbedBuilder()
-      .setColor("#F1C40F") // 노란색 계열
-      .setTitle("🎨 **Select Your Username Color**")
-      .setDescription("Choose a color for your username! Click the button corresponding to the color role you want.\n\n_Note: You can only have one color role at a time._");
+      .setColor("#FFAACD")
+      .setTitle("Color 3 Roles")
+      .setDescription(
+        [
+          "Choose one of the **Color 3** roles below.",
+          "You can only have **one** of these colors at a time.",
+          "Click a button to select or remove a color.",
+        ].join("\n")
+      );
 
     const rows = [];
-    for (let i = 0; i < COLOR_ROLES.length; i += 5) {
+    for (let i = 0; i < COLOR_ROLES.length; i += 3) {
+      const slice = COLOR_ROLES.slice(i, i + 3);
       const row = new ActionRowBuilder();
-      const chunk = COLOR_ROLES.slice(i, i + 5);
-      
-      chunk.forEach(role => {
+      slice.forEach((c) => {
         row.addComponents(
           new ButtonBuilder()
-            .setCustomId(role.customId)
-            .setLabel(role.label)
+            .setCustomId(c.customId)
+            .setEmoji(c.emoji)
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji(role.emoji)
         );
       });
       rows.push(row);
@@ -532,321 +453,350 @@ client.on("messageCreate", async (message) => {
     await message.channel.send({ embeds: [colorEmbed], components: rows });
     return;
   }
-  
-  // ========== !subscriber (Notification Panel) (유지 완료) ==========
+
+  // ========== !subscriber (Live Notification Panel - Moderator+) ==========
   if (cmd === "!subscriber") {
     const subEmbed = new EmbedBuilder()
-      .setColor("#FF0000") 
-      .setImage(NOTIFICATION_BANNER_URL)
-      .setTitle("🔔 **Live Stream Notification Setup**")
-      .setDescription(`Click the **Subscribe** button below to receive instant notifications and a ping role (${message.guild.roles.cache.get(SUB_ROLE)}) whenever the channel goes live!`);
+      .setColor("#FFCC33")
+      .setTitle("📺 Gosu General TV — Live Notifications")
+      .setDescription(
+        [
+          "If you’d like to receive alerts when **Gosu General TV** goes live or posts important announcements,",
+          "press `Subscribe / Unsubscribe` to get or remove the **Live Notifications** role.",
+          "",
+          "Note: Subscribing will temporarily replace your **Gosu** role. Press the button again to return to the Gosu role.",
+          "",
+          "Thank you for being part of the community! 💙",
+        ].join("\n")
+      );
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("sub_subscribe")
-        .setLabel("Subscribe / Unsubscribe")
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji("🛎️")
+        .setLabel("Subscribe / Unsubscribe") 
+        .setStyle(ButtonStyle.Success)
     );
 
+    // 1단계: 이미지를 '첨부 파일'로 먼저 전송
+    await message.channel.send({ 
+        files: [{ attachment: NOTIFICATION_BANNER_URL, name: 'notification_banner.png' }]
+    }); 
+
+    // 2단계: 이미지 다음에 임베드와 버튼을 전송합니다.
     await message.channel.send({ embeds: [subEmbed], components: [row] });
     return;
   }
+  
+  // =====================================================
+  // MODERATION COMMANDS (Moderator+)
+  // =====================================================
 
-  // ========== !setupmirror (Announcement Mirroring Panel) ==========
-  if (cmd === "!setupmirror") {
-    if (ANNOUNCEMENT_CHANNEL_SOURCE_ID === "YOUR_SOURCE_CHANNEL_ID_HERE" || ANNOUNCEMENT_CHANNEL_TARGET_ID === "YOUR_TARGET_CHANNEL_ID_HERE") {
-      return message.reply(`⚠️ **ERROR:** Please set **ANNOUNCEMENT_CHANNEL_SOURCE_ID** and **ANNOUNCEMENT_CHANNEL_TARGET_ID** in the code first.`);
+  // ========== !ban ==========
+  if (cmd === "!ban") {
+    const user = message.mentions.members?.first();
+    if (!user) return message.reply("Usage: `!ban @user [reason]`");
+
+    const reason = args.slice(2).join(" ") || "No reason provided";
+    try {
+      await user.ban({ reason });
+      return message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
+    } catch (err) {
+      console.error("Ban error:", err);
+      return message.reply("⚠ Failed to ban that user.");
     }
-    
-    const sourceChannel = message.guild.channels.cache.get(ANNOUNCEMENT_CHANNEL_SOURCE_ID);
-    const targetChannel = message.guild.channels.cache.get(ANNOUNCEMENT_CHANNEL_TARGET_ID);
-
-    if (!sourceChannel || !targetChannel) {
-      return message.reply(`⚠️ **ERROR:** Could not find one or both configured channels.`);
-    }
-
-    const mirrorEmbed = new EmbedBuilder()
-      .setColor("#00FF7F")
-      .setTitle("📣 Live Announcement Mirroring Setup")
-      .setDescription(
-        [
-          `✅ **원본 공지 채널 (Pingcord):** ${sourceChannel}`,
-          `➡️ **대상 라이브 알림 채널:** ${targetChannel}`,
-          `**멘션 역할:** ${message.guild.roles.cache.get(SUB_ROLE)}`,
-          "",
-          "원본 채널에 메시지가 포스팅되면, 대상 채널에 **라이브 배너와 함께** 자동으로 복사됩니다."
-        ].join('\n')
-      );
-
-    return message.reply({ embeds: [mirrorEmbed] });
   }
-  
-  // ========== !setupticket (Ticket Panel) (유지 완료) ==========
-  if (cmd === "!setupticket") {
-    if (TICKET_CATEGORY_ID === "YOUR_TICKET_CATEGORY_ID_HERE") {
-      return message.reply(`⚠️ **ERROR:** Please set **TICKET_CATEGORY_ID** in the code first.`);
+
+  // ========== !kick ==========
+  if (cmd === "!kick") {
+    const user = message.mentions.members?.first();
+    if (!user) return message.reply("Usage: `!kick @user [reason]`");
+
+    const reason = args.slice(2).join(" ") || "No reason provided";
+    try {
+      await user.kick(reason);
+      return message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
+    } catch (err) {
+      console.error("Kick error:", err);
+      return message.reply("⚠ Failed to kick that user.");
     }
-    
-    const ticketEmbed = new EmbedBuilder()
-      .setColor("#FFD700")
-      .setTitle("🎫 Create a Private Support Ticket")
-      .setDescription(
-        [
-          "If you need to contact a staff member privately for support, reporting, or an appeal, click the button below.",
-          "A new private channel will be created only visible to you and the Moderation Team."
-        ].join('\n')
-      );
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("create_ticket")
-        .setLabel("Open a Ticket")
-        .setEmoji("📩")
-        .setStyle(ButtonStyle.Primary)
-    );
-
-    await message.channel.send({ embeds: [ticketEmbed], components: [row] });
-    return;
   }
-});
 
-// =====================================================
-// ANNOUNCEMENT MIRRORING LOGIC (Live Notifications - 배너 포함)
-// =====================================================
-client.on('messageCreate', async (message) => {
-  if (message.author.bot || !message.guild) return;
+  // ========== !mute ==========
+  if (cmd === "!mute") {
+    const user = message.mentions.members?.first();
+    const minutes = parseInt(args[2]) || 10;
+    if (!user) return message.reply("Usage: `!mute @user [minutes]`");
 
-  // 설정된 공지 작성 채널에서 메시지가 오면 (Pingcord 메시지 감지)
-  if (message.channel.id === ANNOUNCEMENT_CHANNEL_SOURCE_ID) {
-    const targetChannel = message.guild.channels.cache.get(ANNOUNCEMENT_CHANNEL_TARGET_ID);
-    const liveRole = message.guild.roles.cache.get(SUB_ROLE);
+    try {
+      await user.timeout(minutes * 60 * 1000, `Muted by ${message.author.tag}`);
+      return message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
+    } catch (err) {
+      console.error("Mute error:", err);
+      return message.reply("⚠ Failed to mute that user.");
+    }
+  }
 
-    if (!targetChannel || !liveRole) {
-      console.error("Mirroring error: Target channel or Live role not found.");
-      return;
+  // ========== !unmute ==========
+  if (cmd === "!unmute") {
+    const user = message.mentions.members?.first();
+    if (!user) return message.reply("Usage: `!unmute @user`");
+
+    try {
+      await user.timeout(null, `Unmuted by ${message.author.tag}`);
+      return message.reply(`🔊 Unmuted **${user.user.tag}**.`);
+    } catch (err) {
+      console.error("Unmute error:", err);
+      return message.reply("⚠ Failed to unmute that user.");
+    }
+  }
+
+  // ========== !prune (Clear Messages) ==========
+  if (cmd === "!prune") {
+    const amount = parseInt(args[1]);
+    if (!amount || amount < 1 || amount > 100) {
+      return message.reply("Usage: `!prune 1-100`");
     }
 
     try {
-      // 1. Live Banner Embed 전송 (가장 상단에 배너와 멘션)
-      const bannerEmbed = new EmbedBuilder()
-        .setColor("#FF0000") // 빨간색 강조
-        .setImage(LIVE_BANNER_URL);
-
-      await targetChannel.send({ 
-        content: `${liveRole} **Live Stream Started!**`, 
-        embeds: [bannerEmbed]
-      });
-        
-      // 2. 원본 메시지 복사 (Pingcord가 보낸 임베드/내용)
-      const mirrorContent = {
-        content: message.content,
-        embeds: [...message.embeds],
-        files: message.attachments.map(a => a.url),
-        components: [...message.components],
-      };
-      
-      await targetChannel.send(mirrorContent);
-      
-      console.log(`Successfully mirrored message with Live Banner.`);
-
-    } catch (error) {
-      console.error("Failed to mirror message:", error);
+      await message.channel.bulkDelete(amount, true);
+      const m = await message.channel.send(`🧹 Deleted **${amount}** messages.`);
+      setTimeout(() => m.delete().catch(() => {}), 4000);
+    } catch (err) {
+      console.error("Prune error:", err);
+      return message.reply("⚠ Could not delete messages (maybe older than 14 days).");
     }
+  }
+
+  // ========== !addrole ==========
+  if (cmd === "!addrole") {
+    const target = message.mentions.members?.first();
+    if (!target) return message.reply("Usage: `!addrole @user RoleName`");
+
+    const roleName = args.slice(2).join(" ");
+    if (!roleName) return message.reply("Please provide a role name.");
+
+    const role = message.guild.roles.cache.find(
+      (r) => r.name.toLowerCase() === roleName.toLowerCase()
+    );
+    if (!role) return message.reply(`⚠ Could not find a role named **${roleName}**.`);
+
+    try {
+      await target.roles.add(role);
+      return message.reply(`✅ Added role **${role.name}** to **${target.user.tag}**.`);
+    } catch (err) {
+      console.error("Add role error:", err);
+      return message.reply("⚠ Failed to add that role.");
+    }
+  }
+
+  // ========== !removerole ==========
+  if (cmd === "!removerole") {
+    const target = message.mentions.members?.first();
+    if (!target) return message.reply("Usage: `!removerole @user RoleName`");
+
+    const roleName = args.slice(2).join(" ");
+    if (!roleName) return message.reply("Please provide a role name.");
+
+    const role = message.guild.roles.cache.find(
+      (r) => r.name.toLowerCase() === roleName.toLowerCase()
+    );
+    if (!role) return message.reply(`⚠ Could not find a role named **${roleName}**.`);
+
+    if (!target.roles.cache.has(role.id)) {
+      return message.reply(
+        `⚠ **${target.user.tag}** does not currently have the **${role.name}** role.`
+      );
+    }
+
+    try {
+      await target.roles.remove(role);
+      return message.reply(`❎ Removed role **${role.name}** from **${target.user.tag}**.`);
+    } catch (err) {
+      console.error("Remove role error:", err);
+      return message.reply("⚠ Failed to remove that role.");
+    }
+  }
+
+  // =====================================================
+  // INVITE + HELP
+  // =====================================================
+
+  // ========== !invite ==========
+  if (cmd === "!invite") {
+    return message.reply("📨 **Server Invite:** https://discord.gg/gosugeneral");
+  }
+
+  // ========== !help or /? ==========
+  if (cmd === "!help" || cmd === "/?") {
+    const help = new EmbedBuilder()
+      .setColor("#00FFFF")
+      .setTitle("Gosu Bot — Commands")
+      .setDescription(
+        [
+          "**General**",
+          "`!ping` — Check if the bot is online.",
+          "`!invite` — Show the server invite link.",
+          "",
+          "**Moderation (Moderator+)**",
+          "`!ban @user [reason]` — Ban a user.",
+          "`!kick @user [reason]` — Kick a user.",
+          "`!mute @user [minutes]` — Timeout a user.",
+          "`!unmute @user` — Remove timeout.",
+          "`!prune [1-100]` — Delete recent messages.",
+          "`!addrole @user RoleName` — Add a role to a user.",
+          "`!removerole @user RoleName` — Remove a role from a user.",
+          "`!subscriber` — Create the live notification panel.",
+          "",
+          "**Admin / Developer**",
+          "`!setupjoin` — Create the rules panel.",
+          "`!welcome` — Create the main welcome panel.",
+          "`!color` — Create the Color 3 role panel.",
+          "`!addword [단어]` — Add a word to the filter list.",
+          "`!removeword [단어]` — Remove a word from the filter list.",
+          "`!listwords` — Show the current blacklisted words.",
+          "`!reloadblacklist` — Reload the filter words from the JSON file.",
+        ].join("\n")
+      );
+
+    return message.reply({ embeds: [help] });
   }
 });
 
-
 // =====================================================
-// BUTTON INTERACTIONS (Rules + Colors + Subscribe + Ticket)
+// BUTTON INTERACTIONS (Rules + Colors + Subscribe Panel)
 // =====================================================
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  const { customId, guild, member, channel } = interaction;
-  const gosuRole = guild.roles.cache.get(GOSU_ROLE);
+  const { customId, guild, member } = interaction;
 
   // -------- Agree To Rules --------
   if (customId === "agree_rules") {
-    if (!gosuRole) {
-      await interaction.reply({ content: "Gosu Role not found. Please check configuration.", ephemeral: true });
-      return;
+    const role = guild.roles.cache.get(GOSU_ROLE);
+    if (!role) {
+      return interaction.reply({
+        content: "⚠ Member role is not configured correctly. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+
+    if (member.roles.cache.has(role.id)) {
+      return interaction.reply({
+        content: "You already have access. Enjoy the server!",
+        ephemeral: true,
+      });
     }
 
     try {
-      await member.roles.add(gosuRole);
-      await interaction.reply({ content: "✅ Rules agreed! You now have full server access.", ephemeral: true });
-    } catch (error) {
-      console.error("Error adding role on agreement:", error);
-      await interaction.reply({ content: "⚠️ Failed to grant role. Check bot permissions.", ephemeral: true });
+      await member.roles.add(role);
+      return interaction.reply({
+        content: `✅ You accepted the rules and received the **${role.name}** role. Welcome!`,
+        ephemeral: true,
+      });
+    } catch (err) {
+      console.error("Agree rules error:", err);
+      return interaction.reply({
+        content: "⚠ Failed to assign the role. Please contact staff.",
+        ephemeral: true,
+      });
     }
   }
 
-  // -------- Subscribe / Unsubscribe Toggle Button --------
+  // -------- Subscribe / Unsubscribe Toggle Button (상호 배타적 로직) --------
   if (customId === "sub_subscribe") {
     const subRole = guild.roles.cache.get(SUB_ROLE);
+    const gosuRole = guild.roles.cache.get(GOSU_ROLE);
 
-    if (!subRole) {
-      await interaction.reply({ content: "Subscriber Role not found. Please check configuration.", ephemeral: true });
-      return;
+    if (!subRole || !gosuRole) {
+      return interaction.reply({
+        content: "⚠ Subscription or Gosu role is not configured correctly. Please contact staff.",
+        ephemeral: true,
+      });
     }
 
     try {
-      if (member.roles.cache.has(subRole.id)) {
+      // 1. 현재 구독 역할(SUB_ROLE)을 가지고 있는지 확인 (-> 구독 해제)
+      if (member.roles.cache.has(SUB_ROLE)) {
+        // 2. 구독 해제 (SUB_ROLE 제거 및 GOSU_ROLE 부여)
         await member.roles.remove(subRole);
-        await interaction.reply({ content: `🔔 Unsubscribed! You will no longer receive live pings (${subRole.name}).`, ephemeral: true });
+        await member.roles.add(gosuRole);
+        return interaction.reply({
+          content: `🔕 Live notifications **unsubscribed**. Your role has been reset to **${gosuRole.name}**.`,
+          ephemeral: true,
+        });
       } else {
+        // 3. 구독 (SUB_ROLE 부여 및 GOSU_ROLE 제거)
+        // Gosu Role을 가지고 있다면 제거합니다. (상호 배타적)
+        if (member.roles.cache.has(GOSU_ROLE)) {
+          await member.roles.remove(gosuRole);
+        }
         await member.roles.add(subRole);
-        await interaction.reply({ content: `✅ Subscribed! You will now receive live pings (${subRole.name}).`, ephemeral: true });
+
+        return interaction.reply({
+          content: `✅ You are now **subscribed** to Live Notifications. Your **${gosuRole.name}** role has been replaced.`,
+          ephemeral: true,
+        });
       }
-    } catch (error) {
-      console.error("Error toggling subscribe role:", error);
-      await interaction.reply({ content: "⚠️ Failed to modify your role. Check bot permissions.", ephemeral: true });
+    } catch (err) {
+      console.error("Subscribe toggle error:", err);
+      return interaction.reply({
+        content: "⚠ Failed to update your roles. Please contact staff.",
+        ephemeral: true,
+      });
     }
   }
 
-  // -------- Color buttons --------
+  // -------- Color buttons (상호 배타적 로직) --------
   const colorConfig = COLOR_ROLES.find((c) => c.customId === customId);
   if (colorConfig) {
-    const allColorRoleIds = COLOR_ROLES.map(c => c.roleId);
-    const targetRole = guild.roles.cache.get(colorConfig.roleId);
-
-    if (!targetRole) {
-      return interaction.reply({ content: `Color role ${colorConfig.label} not found. Check configuration.`, ephemeral: true });
+    const role = guild.roles.cache.get(colorConfig.roleId);
+    if (!role) {
+      return interaction.reply({
+        content: "⚠ The color role for this button is not configured. Please contact staff.",
+        ephemeral: true,
+      });
     }
 
-    try {
-      // 1. 기존 컬러 역할 제거 (한 가지 색상만 선택 가능하도록)
-      const rolesToRemove = member.roles.cache.filter(role => allColorRoleIds.includes(role.id));
-      if (rolesToRemove.size > 0) {
-        await member.roles.remove(rolesToRemove);
-      }
-
-      // 2. 새 컬러 역할 부여
-      await member.roles.add(targetRole);
-      await interaction.reply({ content: `✅ Your username color is now set to **${colorConfig.label}**!`, ephemeral: true });
-
-    } catch (error) {
-      console.error("Error toggling color role:", error);
-      await interaction.reply({ content: "⚠️ Failed to change your color role. Check bot permissions.", ephemeral: true });
-    }
-  }
-
-  // -------- Create Ticket Button --------
-  if (customId === "create_ticket") {
-    await interaction.deferReply({ ephemeral: true });
-
-    const ticketName = `ticket-${member.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}-${Math.random().toString(36).substring(2, 6)}`;
-    
-    // 이미 열린 티켓이 있는지 확인
-    const existingTicket = guild.channels.cache.find(c => 
-      c.name.startsWith(`ticket-${member.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`) && c.parentId === TICKET_CATEGORY_ID
-    );
-
-    if (existingTicket) {
-      return interaction.editReply({ 
-        content: `⚠️ You already have an open ticket: ${existingTicket}. Please close it before opening a new one.`, 
-        ephemeral: true 
+    if (!guild.members.me.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+      return interaction.reply({
+        content: "⚠ I do not have permission to **Manage Roles**.",
+        ephemeral: true,
       });
     }
 
     try {
-      // 티켓 채널 생성
-      const ticketChannel = await guild.channels.create({
-        name: ticketName,
-        type: ChannelType.GuildText,
-        parent: TICKET_CATEGORY_ID,
-        permissionOverwrites: [
-          {
-            id: guild.id, // @everyone
-            deny: [PermissionsBitField.Flags.ViewChannel],
-          },
-          {
-            id: member.id, // 티켓 생성자
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
-          },
-          {
-            id: MOD_ROLE, // 모더레이터 역할
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
-          },
-          {
-            id: ADMIN_ROLE, // 관리자 역할
-            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
-          },
-        ],
-      });
+      const colorRoleIds = COLOR_ROLES.map((c) => c.roleId);
+      // 현재 멤버가 가지고 있는 컬러 역할들을 찾습니다.
+      const toRemove = member.roles.cache.filter((r) => colorRoleIds.includes(r.id));
 
-      // 티켓 채널에 환영 메시지 전송
-      const ticketWelcomeEmbed = new EmbedBuilder()
-        .setColor("#FFD700")
-        .setTitle(`Ticket for ${member.user.tag}`)
-        .setDescription(`Welcome ${member}, a staff member will be with you shortly.\n\nPlease explain your issue clearly.`);
-
-      const closeButton = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("close_ticket")
-          .setLabel("Close Ticket")
-          .setEmoji("🔒")
-          .setStyle(ButtonStyle.Danger)
-      );
-
-      await ticketChannel.send({ 
-        content: `${member} ${guild.roles.cache.get(MOD_ROLE)}`, 
-        embeds: [ticketWelcomeEmbed], 
-        components: [closeButton] 
-      });
-
-      // 상호작용 회신
-      await interaction.editReply({ 
-        content: `✅ Ticket created! Head over to ${ticketChannel}.`,
-        ephemeral: true 
-      });
-
-    } catch (error) {
-      console.error("Ticket creation error:", error);
-      await interaction.editReply({ 
-        content: `⚠️ Failed to create ticket: ${error.message}`,
-        ephemeral: true 
-      });
-    }
-  }
-
-  // -------- Close Ticket Button --------
-  if (customId === "close_ticket") {
-    const hasPermission = isModerator(member) || channel.name.includes(member.user.username.toLowerCase().replace(/[^a-z0-9]/g, ''));
-
-    if (!hasPermission) {
-      return interaction.reply({ content: "⚠️ Only the ticket creator or staff can close this ticket.", ephemeral: true });
-    }
-
-    await interaction.reply({ content: "🔒 Closing ticket in 5 seconds...", ephemeral: false });
-
-    setTimeout(async () => {
-      try {
-        await channel.delete();
-      } catch (error) {
-        console.error("Failed to delete ticket channel:", error);
-        await interaction.editReply({ content: "⚠️ Failed to delete channel.", ephemeral: true });
+      // 이미 이 색을 갖고 있으면 → 제거
+      if (member.roles.cache.has(role.id)) {
+        await member.roles.remove(role);
+        return interaction.reply({
+          content: `Removed color role **${role.name}**.`,
+          ephemeral: true,
+        });
       }
-    }, 5000); 
-  }
-});
 
-// =====================================================
-// GUILD MEMBER ADD (Invite Tracking Logic Removed)
-// =====================================================
-client.on('guildMemberAdd', async (member) => {
-  try {
-    const gosuRole = member.guild.roles.cache.get(GOSU_ROLE);
-    if (gosuRole) {
-      // 역할 부여 로직은 주석 처리되어 있어 수동으로 진행됩니다.
-      // await member.roles.add(gosuRole);
+      // 다른 색들 모두 제거 후 새 색 부여 (하나만 가질 수 있도록)
+      if (toRemove.size > 0) {
+        await member.roles.remove(toRemove);
+      }
+
+      await member.roles.add(role);
+      return interaction.reply({
+        content: `You now have the color role **${role.name}**.`,
+        ephemeral: true,
+      });
+    } catch (err) {
+      console.error("Color role error:", err);
+      return interaction.reply({
+        content: "⚠ Failed to update your color role. Please contact staff.",
+        ephemeral: true,
+      });
     }
-  } catch (error) {
-    console.error(`Error adding initial role to ${member.user.tag}: ${error.message}`);
   }
 });
-
 
 // --------------------
 // Login
