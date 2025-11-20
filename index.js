@@ -459,7 +459,7 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // ========== !subscriber (Live Notification Panel - Moderator+) ==========
+// ========== !subscriber (Live Notification Panel - Moderator+) ==========
   if (cmd === "!subscriber") {
     const subEmbed = new EmbedBuilder()
       .setColor("#FFCC33")
@@ -473,25 +473,21 @@ client.on("messageCreate", async (message) => {
           "",
           "Thank you for being part of the community! 💙",
         ].join("\n")
-      );
+      )
+      // ✅ 이미지 중복 출력을 방지하고 레이아웃을 깔끔하게 맞춥니다.
+      .setImage(NOTIFICATION_BANNER_URL); 
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("sub_subscribe")
-        .setLabel("Subscribe / Unsubscribe") 
+        .setLabel("Subscribe / Unsubscribe") 
         .setStyle(ButtonStyle.Success)
     );
 
-    // 1단계: 이미지를 '첨부 파일'로 먼저 전송
-    await message.channel.send({ 
-        files: [{ attachment: NOTIFICATION_BANNER_URL, name: 'notification_banner.png' }]
-    }); 
-
-    // 2단계: 이미지 다음에 임베드와 버튼을 전송합니다.
+    // ✅ 단일 메시지 전송으로 통합합니다.
     await message.channel.send({ embeds: [subEmbed], components: [row] });
     return;
   }
-  
   // =====================================================
   // MODERATION COMMANDS (Moderator+)
   // =====================================================
@@ -807,4 +803,5 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
+
 
