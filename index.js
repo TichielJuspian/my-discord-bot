@@ -26,10 +26,10 @@ const SUB_ROLE = "497654614729031681";       // Live 알림 구독 롤
 // WELCOME / RULES BANNERS
 // --------------------
 const RULES_BANNER_URL =
-  "https://cdn.discordapp.com/attachments/495719121686626323/1440889423473541312/welcome.png?ex=691fcc58&is=691e7ad8&hm=6f9265fdc7e5556f3b2f3ee4bbc77fdd1b33ce793ab3e09e85931daf9bd41087&";
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440889423473541312/welcome.png";
 
 const WELCOME_BANNER_URL =
-  "https://cdn.discordapp.com/attachments/495719121686626323/1440889423473541312/welcome.png?ex=691fcc58&is=691e7ad8&hm=6f9265fdc7e5556f3b2f3ee4bbc77fdd1b33ce793ab3e09e85931daf9bd41087&";
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440889423473541312/welcome.png";
 
 // 컬러 역할들 (역할 ID를 실제 서버 값으로 바꿔 넣으면 됨)
 const COLOR_ROLES = [
@@ -242,9 +242,7 @@ client.on("messageCreate", async (message) => {
       .addFields(
         {
           name: "📺 Official Links",
-          value: [
-            "• **YouTube** – https://youtube.com/@GosuGeneral",
-          ].join("\n"),
+          value: "• **YouTube** – https://youtube.com/@GosuGeneral",
           inline: false,
         },
         {
@@ -254,7 +252,19 @@ client.on("messageCreate", async (message) => {
         }
       );
 
-    await message.channel.send({ embeds: [welcomeEmbed] });
+    // 필요하면 버튼도 추가 (링크 버튼)
+    const buttons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("YouTube")
+        .setStyle(ButtonStyle.Link)
+        .setURL("https://youtube.com/@GosuGeneral"),
+      new ButtonBuilder()
+        .setLabel("Invite Link")
+        .setStyle(ButtonStyle.Link)
+        .setURL("https://discord.gg/gosugeneral")
+    );
+
+    await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
     return;
   }
 
@@ -678,4 +688,3 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
-
