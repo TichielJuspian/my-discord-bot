@@ -228,13 +228,31 @@ client.on("messageCreate", async (message) => {
   // 2. COMMAND LOGIC
   // ---------------------------
 
-  // ---- All !commands are auto-deleted after 1 second ----
+  // ---- All !commands are auto-deleted after 1 second (except for commands meant to stay like !ban, !kick, !mute, !unmute, !addrole, !removerole, !listwords) ----
   if (isCommand) {
-    setTimeout(() => {
-      if (!message.deleted) {
-        message.delete().catch(() => {});
-      }
-    }, 1000); 
+    // 명령어 메시지 자체를 삭제할지 여부를 결정하는 조건
+    const commandsToKeepReply = ["!ban", "!kick", "!mute", "!unmute", "!addrole", "!removerole", "!listwords"];
+    
+    // 커맨드 메시지 자체는 1초 뒤에 삭제합니다. (Moderation Log를 위해 Reply 메시지를 남김)
+    // 단, Reply가 남는 커맨드는 Reply를 남기되, 커맨드 메시지 자체는 삭제합니다.
+    if (!commandsToKeepReply.includes(cmd)) {
+        setTimeout(() => {
+            if (!message.deleted) {
+                message.delete().catch(() => {});
+            }
+        }, 1000); 
+    } else {
+        // !addrole, !removerole 등의 커맨드 메시지 자체는 지우지 않습니다. (편의를 위해 유지)
+        // 기존의 일괄 삭제 로직은 삭제합니다.
+        // 하지만 !ping, !addword 등은 여전히 1초 후 삭제됩니다.
+         setTimeout(() => {
+            if (!message.deleted) {
+                message.delete().catch(() => {});
+            }
+        }, 1000); 
+    }
+    // Note: !addrole, !removerole, !addword, !removeword, !reloadblacklist 의 reply는
+    // 각각의 명령어 블록에서 setTimeout을 제거하거나 유지함으로써 결정됩니다.
   }
 
   // ---------------------------
@@ -254,7 +272,7 @@ client.on("messageCreate", async (message) => {
   const modOnly = [
     "!ban", "!kick", "!mute", "!unmute", "!prune", 
     "!addrole", "!removerole",
-    "!addword", "!removeword", "!listwords", "!reloadblacklist" // 👈 Moderator 권한 허용
+    "!addword", "!removeword", "!listwords", "!reloadblacklist" 
   ];
   if (modOnly.includes(cmd)) {
     if (!isModerator(message.member)) {
@@ -332,7 +350,7 @@ client.on("messageCreate", async (message) => {
       )
       .setFooter({ text: "Showing the first 50 words." });
 
-    return message.reply({ embeds: [listEmbed] });
+    return message.reply({ embeds: [listEmbed] }); // Reply message is kept by default
   }
 
   // ========== !reloadblacklist (Reload from file) ==========
@@ -538,21 +556,18 @@ client.on("messageCreate", async (message) => {
     const user = message.mentions.members?.first();
     if (!user) {
       const reply = await message.reply("Usage: `!ban @user [reason]`");
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     }
 
     const reason = args.slice(2).join(" ") || "No reason provided";
     try {
       await user.ban({ reason });
       const reply = await message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     } catch (err) {
       console.error("Ban error:", err);
       const reply = await message.reply("⚠ Failed to ban that user.");
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     }
   }
 
@@ -561,21 +576,18 @@ client.on("messageCreate", async (message) => {
     const user = message.mentions.members?.first();
     if (!user) {
       const reply = await message.reply("Usage: `!kick @user [reason]`");
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     }
 
     const reason = args.slice(2).join(" ") || "No reason provided";
     try {
       await user.kick(reason);
       const reply = await message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     } catch (err) {
       console.error("Kick error:", err);
       const reply = await message.reply("⚠ Failed to kick that user.");
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     }
   }
 
@@ -585,20 +597,17 @@ client.on("messageCreate", async (message) => {
     const minutes = parseInt(args[2]) || 10;
     if (!user) {
       const reply = await message.reply("Usage: `!mute @user [minutes]`");
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     }
 
     try {
       await user.timeout(minutes * 60 * 1000, `Muted by ${message.author.tag}`);
       const reply = await message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     } catch (err) {
       console.error("Mute error:", err);
       const reply = await message.reply("⚠ Failed to mute that user.");
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     }
   }
 
@@ -607,20 +616,17 @@ client.on("messageCreate", async (message) => {
     const user = message.mentions.members?.first();
     if (!user) {
       const reply = await message.reply("Usage: `!unmute @user`");
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     }
 
     try {
       await user.timeout(null, `Unmuted by ${message.author.tag}`);
       const reply = await message.reply(`🔊 Unmuted **${user.user.tag}**.`);
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     } catch (err) {
       console.error("Unmute error:", err);
       const reply = await message.reply("⚠ Failed to unmute that user.");
-      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
-      return;
+      return; // Reply stays
     }
   }
 
@@ -636,7 +642,7 @@ client.on("messageCreate", async (message) => {
     try {
       await message.channel.bulkDelete(amount, true);
       const m = await message.channel.send(`🧹 Deleted **${amount}** messages.`);
-      setTimeout(() => m.delete().catch(() => {}), 1000);
+      setTimeout(() => m.delete().catch(() => {}), 1000); // Only the notification is deleted
     } catch (err) {
       console.error("Prune error:", err);
       const reply = await message.reply("⚠ Could not delete messages (maybe older than 14 days).");
@@ -650,14 +656,14 @@ client.on("messageCreate", async (message) => {
     const target = message.mentions.members?.first();
     if (!target) {
       const reply = await message.reply("Usage: `!addrole @user RoleName`");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
     const roleName = args.slice(2).join(" ");
     if (!roleName) {
       const reply = await message.reply("Please provide a role name.");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
@@ -666,19 +672,19 @@ client.on("messageCreate", async (message) => {
     );
     if (!role) {
       const reply = await message.reply(`⚠ Could not find a role named **${roleName}**.`);
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
     try {
       await target.roles.add(role);
       const reply = await message.reply(`✅ Added role **${role.name}** to **${target.user.tag}**.`);
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     } catch (err) {
       console.error("Add role error:", err);
       const reply = await message.reply("⚠ Failed to add that role.");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
   }
@@ -688,14 +694,14 @@ client.on("messageCreate", async (message) => {
     const target = message.mentions.members?.first();
     if (!target) {
       const reply = await message.reply("Usage: `!removerole @user RoleName`");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
     const roleName = args.slice(2).join(" ");
     if (!roleName) {
       const reply = await message.reply("Please provide a role name.");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
@@ -704,7 +710,7 @@ client.on("messageCreate", async (message) => {
     );
     if (!role) {
       const reply = await message.reply(`⚠ Could not find a role named **${roleName}**.`);
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
@@ -712,19 +718,19 @@ client.on("messageCreate", async (message) => {
       const reply = await message.reply(
         `⚠ **${target.user.tag}** does not currently have the **${role.name}** role.`
       );
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
     try {
       await target.roles.remove(role);
       const reply = await message.reply(`❎ Removed role **${role.name}** from **${target.user.tag}**.`);
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     } catch (err) {
       console.error("Remove role error:", err);
       const reply = await message.reply("⚠ Failed to remove that role.");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
   }
@@ -754,12 +760,12 @@ client.on("messageCreate", async (message) => {
           "`!kick @user [reason]` — Kick a user. (Reply stays)",
           "`!mute @user [minutes]` — Timeout a user. (Reply stays)",
           "`!unmute @user` — Remove timeout. (Reply stays)",
+          "`!addrole @user RoleName` — Add a role. (**Reply stays**)",
+          "`!removerole @user RoleName` — Remove a role. (**Reply stays**)",
           "`!prune [1-100]` — Delete recent messages. (Reply deletes after 1s)",
-          "`!addrole @user RoleName` — Add a role to a user. (Reply deletes after 1s)",
-          "`!removerole @user RoleName` — Remove a role from a user. (Reply deletes after 1s)",
             "`!addword [word]` — Add a word to the filter list. (Reply deletes after 1s)",
           "`!removeword [word]` — Remove a word from the filter list. (Reply deletes after 1s)",
-          "`!listwords` — Show the current blacklisted words.",
+          "`!listwords` — Show the current blacklisted words. (Reply stays)",
           "`!reloadblacklist` — Reload the filter words from the JSON file. (Reply deletes after 1s)",
           "",
           "**Admin / Developer**",
@@ -915,4 +921,3 @@ client.on("interactionCreate", async (interaction) => {
 // Log in
 // --------------------
 client.login(process.env.Bot_Token);
-
