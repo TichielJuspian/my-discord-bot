@@ -19,7 +19,7 @@ const client = new Client({
 });
 
 // ✅ 여기만 수정하면 됨: "Agree To Rules" 누르면 줄 역할 ID
-const MEMBER_ROLE_ID = "YOUR_MEMBER_ROLE_ID_HERE"; // 예: "1192384729384729384"
+const MEMBER_ROLE_ID = "496717793388134410"; // 예: "1192384729384729384"
 
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
@@ -166,3 +166,4 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(process.env.BOT_TOKEN);
+
