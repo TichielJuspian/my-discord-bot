@@ -22,6 +22,15 @@ const MOD_ROLE = "495727371140202506";       // Moderator
 const ADMIN_ROLE = "495718851288236032";     // Admin / Developer
 const SUB_ROLE = "497654614729031681";       // Live 알림 구독 롤
 
+// --------------------
+// WELCOME / RULES BANNERS
+// --------------------
+const RULES_BANNER_URL =
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440889423473541312/welcome.png?ex=691fcc58&is=691e7ad8&hm=6f9265fdc7e5556f3b2f3ee4bbc77fdd1b33ce793ab3e09e85931daf9bd41087&";
+
+const WELCOME_BANNER_URL =
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440889423473541312/welcome.png?ex=691fcc58&is=691e7ad8&hm=6f9265fdc7e5556f3b2f3ee4bbc77fdd1b33ce793ab3e09e85931daf9bd41087&";
+
 // 컬러 역할들 (역할 ID를 실제 서버 값으로 바꿔 넣으면 됨)
 const COLOR_ROLES = [
   {
@@ -112,19 +121,19 @@ client.on("messageCreate", async (message) => {
   const args = message.content.trim().split(/ +/g);
   const cmd = args[0]?.toLowerCase();
 
-  // ---- 모든 !명령어는 2초 후 자동으로 원본 메시지 삭제 ----
+  // ---- 모든 !명령어는 2초 후 자동 삭제 ----
   if (cmd && cmd.startsWith("!")) {
     setTimeout(() => {
       if (!message.deleted) {
         message.delete().catch(() => {});
       }
-    }, 1000); // 2000ms = 2초 (원하면 1000, 3000 등으로 바꿔도 됨)
+    }, 2000);
   }
 
   // ---------------------------
   // Developer / Admin Only Commands
   // ---------------------------
-  const adminOnly = ["!setupjoin", "!color"];
+  const adminOnly = ["!setupjoin", "!color", "!welcome"];
   if (adminOnly.includes(cmd)) {
     if (!isAdmin(message.member)) {
       return message.reply("⛔ Only **Admins/Developers** can use this command.");
@@ -156,41 +165,37 @@ client.on("messageCreate", async (message) => {
   }
 
   // =====================================================
-  // JOIN PANEL: !setupjoin
+  // JOIN / RULES PANEL: !setupjoin
   // =====================================================
-if (cmd === "!setupjoin") {
-    await message.delete().catch(() => {});
-
+  if (cmd === "!setupjoin") {
     const joinEmbed = new EmbedBuilder()
-      .setColor("#ff003c")
-      .setTitle("🌟 Welcome to the Gosu General TV Discord!")
-      .setImage(
-        "https://media.discordapp.net/attachments/495719121686626323/1440885187482353799/Gosu.png?ex=691fc867&is=691e76e7&hm=0f6717344521242a0f959d9c3cfa3ea6e10fd77aa56c1ff9a196ae574ead94f3&=&format=webp&quality=lossless&width=1223&height=288"
-      )
+      .setColor("#3498db")
+      .setTitle("🌟 Welcome to the Gosu General TV Community!")
+      .setImage(RULES_BANNER_URL)
       .setDescription(
         [
-          "🎮 **Welcome to the official Gosu General TV Community!**",
-          "Here you can chat, join events, receive updates, and be part of the community.",
+          "👋 **Welcome to the official Gosu General TV Discord Server!**",
           "",
-          "Please make sure to read the rules below and press **Agree To Rules** to gain access to all channels.",
+          "Here you can join events, get updates, talk with the community, and enjoy the content together.",
+          "Please make sure to read the rules below and press **Agree To Rules** to gain full access.",
           "",
           "----------------------------------------------",
           "### 📜 **Server Rules**",
           "",
-          "✨ **1 — Be Respectful**\nTreat everyone with respect. Toxicity, harassment, bullying, or personal attacks are not allowed.",
+          "✨ **1 — Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.",
           "",
-          "✨ **2 — No Spam**\nAvoid spamming text, emojis, images, or unnecessary mentions.",
+          "✨ **2 — No Spam**\nAvoid repeated messages, emoji spam, or unnecessary mentions.",
           "",
-          "✨ **3 — No NSFW or Harmful Content**\nAbsolutely no NSFW, gore, disturbing, or dangerous content.",
+          "✨ **3 — No NSFW or Harmful Content**\nNo adult content, gore, or anything unsafe.",
           "",
-          "✨ **4 — No Self-Promo or Ads**\nDo not advertise other servers, channels, or personal content without permission.",
+          "✨ **4 — No Advertising**\nNo links, promos, or self-promotion without staff approval.",
           "",
-          "✨ **5 — Keep Conversations Clean**\nNo hate speech, slurs, excessive drama, or discrimination.",
+          "✨ **5 — Keep it Clean**\nNo hate speech, slurs, or extreme drama.",
           "",
-          "✨ **6 — Follow Staff Instructions**\nIf staff gives a direction, follow it. If you believe something is unfair, contact staff privately.",
+          "✨ **6 — Follow Staff Instructions**\nIf staff gives instructions, please follow them.",
           "",
           "----------------------------------------------",
-          "Press **Agree To Rules** below to get access to the server. Enjoy your stay! 🎉",
+          "Press **Agree To Rules** below to enter and enjoy the server! 🎉",
         ].join("\n")
       );
 
@@ -202,15 +207,61 @@ if (cmd === "!setupjoin") {
     );
 
     await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
-}
+    return;
+  }
 
+  // =====================================================
+  // WELCOME PANEL: !welcome (Blue Protocol 스타일)
+  // =====================================================
+  if (cmd === "!welcome") {
+    const welcomeEmbed = new EmbedBuilder()
+      .setColor("#1e90ff")
+      .setTitle("✨ Welcome to the Gosu General TV Discord Server!")
+      .setImage(WELCOME_BANNER_URL)
+      .setDescription(
+        [
+          "Greetings, adventurer! 👋",
+          "",
+          "Welcome to the **Gosu General TV** community server.",
+          "Here you can hang out with the community, share plays, ask questions,",
+          "receive announcements, and join events together.",
+          "",
+          "Please make sure to read our server rules in the rules/join channel,",
+          "and press **Agree To Rules** there to gain full access.",
+          "",
+          "---",
+          "### 📌 What you can find here",
+          "• Live stream notifications & announcements",
+          "• Game discussions and guides",
+          "• Clips, highlights, and community content",
+          "• Chill chat with other Gosu viewers",
+          "",
+          "Enjoy your stay and have fun! 💙",
+        ].join("\n")
+      )
+      .addFields(
+        {
+          name: "📺 Official Links",
+          value: [
+            "• **YouTube** – https://youtube.com/@GosuGeneral",
+          ].join("\n"),
+          inline: false,
+        },
+        {
+          name: "🔗 Invite Link",
+          value: "https://discord.gg/gosugeneral",
+          inline: false,
+        }
+      );
+
+    await message.channel.send({ embeds: [welcomeEmbed] });
+    return;
+  }
 
   // =====================================================
   // COLOR PANEL: !color (Admin only)
   // =====================================================
   if (cmd === "!color") {
-    await message.delete().catch(() => {});
-
     const colorEmbed = new EmbedBuilder()
       .setColor("#FFAACD")
       .setTitle("Color 3 Roles")
@@ -238,15 +289,13 @@ if (cmd === "!setupjoin") {
     }
 
     await message.channel.send({ embeds: [colorEmbed], components: rows });
-    return message.channel.send("✅ Color role panel has been created in this channel.");
+    return;
   }
 
   // =====================================================
   // SUBSCRIBE PANEL: !subscriber (Moderator+)
   // =====================================================
   if (cmd === "!subscriber") {
-    await message.delete().catch(() => {});
-
     const subEmbed = new EmbedBuilder()
       .setColor("#FFCC33")
       .setTitle("📺 Gosu General TV — Live Notifications")
@@ -256,7 +305,7 @@ if (cmd === "!setupjoin") {
           "press `Subscribe` to get the **Live Notifications** role.",
           "",
           "If you no longer want to receive these alerts,",
-          "press `!unsubscribe` to remove the role.",
+          "type `!unsubscribe` to remove the role.",
           "",
           "Thank you for being part of the community! 💙",
         ].join("\n")
@@ -270,7 +319,7 @@ if (cmd === "!setupjoin") {
     );
 
     await message.channel.send({ embeds: [subEmbed], components: [row] });
-    return message.channel.send("✅ Live notification panel has been created in this channel.");
+    return;
   }
 
   // =====================================================
@@ -493,6 +542,7 @@ if (cmd === "!setupjoin") {
           "",
           "**Admin / Developer**",
           "`!setupjoin` — Create the rules panel.",
+          "`!welcome` — Create the main welcome panel.",
           "`!color` — Create the Color 3 role panel.",
         ].join("\n")
       );
@@ -628,6 +678,3 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.TOKEN);
-
-
-
