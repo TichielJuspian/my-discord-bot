@@ -7,11 +7,10 @@ require('dotenv').config();
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
 // .env 파일에 다음 ID들을 설정해야 합니다. (예: ADMIN_ROLE_ID="123456789012345678")
-const MEMBER_ROLE = process.env.MEMBER_ROLE_ID;         // 멤버에게 부여할 기본 역할 ID (이 코드는 'GOSU_ROLE' 대신 이 변수명을 사용합니다)
+const MEMBER_ROLE = process.env.MEMBER_ROLE_ID;         // 멤버에게 부여할 기본 역할 ID (규칙 동의 역할)
 const ADMIN_ROLE = process.env.ADMIN_ROLE_ID;           // 관리자 역할 ID
-const GOSU_ROLE = process.env.GOSU_ROLE_ID;             // '고수' 역할 ID (이전 코드와의 혼동을 막기 위해 사용하지 않지만, 필요시 설정)
 const MOD_ROLE = process.env.MOD_ROLE_ID;               // Moderation 명령어 사용 가능 역할 ID
-const SUB_ROLE = "497654614729031681";                  // 알림 구독 역할 ID (예시 ID)
+const SUB_ROLE = process.env.SUB_ROLE_ID;               // 알림 구독 역할 ID
 
 // ----------------------------------------------------
 // FILE PATH CONSTANTS
@@ -24,7 +23,7 @@ const LOG_CONFIG_FILE_PATH = 'log_config.json'; // 3단계 로그 설정을 저�
 // ---------------------------
 let BLACKLISTED_WORDS = []; // Global array for blocked words
 
-// 🔥 관리자만 필터 우회
+// 🔥 관리자/모더레이터만 필터 우회
 const FILTER_EXEMPT_ROLES = [
     ADMIN_ROLE,
     MOD_ROLE,
@@ -34,7 +33,7 @@ const FILTER_EXEMPT_ROLES = [
 // GLOBAL LOG CONFIG (3단계 세분화된 로그 시스템)
 // ----------------------------------------------------
 let LOG_CHANNELS = {
-    action: null, // User actions (join, leave, voice, role changes)
+    action: null, // User actions (join, leave, voice, role changes, message delete)
     mod: null,    // Moderation actions (ban, kick, mute, external ban)
     filter: null  // Filter hits (blacklisted words)
 };
@@ -57,8 +56,9 @@ function saveBlacklist() {
 // -------- BLACKLIST JSON 파일 로드 --------
 function loadBlacklist() {
     try {
+        // 읽어온 데이터를 소문자로 변환하여 저장
         const data = fs.readFileSync(BLACKLIST_FILE_PATH, 'utf8');
-        BLACKLISTED_WORDS = JSON.parse(data);
+        BLACKLISTED_WORDS = JSON.parse(data).map(word => String(word).toLowerCase());
         console.log(`Loaded ${BLACKLISTED_WORDS.length} blacklisted words.`);
     } catch (err) {
         if (err.code === 'ENOENT') {
@@ -114,10 +114,12 @@ function sendLog(guild, logType, embed) {
 
 // -------- 권한 확인 --------
 function hasAdminPermission(member) {
+    if (!member || !ADMIN_ROLE) return false;
     return member.roles.cache.has(ADMIN_ROLE) || member.permissions.has(PermissionsBitField.Flags.Administrator);
 }
 
 function hasModPermission(member) {
+    if (!member || !ADMIN_ROLE || !MOD_ROLE) return false;
     return member.roles.cache.has(ADMIN_ROLE) || member.roles.cache.has(MOD_ROLE) || member.permissions.has(PermissionsBitField.Flags.ManageMessages);
 }
 
@@ -132,7 +134,7 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers, 
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.MessageContent, // ❗ 명령어 읽기에 필수
         GatewayIntentBits.GuildVoiceStates, 
         GatewayIntentBits.GuildBans, 
         GatewayIntentBits.MessageReactions,
@@ -173,25 +175,19 @@ client.on("messageCreate", async (message) => {
     // 1. CHAT FILTER LOGIC (안정적인 단어 단위 필터링)
     // ---------------------------
     if (!isExempt) {
-        // 1. 정규화 및 소문자 변환
         const normalizedContent = message.content.normalize('NFC').toLowerCase();
-
-        // 2. 메시지를 띄어쓰기(공백) 기준으로 단어 배열로 분리
         const contentWords = normalizedContent.split(/\s+/).filter(w => w.length > 0);
 
         let foundWord = null;
 
         for (const word of BLACKLISTED_WORDS) {
-            // 금지어에서 특수문자를 제거하여 '순수한 금지어' 준비
             const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, '');
 
             if (!simplifiedWord) continue;
 
             for (const contentWord of contentWords) {
-                // 사용자의 단어에서도 특수문자를 제거하여 '순수한 사용자 단어' 준비
                 const simplifiedContentWord = contentWord.replace(/[^가-힣a-z0-9]/g, '');
 
-                // 순수한 사용자 단어가 순수한 금지어를 포함하는지 확인 (오탐 줄임)
                 if (simplifiedContentWord.includes(simplifiedWord)) {
                     foundWord = word;
                     break; 
@@ -222,7 +218,7 @@ client.on("messageCreate", async (message) => {
                 });
             }
 
-            // 🌟 필터 경고 메시지 (경고 메시지 자체는 7초 후 삭제)
+            // 🌟 필터 경고 메시지 (7초 후 삭제)
             const warningEmbed = new EmbedBuilder()
                 .setColor("#FF0000")
                 .setTitle("🚫 Watch Your Language!")
@@ -240,16 +236,14 @@ client.on("messageCreate", async (message) => {
     // ---------------------------
     if (!isCommand) return; 
 
-    // ---- 명령어 권한 체크 (재배치) ----
-    // Admin Only Commands
-    const adminOnly = ["!setupjoin", "!color", "!welcome", "!subscriber", "!addlog", "!deletelog", "!addactionlog", "!removeactionlog", "!addmodlog", "!removemodlog", "!addfilterlog", "!removefilterlog"];
+    // ---- 명령어 권한 체크 ----
+    const adminOnly = ["!setupjoin", "!color", "!welcome", "!subscriber", "!addactionlog", "!removeactionlog", "!addmodlog", "!removemodlog", "!addfilterlog", "!removefilterlog", "!addlog", "!deletelog"];
     if (adminOnly.includes(cmd) && !isAdmin) {
         const reply = await message.reply("⛔ Permission Denied. This command is restricted to **Admin**.");
         setTimeout(() => reply.delete().catch(() => {}), 1000);
         return;
     }
 
-    // Mod Only Commands
     const modOnly = ["!ban", "!kick", "!mute", "!unmute", "!prune", "!addword", "!removeword", "!listwords", "!reloadblacklist", "!addrole", "!removerole"];
     if (modOnly.includes(cmd) && !isMod) {
         const reply = await message.reply("⛔ Permission Denied. This command is restricted to **Moderators**.");
@@ -257,7 +251,7 @@ client.on("messageCreate", async (message) => {
         return;
     }
     
-    // 명령 실행 후 원본 메시지 삭제 (Moderation Log가 필요한 경우에만 Reply를 남기도록 수정)
+    // 명령어 메시지 자체 삭제
     const commandsToDeleteOriginal = [
         "!ping", "!invite", "!help", "/?", "!prune", 
         "!addword", "!removeword", "!reloadblacklist", 
@@ -272,12 +266,10 @@ client.on("messageCreate", async (message) => {
             }
         }, 1000); 
     }
-    // !ban, !kick, !mute, !unmute, !addrole, !removerole, !listwords 명령어는 원본 메시지를 삭제하지 않거나 (Moderation Log를 위해) 각 블록에서 개별 처리됩니다.
 
     // ---------------------------
     // ADMIN COMMANDS (LOG MANAGEMENT)
     // ---------------------------
-
     async function handleLogCommand(message, logType, enable) {
         const channelId = message.channel.id;
         const logName = {
@@ -337,7 +329,7 @@ client.on("messageCreate", async (message) => {
     // MODERATION COMMANDS (Moderator+)
     // ---------------------------
     
-    // ========== !addword (Blacklist Management) ==========
+    // ========== !addword ==========
     if (cmd === "!addword") {
         const newWord = args.slice(1).join(" ").toLowerCase().trim();
         if (!newWord) {
@@ -356,7 +348,7 @@ client.on("messageCreate", async (message) => {
         return setTimeout(() => reply.delete().catch(() => {}), 1000);
     }
 
-    // ========== !removeword (Blacklist Management) ==========
+    // ========== !removeword ==========
     if (cmd === "!removeword") {
         const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
         if (!wordToRemove) {
@@ -377,7 +369,7 @@ client.on("messageCreate", async (message) => {
         return setTimeout(() => reply.delete().catch(() => {}), 1000);
     }
     
-    // ========== !listwords (Blacklist Management) ==========
+    // ========== !listwords ==========
     if (cmd === "!listwords") {
         const words = BLACKLISTED_WORDS.length > 0 ? BLACKLISTED_WORDS.join(', ') : "The blacklist is empty.";
         const listEmbed = new EmbedBuilder()
@@ -385,18 +377,17 @@ client.on("messageCreate", async (message) => {
             .setTitle(`🚫 Current Blacklisted Words (${BLACKLISTED_WORDS.length} total)`)
             .setDescription(words.substring(0, 4096));
         await message.reply({ embeds: [listEmbed] });
-        // 원본 메시지 삭제는 건너뛰고, Reply는 유지됩니다.
         return;
     }
     
-    // ========== !reloadblacklist (Blacklist Management) ==========
+    // ========== !reloadblacklist ==========
     if (cmd === "!reloadblacklist") {
         loadBlacklist(); 
         const reply = await message.reply(`✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from blacklist.json.`);
         return setTimeout(() => reply.delete().catch(() => {}), 1000);
     }
     
-    // ========== !ban (Moderation) ==========
+    // ========== !ban ==========
     if (cmd === "!ban") {
         const user = message.mentions.members?.first();
         const reason = args.slice(2).join(" ") || "No reason provided";
@@ -424,7 +415,7 @@ client.on("messageCreate", async (message) => {
         }
     }
 
-    // ========== !kick (Moderation) ==========
+    // ========== !kick ==========
     if (cmd === "!kick") {
         const user = message.mentions.members?.first();
         const reason = args.slice(2).join(" ") || "No reason provided";
@@ -452,7 +443,7 @@ client.on("messageCreate", async (message) => {
         }
     }
 
-    // ========== !mute (Timeout) (Moderation) ==========
+    // ========== !mute (Timeout) ==========
     if (cmd === "!mute") {
         const user = message.mentions.members?.first();
         const minutes = parseInt(args[2]) || 10;
@@ -480,7 +471,7 @@ client.on("messageCreate", async (message) => {
         }
     }
 
-    // ========== !unmute (Remove Timeout) (Moderation) ==========
+    // ========== !unmute ==========
     if (cmd === "!unmute") {
         const user = message.mentions.members?.first();
         if (!user) {
@@ -507,7 +498,7 @@ client.on("messageCreate", async (message) => {
         }
     }
 
-    // ========== !prune (Clear Messages) (Moderation) ==========
+    // ========== !prune (Clear Messages) ==========
     if (cmd === "!prune") {
         const amount = parseInt(args[1]);
         if (!amount || amount < 1 || amount > 100) {
@@ -525,9 +516,7 @@ client.on("messageCreate", async (message) => {
         }
     }
     
-    // ========== !addrole / !removerole (Moderation) ==========
-    // (이전 코드의 !addrole, !removerole 로직은 복잡한 색상 역할 로직과 충돌할 수 있으므로, 간결한 일반 역할 부여/제거 로직으로 대체합니다.)
-    
+    // ========== !addrole / !removerole ==========
     async function handleRoleCommand(message, action) {
         const target = message.mentions.members?.first();
         if (!target) {
@@ -573,23 +562,18 @@ client.on("messageCreate", async (message) => {
     // PANEL SETUP COMMANDS (Admin Only)
     // ---------------------------
     
-    // (패널 설정 명령어는 이전 코드에서 복사하신 것과 동일한 로직으로 유지합니다. 역할 ID만 위에 선언된 MEMBER_ROLE, SUB_ROLE 등을 사용합니다.)
-    
-    // NOTE: IMAGE URLS - 이 URL들은 고객님의 디스코드 서버 ID를 포함하고 있으므로, 봇이 파일을 찾지 못할 경우 이미지가 깨질 수 있습니다.
-    // 만약 이미지가 깨지면 고객님 서버의 채널에 이미지를 업로드하고, 그 이미지의 URL로 교체해야 합니다.
-    
     const RULES_BANNER_URL = "https://cdn.discordapp.com/attachments/495719121686626323/1440992642761752656/must_read.png?ex=69202c7a&is=691edafa&hm=0dd8a2b0a189b4bec6947c05877c17b0b9408dd8f99cb7eee8de4336122f67d4&";
     const WELCOME_BANNER_URL = "https://cdn.discordapp.com/attachments/495719121686626323/1440988230492225646/welcome.png?ex=6920285e&is=691ed6de&hm=74ea90a10d279092b01dcccfaf0fd40fbbdf78308606f362bf2fe15e20c64b86&";
     const NOTIFICATION_BANNER_URL = "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c985f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
 
     const COLOR_ROLES = [
-        // Role IDs must be modified!
-        { customId: "color_icey", emoji: "❄️", label: "~ icey azure ~", roleId: process.env.ICEY_AZURE_ROLE_ID || "ICEY_AZURE_ROLE_ID" },
-        { customId: "color_candy", emoji: "🍭", label: "~ candy ~", roleId: process.env.CANDY_ROLE_ID || "CANDY_ROLE_ID" },
-        { customId: "color_lilac", emoji: "🌸", label: "~ lilac ~", roleId: process.env.LILAC_ROLE_ID || "LILAC_ROLE_ID" },
-        { customId: "color_blush", emoji: "❤️", label: "~ blush ~", roleId: process.env.BLUSH_ROLE_ID || "BLUSH_ROLE_ID" },
-        { customId: "color_bubblegum", emoji: "🍥", label: "~ bubblegum ~", roleId: process.env.BUBBLEGUM_ROLE_ID || "BUBBLEGUM_ROLE_ID" },
-        { customId: "color_chocolate", emoji: "🍫", label: "~ chocolate ~", roleId: process.env.CHOCOLATE_ROLE_ID || "CHOCOLATE_ROLE_ID" },
+        // Role IDs must be modified! (.env 변수를 사용합니다)
+        { customId: "color_icey", emoji: "❄️", label: "~ icey azure ~", roleId: process.env.ICEY_AZURE_ROLE_ID },
+        { customId: "color_candy", emoji: "🍭", label: "~ candy ~", roleId: process.env.CANDY_ROLE_ID },
+        { customId: "color_lilac", emoji: "🌸", label: "~ lilac ~", roleId: process.env.LILAC_ROLE_ID },
+        { customId: "color_blush", emoji: "❤️", label: "~ blush ~", roleId: process.env.BLUSH_ROLE_ID },
+        { customId: "color_bubblegum", emoji: "🍥", label: "~ bubblegum ~", roleId: process.env.BUBBLEGUM_ROLE_ID },
+        { customId: "color_chocolate", emoji: "🍫", label: "~ chocolate ~", roleId: process.env.CHOCOLATE_ROLE_ID },
     ];
 
 
@@ -703,7 +687,7 @@ client.on("messageCreate", async (message) => {
                     "If you’d like to receive alerts when **Gosu General TV** goes live or posts important announcements,",
                     "press `Subscribe / Unsubscribe` to get or remove the **Live Notifications** role.",
                     "",
-                    "Note: Subscribing will temporarily replace your **Gosu** role. Press the button again to return to the Gosu role.",
+                    "Note: Subscribing will temporarily replace your **Member** role. Press the button again to return to the Member role.",
                     "",
                     "Thank you for being part of the community! 💙",
                 ].join("\n")
@@ -753,7 +737,7 @@ client.on("messageCreate", async (message) => {
                     "",
                     "**Admin / Developer (Log & Panel Setup)**",
                     "`!addlog` / `!deletelog` — Set/unset ALL logs to the current channel.",
-                    "`!addactionlog` / `!removeactionlog` — Activity logs (Join, Leave, Voice, Role).",
+                    "`!addactionlog` / `!removeactionlog` — Activity logs (Join, Leave, Voice, Role, Msg Delete).",
                     "`!addmodlog` / `!removemodlog` — Moderation logs (Kick, Ban, Mute).",
                     "`!addfilterlog` / `!removefilterlog` — Filter hit logs.",
                     "`!setupjoin` / `!welcome` / `!subscriber` / `!color` — Panel setup.",
@@ -774,7 +758,7 @@ client.on("interactionCreate", async (interaction) => {
 
     // -------- Agree To Rules (MEMBER_ROLE 부여) --------
     if (customId === "agree_rules") {
-        const role = guild.roles.cache.get(MEMBER_ROLE); // MEMBER_ROLE 사용
+        const role = guild.roles.cache.get(MEMBER_ROLE); 
         if (!role) {
             return interaction.reply({ content: "⚠ Member role is not configured correctly. Please contact staff.", ephemeral: true, });
         }
@@ -795,7 +779,7 @@ client.on("interactionCreate", async (interaction) => {
     // -------- Subscribe / Unsubscribe Toggle Button (SUB_ROLE, MEMBER_ROLE 상호 배타적 토글) --------
     if (customId === "sub_subscribe") {
         const subRole = guild.roles.cache.get(SUB_ROLE);
-        const memberRole = guild.roles.cache.get(MEMBER_ROLE); // MEMBER_ROLE 사용
+        const memberRole = guild.roles.cache.get(MEMBER_ROLE); 
 
         if (!subRole || !memberRole) {
             return interaction.reply({ content: "⚠ Subscription or Member role is not configured correctly. Please contact staff.", ephemeral: true, });
@@ -895,7 +879,7 @@ client.on("guildMemberRemove", async (member) => {
     const leaveEmbed = new EmbedBuilder()
         .setColor("#FF0000")
         .setTitle("🔴 Member Left")
-        .setAuthor({ name: user.tag, iconURL: user.user.displayAvatarURL() }) 
+        .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() }) 
         .setDescription(`**@${user.tag}** left the server.`)
         .setTimestamp();
     sendLog(member.guild, 'action', leaveEmbed);
