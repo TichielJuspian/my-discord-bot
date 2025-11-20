@@ -1,7 +1,7 @@
-// ===============================
+// =====================================================
 // Gosu Custom Discord Bot (Final Build - All Features Merged)
 // Discord.js v14
-// ===================================
+// =====================================================
 
 require("dotenv").config();
 const {
@@ -24,10 +24,10 @@ const BLACKLIST_FILE_PATH = 'blacklist.json';
 // ----------------------------------------------------
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
-const GOSU_ROLE = "496717793388134410";      // Main Gosu Role (Given after Agree To Rules)
-const MOD_ROLE = "495727371140202506";       // Moderator Role
-const ADMIN_ROLE = "495718851288236032";     // Admin / Developer Role
-const SUB_ROLE = "497654614729031681";       // Live Notification Subscriber Role
+const GOSU_ROLE = "496717793388134410";      // Main Gosu Role (규칙 동의 후 부여되는 기본 역할 ID)
+const MOD_ROLE = "495727371140202506";       // Moderator Role (관리 및 필터 면제 역할 ID)
+const ADMIN_ROLE = "495718851288236032";     // Admin / Developer Role (최고 관리자 및 필터 면제 역할 ID)
+const SUB_ROLE = "497654614729031681";       // Live Notification Subscriber Role (알림 역할 ID)
 
 // ----------------------------------------------------
 // CHAT FILTER CONFIG
@@ -40,7 +40,7 @@ const FILTER_EXEMPT_ROLES = [
 ];
 
 // ----------------------------------------------------
-// Helper: Function to save JSON file (Called automatically when array changes)
+// Helper: Function to save JSON file
 // ----------------------------------------------------
 function saveBlacklist() {
     try {
@@ -54,7 +54,7 @@ function saveBlacklist() {
 }
 
 // ----------------------------------------------------
-// Helper: Function to load JSON file (Called on bot start or reload command)
+// Helper: Function to load JSON file
 // ----------------------------------------------------
 function loadBlacklist() {
     try {
@@ -79,7 +79,7 @@ loadBlacklist();
 
 
 // ----------------------------------------------------
-// WELCOME / RULES / NOTIFICATION BANNERS
+// WELCOME / RULES / NOTIFICATION BANNERS (Image URLs)
 // ----------------------------------------------------
 const RULES_BANNER_URL =
   "https://cdn.discordapp.com/attachments/495719121686626323/1440992642761752656/must_read.png?ex=69202c7a&is=691edafa&hm=0dd8a2b0a189b4bec6947c05877c17b0b9408dd8f99cb7eee8de4336122f67d4&";
@@ -130,7 +130,7 @@ const COLOR_ROLES = [
 ];
 
 // --------------------
-// Client
+// Client Initialization
 // --------------------
 const client = new Client({
   intents: [
@@ -163,21 +163,21 @@ function isAdmin(member) {
 }
 
 // --------------------
-// Bot Ready
+// Bot Ready Event
 // --------------------
 client.once("ready", () => {
   console.log(`Bot logged in as ${client.user.tag}`);
 });
 
 // =====================================================
-// PREFIX COMMANDS & CHAT FILTER
+// PREFIX COMMANDS & CHAT FILTER (FIXED LOGIC)
 // =====================================================
 
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
   // ---------------------------
-  // 0. COMMAND PARSING (Moved to top)
+  // 0. COMMAND PARSING (Moved to top for filter exemption)
   // ---------------------------
   const args = message.content.trim().split(/ +/g);
   const cmd = args[0]?.toLowerCase();
@@ -189,7 +189,7 @@ client.on("messageCreate", async (message) => {
   const content = message.content.toLowerCase();
   const member = message.member;
 
-  // Check for filter exempt roles OR if the message is a command (FIX: Exempts commands from filter)
+  // FIX: 명령어인 경우 필터링을 면제합니다.
   const isExempt = FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId)) || isCommand;
 
   if (!isExempt) {
@@ -215,9 +215,8 @@ client.on("messageCreate", async (message) => {
   }
   
   // ---------------------------
-  // 2. COMMAND LOGIC (Runs after filter check)
+  // 2. COMMAND LOGIC (Runs only if not filtered or is exempt)
   // ---------------------------
-  // Command parsing is now done at the top (cmd, args variables are already set)
 
   // ---- All !commands are auto-deleted after 1 second ----
   if (isCommand) {
@@ -233,4 +232,672 @@ client.on("messageCreate", async (message) => {
   // ---------------------------
   const adminOnly = ["!setupjoin", "!color", "!welcome", "!reloadblacklist", "!addword", "!removeword", "!listwords", "!subscriber"]; 
   if (adminOnly.includes(cmd)) {
-    if (!isAdmin(message
+    if (!isAdmin(message.member)) {
+      const reply = await message.reply("⛔ Only **Admins/Developers** can use this command.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+  }
+
+  const modOnly = [
+    "!ban", "!kick", "!mute", "!unmute", "!prune", 
+    "!addrole", "!removerole", 
+  ];
+  if (modOnly.includes(cmd)) {
+    if (!isModerator(message.member)) {
+      const reply = await message.reply("⛔ Only **Moderators** can use this command.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+  }
+
+  // ========== !PING ==========
+  if (cmd === "!ping") {
+    return message.reply("Pong!");
+  }
+  
+  // =====================================================
+  // BLACKLIST MANAGEMENT COMMANDS (Admin Only)
+  // =====================================================
+
+  // ========== !addword ==========
+  if (cmd === "!addword") {
+    const newWord = args.slice(1).join(" ").toLowerCase().trim();
+    if (!newWord) {
+      const reply = await message.reply("Usage: `!addword [word]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    if (BLACKLISTED_WORDS.includes(newWord)) {
+      const reply = await message.reply(`⚠ **${newWord}** is already in the blacklist.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    BLACKLISTED_WORDS.push(newWord);
+    saveBlacklist(); // Save to file
+    const reply = await message.reply(`✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`);
+    setTimeout(() => reply.delete().catch(() => {}), 1000);
+    return;
+  }
+
+  // ========== !removeword ==========
+  if (cmd === "!removeword") {
+    const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
+    if (!wordToRemove) {
+      const reply = await message.reply("Usage: `!removeword [word]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    const initialLength = BLACKLISTED_WORDS.length;
+    // Create a new array excluding the word
+    BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(word => word !== wordToRemove);
+    
+    if (BLACKLISTED_WORDS.length === initialLength) {
+      const reply = await message.reply(`⚠ **${wordToRemove}** was not found in the blacklist.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    saveBlacklist(); // Save to file
+    const reply = await message.reply(`✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`);
+    setTimeout(() => reply.delete().catch(() => {}), 1000);
+    return;
+  }
+
+  // ========== !listwords ==========
+  if (cmd === "!listwords") {
+    const listEmbed = new EmbedBuilder()
+      .setColor("#FF0000")
+      .setTitle(`🚫 Current Blacklisted Words (${BLACKLISTED_WORDS.length} total)`)
+      .setDescription(
+        BLACKLISTED_WORDS.length > 0
+          ? BLACKLISTED_WORDS.slice(0, 50).join(", ") + (BLACKLISTED_WORDS.length > 50 ? "..." : "")
+          : "No words currently blacklisted."
+      )
+      .setFooter({ text: "Showing the first 50 words." });
+
+    return message.reply({ embeds: [listEmbed] });
+  }
+
+  // ========== !reloadblacklist (Reload from file) ==========
+  if (cmd === "!reloadblacklist") {
+        loadBlacklist(); 
+        const reply = await message.reply(`✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from blacklist.json.`);
+        setTimeout(() => reply.delete().catch(() => {}), 1000);
+        return;
+  }
+
+
+  // =====================================================
+  // PANEL SETUP COMMANDS (Admin Only)
+  // =====================================================
+
+ // ========== !setupjoin (Rules Panel) ==========
+  if (cmd === "!setupjoin") {
+    
+    const joinEmbed = new EmbedBuilder()
+      .setColor("#1e90ff")
+      .setTitle("✨ Welcome to the Gosu General TV Community!")
+      .setDescription(
+        [
+          "Here you can join events, get updates, talk with the community, and enjoy the content together.",
+          "",        
+          "--------------------------------------------------------",
+          "### 📜 Server Rules",
+          "✨ **1 – Be Respectful**",
+          "Treat everyone kindly. No harassment, bullying, or toxicity.",
+          "",
+          "✨ **2 – No Spam**",
+          "Avoid repeated messages, emoji spam, or unnecessary mentions.",
+          "",
+          "✨ **3 – No NSFW or Harmful Content**",
+          "No adult content, gore, or anything unsafe.",
+          "",
+          "✨ **4 – No Advertising**",
+          "No links, promos, or self-promotion without staff approval.",
+          "",
+          "✨ **5 – Keep it Clean**",
+          "No hate speech, slurs, or extreme drama.",
+          "",
+          "✨ **6 – Follow Staff Instructions**",
+          "If staff gives instructions, please follow them.",
+          "--------------------------------------------------------",
+          "Press **Agree To Rules** below to enter and enjoy the server! 🎊",
+        ].join("\n")
+      );
+
+    // Create the 'Agree To Rules' button
+    const buttons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("agree_rules") // Button interaction ID
+        .setLabel("Agree To Rules")
+        .setStyle(ButtonStyle.Success)
+    );
+
+    // Step 1: Send the MUST READ image banner as an attachment first
+    await message.channel.send({ 
+        files: [{ attachment: RULES_BANNER_URL, name: 'must_read.png' }]
+    }); 
+
+    // Step 2: Send the embed and button.
+    await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
+    return;
+  }
+  // ========== !setupjoin (Rules Panel) End ==========
+
+  // ========== !welcome (Welcome Panel) ==========
+  if (cmd === "!welcome") {
+    const welcomeEmbed = new EmbedBuilder()
+      .setColor("#1e90ff")
+      .setTitle("✨ Welcome to the Gosu General TV Discord Server!")
+      .setDescription(
+        [
+          "Greetings, adventurer!", 
+          "",
+          "Welcome to the **Gosu General TV** community server.",
+          "Here you can hang out with the community, share plays, ask questions,",
+          "receive announcements, and join events together.",
+          "",
+          "---",
+          "### 📌 What you can find here",
+          "• Live stream notifications & announcements",
+          "• Game discussions and guides",
+          "• Clips, highlights, and community content",
+          "• Chill chat with other Gosu viewers",
+          "",
+          "---",
+          "Enjoy your stay and have fun! 💙",
+        ].join("\n")
+      )
+      .addFields(
+        {
+          name: "Official Links", 
+          value: "📺 [YouTube](https://youtube.com/@Teamgosu)\n🟣 [Twitch](https://www.twitch.tv/gosugeneraltv)",
+          inline: true, 
+        },
+        {
+          name: "Discord Invite Link", 
+          value: "🔗 [Invite Link](https://discord.gg/gosugeneral)",
+          inline: true, 
+        }
+      );
+
+    const buttons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("YouTube Channel")
+        .setStyle(ButtonStyle.Link)
+        .setURL("https://youtube.com/@Teamgosu"), 
+      new ButtonBuilder()
+        .setLabel("Twitch Channel")
+        .setStyle(ButtonStyle.Link)
+        .setURL("https://www.twitch.tv/gosugeneraltv"), 
+      new ButtonBuilder()
+        .setLabel("Invite Link")
+        .setStyle(ButtonStyle.Link)
+        .setURL("https://discord.gg/gosugeneral")
+    );
+
+    // Step 1: Send the WELCOME banner image as an attachment first
+    await message.channel.send({ 
+        files: [{ attachment: WELCOME_BANNER_URL, name: 'welcome.png' }]
+    }); 
+
+    // Step 2: Send the embed and buttons after the image.
+    await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
+    return;
+  }
+
+  // ========== !color (Color Role Panel) ==========
+  if (cmd === "!color") {
+    const colorEmbed = new EmbedBuilder()
+      .setColor("#FFAACD")
+      .setTitle("Color 3 Roles")
+      .setDescription(
+        [
+          "Choose one of the **Color 3** roles below.",
+          "You can only have **one** of these colors at a time.",
+          "Click a button to select or remove a color.",
+        ].join("\n")
+      );
+
+    const rows = [];
+    for (let i = 0; i < COLOR_ROLES.length; i += 3) {
+      const slice = COLOR_ROLES.slice(i, i + 3);
+      const row = new ActionRowBuilder();
+      slice.forEach((c) => {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(c.customId)
+            .setEmoji(c.emoji)
+            .setStyle(ButtonStyle.Secondary)
+        );
+      });
+      rows.push(row);
+    }
+
+    await message.channel.send({ embeds: [colorEmbed], components: rows });
+    return;
+  }
+
+  // ========== !subscriber (Live Notification Panel - Admin+) ==========
+  // Permission: Admin/Developer Only
+  if (cmd === "!subscriber") {
+    const subEmbed = new EmbedBuilder()
+      .setColor("#FFCC33")
+      .setTitle("📺 Gosu General TV — Live Notifications")
+      .setDescription(
+        [
+          "If you’d like to receive alerts when **Gosu General TV** goes live or posts important announcements,",
+          "press `Subscribe / Unsubscribe` to get or remove the **Live Notifications** role.",
+          "",
+          "Note: Subscribing will temporarily replace your **Gosu** role. Press the button again to return to the Gosu role.",
+          "",
+          "Thank you for being part of the community! 💙",
+        ].join("\n")
+      );
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("sub_subscribe")
+        .setLabel("Subscribe / Unsubscribe") 
+        .setStyle(ButtonStyle.Success)
+    );
+
+    // Step 1: Send the DON'T MISS banner image as an attachment first
+    await message.channel.send({ 
+        files: [{ attachment: NOTIFICATION_BANNER_URL, name: 'notification_banner.png' }]
+    }); 
+
+    // Step 2: Send the embed message and button.
+    await message.channel.send({ embeds: [subEmbed], components: [row] });
+    return;
+  }
+  
+  // =====================================================
+  // MODERATION COMMANDS (Moderator+)
+  // =====================================================
+
+  // ========== !ban ==========
+  if (cmd === "!ban") {
+    const user = message.mentions.members?.first();
+    if (!user) {
+      const reply = await message.reply("Usage: `!ban @user [reason]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    const reason = args.slice(2).join(" ") || "No reason provided";
+    try {
+      await user.ban({ reason });
+      const reply = await message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    } catch (err) {
+      console.error("Ban error:", err);
+      const reply = await message.reply("⚠ Failed to ban that user.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+  }
+
+  // ========== !kick ==========
+  if (cmd === "!kick") {
+    const user = message.mentions.members?.first();
+    if (!user) {
+      const reply = await message.reply("Usage: `!kick @user [reason]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    const reason = args.slice(2).join(" ") || "No reason provided";
+    try {
+      await user.kick(reason);
+      const reply = await message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    } catch (err) {
+      console.error("Kick error:", err);
+      const reply = await message.reply("⚠ Failed to kick that user.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+  }
+
+  // ========== !mute ==========
+  if (cmd === "!mute") {
+    const user = message.mentions.members?.first();
+    const minutes = parseInt(args[2]) || 10;
+    if (!user) {
+      const reply = await message.reply("Usage: `!mute @user [minutes]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    try {
+      await user.timeout(minutes * 60 * 1000, `Muted by ${message.author.tag}`);
+      const reply = await message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    } catch (err) {
+      console.error("Mute error:", err);
+      const reply = await message.reply("⚠ Failed to mute that user.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+  }
+
+  // ========== !unmute ==========
+  if (cmd === "!unmute") {
+    const user = message.mentions.members?.first();
+    if (!user) {
+      const reply = await message.reply("Usage: `!unmute @user`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    try {
+      await user.timeout(null, `Unmuted by ${message.author.tag}`);
+      const reply = await message.reply(`🔊 Unmuted **${user.user.tag}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    } catch (err) {
+      console.error("Unmute error:", err);
+      const reply = await message.reply("⚠ Failed to unmute that user.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+  }
+
+  // ========== !prune (Clear Messages) ==========
+  if (cmd === "!prune") {
+    const amount = parseInt(args[1]);
+    if (!amount || amount < 1 || amount > 100) {
+      const reply = await message.reply("Usage: `!prune 1-100`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    try {
+      await message.channel.bulkDelete(amount, true);
+      const m = await message.channel.send(`🧹 Deleted **${amount}** messages.`);
+      setTimeout(() => m.delete().catch(() => {}), 1000);
+    } catch (err) {
+      console.error("Prune error:", err);
+      const reply = await message.reply("⚠ Could not delete messages (maybe older than 14 days).");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+  }
+
+  // ========== !addrole ==========
+  if (cmd === "!addrole") {
+    const target = message.mentions.members?.first();
+    if (!target) {
+      const reply = await message.reply("Usage: `!addrole @user RoleName`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    const roleName = args.slice(2).join(" ");
+    if (!roleName) {
+      const reply = await message.reply("Please provide a role name.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    const role = message.guild.roles.cache.find(
+      (r) => r.name.toLowerCase() === roleName.toLowerCase()
+    );
+    if (!role) {
+      const reply = await message.reply(`⚠ Could not find a role named **${roleName}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    try {
+      await target.roles.add(role);
+      const reply = await message.reply(`✅ Added role **${role.name}** to **${target.user.tag}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    } catch (err) {
+      console.error("Add role error:", err);
+      const reply = await message.reply("⚠ Failed to add that role.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+  }
+
+  // ========== !removerole ==========
+  if (cmd === "!removerole") {
+    const target = message.mentions.members?.first();
+    if (!target) {
+      const reply = await message.reply("Usage: `!removerole @user RoleName`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    const roleName = args.slice(2).join(" ");
+    if (!roleName) {
+      const reply = await message.reply("Please provide a role name.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    const role = message.guild.roles.cache.find(
+      (r) => r.name.toLowerCase() === roleName.toLowerCase()
+    );
+    if (!role) {
+      const reply = await message.reply(`⚠ Could not find a role named **${roleName}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    if (!target.roles.cache.has(role.id)) {
+      const reply = await message.reply(
+        `⚠ **${target.user.tag}** does not currently have the **${role.name}** role.`
+      );
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+
+    try {
+      await target.roles.remove(role);
+      const reply = await message.reply(`❎ Removed role **${role.name}** from **${target.user.tag}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    } catch (err) {
+      console.error("Remove role error:", err);
+      const reply = await message.reply("⚠ Failed to remove that role.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
+    }
+  }
+
+  // =====================================================
+  // INVITE + HELP
+  // =====================================================
+
+  // ========== !invite ==========
+  if (cmd === "!invite") {
+    return message.reply("📨 **Server Invite:** https://discord.gg/gosugeneral");
+  }
+
+  // ========== !help or /? ==========
+  if (cmd === "!help" || cmd === "/?") {
+    const help = new EmbedBuilder()
+      .setColor("#00FFFF")
+      .setTitle("Gosu Bot — Commands")
+      .setDescription(
+        [
+          "**General**",
+          "`!ping` — Check if the bot is online.",
+          "`!invite` — Show the server invite link.",
+          "",
+          "**Moderation (Moderator+)**",
+          "`!ban @user [reason]` — Ban a user.",
+          "`!kick @user [reason]` — Kick a user.",
+          "`!mute @user [minutes]` — Timeout a user.",
+          "`!unmute @user` — Remove timeout.",
+          "`!prune [1-100]` — Delete recent messages.",
+          "`!addrole @user RoleName` — Add a role to a user.",
+          "`!removerole @user RoleName` — Remove a role from a user.",
+          "",
+          "**Admin / Developer**",
+          "`!setupjoin` — Create the rules panel.",
+          "`!welcome` — Create the main welcome panel.",
+          "`!subscriber` — Create the live notification panel.",
+          "`!color` — Create the Color 3 role panel.",
+          "`!addword [word]` — Add a word to the filter list.",
+          "`!removeword [word]` — Remove a word from the filter list.",
+          "`!listwords` — Show the current blacklisted words.",
+          "`!reloadblacklist` — Reload the filter words from the JSON file.",
+        ].join("\n")
+      );
+
+    return message.reply({ embeds: [help] });
+  }
+});
+
+// =====================================================
+// BUTTON INTERACTIONS (Rules + Colors + Subscribe Panel)
+// =====================================================
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  const { customId, guild, member } = interaction;
+
+  // -------- Agree To Rules --------
+  if (customId === "agree_rules") {
+    const role = guild.roles.cache.get(GOSU_ROLE);
+    if (!role) {
+      return interaction.reply({
+        content: "⚠ Member role is not configured correctly. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+
+    if (member.roles.cache.has(role.id)) {
+      return interaction.reply({
+        content: "You already have access. Enjoy the server!",
+        ephemeral: true,
+      });
+    }
+
+    try {
+      await member.roles.add(role);
+      return interaction.reply({
+        content: `✅ You accepted the rules and received the **${role.name}** role. Welcome!`,
+        ephemeral: true,
+      });
+    } catch (err) {
+      console.error("Agree rules error:", err);
+      return interaction.reply({
+        content: "⚠ Failed to assign the role. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // -------- Subscribe / Unsubscribe Toggle Button (Mutually Exclusive Logic) --------
+  if (customId === "sub_subscribe") {
+    const subRole = guild.roles.cache.get(SUB_ROLE);
+    const gosuRole = guild.roles.cache.get(GOSU_ROLE);
+
+    if (!subRole || !gosuRole) {
+      return interaction.reply({
+        content: "⚠ Subscription or Gosu role is not configured correctly. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+
+    try {
+      // 1. Check if member currently has the subscription role (-> Unsubscribe)
+      if (member.roles.cache.has(SUB_ROLE)) {
+        // 2. Unsubscribe (Remove SUB_ROLE and Add GOSU_ROLE back)
+        await member.roles.remove(subRole);
+        await member.roles.add(gosuRole);
+        return interaction.reply({
+          content: `🔕 Live notifications **unsubscribed**. Your role has been reset to **${gosuRole.name}**.`,
+          ephemeral: true,
+        });
+      } else {
+        // 3. Subscribe (Add SUB_ROLE and Remove GOSU_ROLE)
+        // Remove Gosu Role if they have it (mutually exclusive)
+        if (member.roles.cache.has(GOSU_ROLE)) {
+          await member.roles.remove(gosuRole);
+        }
+        await member.roles.add(subRole);
+
+        return interaction.reply({
+          content: `✅ You are now **subscribed** to Live Notifications. Your **${gosuRole.name}** role has been replaced.`,
+          ephemeral: true,
+        });
+      }
+    } catch (err) {
+      console.error("Subscribe toggle error:", err);
+      return interaction.reply({
+        content: "⚠ Failed to update your roles. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // -------- Color buttons (Mutually Exclusive Logic) --------
+  const colorConfig = COLOR_ROLES.find((c) => c.customId === customId);
+  if (colorConfig) {
+    const role = guild.roles.cache.get(colorConfig.roleId);
+    if (!role) {
+      return interaction.reply({
+        content: "⚠ The color role for this button is not configured. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+
+    if (!guild.members.me.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+      return interaction.reply({
+        content: "⚠ I do not have permission to **Manage Roles**.",
+        ephemeral: true,
+      });
+    }
+
+    try {
+      const colorRoleIds = COLOR_ROLES.map((c) => c.roleId);
+      // Find all color roles the current member has.
+      const toRemove = member.roles.cache.filter((r) => colorRoleIds.includes(r.id));
+
+      // If they already have this color -> Remove it
+      if (member.roles.cache.has(role.id)) {
+        await member.roles.remove(role);
+        return interaction.reply({
+          content: `Removed color role **${role.name}** to **${role.name}**.`,
+          ephemeral: true,
+        });
+      }
+
+      // Remove all other colors, then add the new one (ensures only one color is held)
+      if (toRemove.size > 0) {
+        await member.roles.remove(toRemove);
+      }
+
+      await member.roles.add(role);
+      return interaction.reply({
+        content: `You now have the color role **${role.name}** for **${role.name}**.`,
+        ephemeral: true,
+      });
+    } catch (err) {
+      console.error("Color role error:", err);
+      return interaction.reply({
+        content: "⚠ Failed to update your color role. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+  }
+});
+
+// --------------------
+// Log in
+// --------------------
+client.login(process.env.DISCORD_TOKEN);
