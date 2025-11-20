@@ -319,11 +319,9 @@ client.on("messageCreate", async (message) => {
       .setTitle("✨ Welcome to the Gosu General TV Community!")
       .setDescription(
         [
-          // 텍스트 중복 제거됨
-          "Welcome to the official **Gosu General TV** Discord Server!", 
+          // 텍스트 중복 제거됨          
           "Here you can join events, get updates, talk with the community, and enjoy the content together.",
-          "",
-          "Please make sure to read the rules below and press **Agree To Rules** to gain full access.",
+          "",        
           "--------------------------------------------------------",
           "### 📜 Server Rules",
           "✨ **1 – Be Respectful**",
@@ -810,3 +808,4 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
+
