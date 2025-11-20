@@ -900,4 +900,5 @@ client.on("interactionCreate", async (interaction) => {
 // --------------------
 // Log in
 // --------------------
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.Bot_Token);
+
