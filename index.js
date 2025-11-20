@@ -23,15 +23,15 @@ const ADMIN_ROLE = "495718851288236032";     // Admin / Developer
 const SUB_ROLE = "497654614729031681";       // Live 알림 구독 롤
 
 // --------------------
-// WELCOME / RULES BANNERS
+// WELCOME / RULES BANNERS (수정할 부분)
 // --------------------
 const RULES_BANNER_URL =
-  "https://cdn.discordapp.com/attachments/495719121686626323/1440889423473541312/welcome.png";
+  "https://media.discordapp.net/attachments/495719121686626323/1440975720561115176/welcome.png?ex=69201cb7&is=691ecb37&hm=65040457a65b91150a8068cd0af132d5ffa3565c540a63f79870bf3a0cb348bf&=&format=webp&quality=lossless&width=818&height=191";
 
 const WELCOME_BANNER_URL =
-  "https://cdn.discordapp.com/attachments/495719121686626323/1440889423473541312/welcome.png";
+  "https://media.discordapp.net/attachments/495719121686626323/1440975720561115176/welcome.png?ex=69201cb7&is=691ecb37&hm=65040457a65b91150a8068cd0af132d5ffa3565c540a63f79870bf3a0cb348bf&=&format=webp&quality=lossless&width=818&height=191";
 
-// 컬러 역할들 (역할 ID를 실제 서버 값으로 바꿔 넣으면 됨)
+// 컬러 역할들 (변화 없음)
 const COLOR_ROLES = [
   {
     customId: "color_icey",
@@ -653,6 +653,7 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
+
 
 
 
