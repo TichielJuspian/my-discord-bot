@@ -168,30 +168,43 @@ client.on("messageCreate", async (message) => {
 // JOIN / RULES PANEL: !setupjoin (수정 부분)
 // =====================================================
 if (cmd === "!setupjoin") {
-    // 1. 임베드에서 이미지 설정을 제거합니다.
-    const joinEmbed = new EmbedBuilder()
-      .setColor("#3498db")
-      .setTitle("🌟 Welcome to the Gosu General TV Community!")
-      // .setImage(RULES_BANNER_URL) // <--- 이 부분을 제거합니다.
-      .setDescription(
-        [
-          // ... (규칙 내용 유지)
-          "Press **Agree To Rules** below to enter and enjoy the server! 🎉",
-        ].join("\n")
-      );
+    // 1. 임베드에서 이미지 설정을 제거합니다.
+    const joinEmbed = new EmbedBuilder()
+      .setColor("#3498db")
+      .setTitle("🌟 Welcome to the Gosu General TV Community!")
+      // .setImage(RULES_BANNER_URL) // 이 부분은 위에서 이미 제거되었습니다.
+      .setDescription(
+        [
+          "👋 **Welcome to the official Gosu General TV Discord Server!**",
+          "",
+          "Here you can join events, get updates, talk with the community, and enjoy the content together.",
+          "Please make sure to read the rules below and press **Agree To Rules** to gain full access.",
+          "",
+          "----------------------------------------------",
+          "### 📜 **Server Rules**",
+          "",
+          "✨ **1 — Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.",
+          // ... (규칙 내용 유지)
+          "✨ **6 — Follow Staff Instructions**\nIf staff gives instructions, please follow them.",
+          "",
+          "----------------------------------------------",
+          "Press **Agree To Rules** below to enter and enjoy the server! 🎉",
+        ].join("\n")
+      );
 
-    const buttons = new ActionRowBuilder().addComponents(
-        // ... (버튼 내용 유지)
-    );
+    const buttons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("agree_rules")
+        .setLabel("Agree To Rules")
+        .setStyle(ButtonStyle.Success)
+    );
 
-    // 1단계: 이미지를 먼저 전송
-    await message.channel.send({ 
-        files: [{ attachment: RULES_BANNER_URL, name: 'rules_banner.png' }]
-    });
+    // 1단계: 이미지를 먼저 전송하여 미리보기를 유도합니다.
+    await message.channel.send(RULES_BANNER_URL); // ✅ RULES_BANNER_URL 사용
 
-    // 2단계: 이어서 임베드 메시지 전송
-    await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
-    return;
+    // 2단계: 이미지 다음에 임베드 메시지를 전송합니다.
+    await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
+    return;
 }
 // =====================================================
 // WELCOME PANEL: !welcome (최종 수정)
@@ -640,6 +653,7 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
+
 
 
 
