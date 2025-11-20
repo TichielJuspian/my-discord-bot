@@ -1,7 +1,7 @@
 // ===============================
-// Gosu Custom Discord Bot (Full Build)
+// Gosu Custom Discord Bot (Final Build)
 // Discord.js v14
-// ===============================
+// ===================================
 
 require("dotenv").config();
 const {
@@ -15,24 +15,26 @@ const {
   ButtonBuilder,
 } = require("discord.js");
 
-// --------------------
-// ROLE IDs (서버 ID에 맞게 수정 필요)
-// --------------------
+// ----------------------------------------------------
+// ROLE IDs (❗ 서버 ID에 맞게 수정 필수 ❗)
+// ----------------------------------------------------
 const GOSU_ROLE = "496717793388134410";      // 기본 Gosu 입장 롤 (Agree To Rules)
 const MOD_ROLE = "495727371140202506";       // Moderator
 const ADMIN_ROLE = "495718851288236032";     // Admin / Developer
 const SUB_ROLE = "497654614729031681";       // Live 알림 구독 롤
 
-// --------------------
-// WELCOME / RULES BANNERS (제공된 새 이미지 링크 적용)
-// --------------------
-const BANNER_URL =
+// ----------------------------------------------------
+// WELCOME / RULES BANNERS (최종 확정 이미지 링크)
+// ----------------------------------------------------
+// !setupjoin에 사용할 'must_read.png' 이미지 링크
+const RULES_BANNER_URL =
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440983114662023248/must_read.png?ex=6920239a&is=691ed21a&hm=d93d55c6d1b5ab8fc6be1634729ff63b30100b1673f476c2764b92c23382353e&";
+
+// !welcome에 사용할 'welcome.png' 이미지 링크
+const WELCOME_BANNER_URL =
   "https://media.discordapp.net/attachments/495719121686626323/1440975720561115176/welcome.png?ex=69201cb7&is=691ecb37&hm=65040457a65b91150a8068cd0af132d5ffa3565c540a63f79870bf3a0cb348bf&=&format=webp&quality=lossless&width=818&height=191";
 
-const RULES_BANNER_URL = BANNER_URL; // 규칙 패널 배너
-const WELCOME_BANNER_URL = BANNER_URL; // 환영 패널 배너
-
-// 컬러 역할들 (역할 ID를 실제 서버 값으로 바꿔 넣으면 됨)
+// 컬러 역할들 (역할 ID 수정 필요)
 const COLOR_ROLES = [
   {
     customId: "color_icey",
@@ -166,13 +168,12 @@ client.on("messageCreate", async (message) => {
   }
 
   // =====================================================
-  // JOIN / RULES PANEL: !setupjoin (이미지 상단 표시 적용)
+  // JOIN / RULES PANEL: !setupjoin (첨부 파일 방식으로 전송)
   // =====================================================
   if (cmd === "!setupjoin") {
     const joinEmbed = new EmbedBuilder()
       .setColor("#3498db")
       .setTitle("🌟 Welcome to the Gosu General TV Community!")
-      // .setImage(RULES_BANNER_URL) // 이미지 상단 표시를 위해 제거
       .setDescription(
         [
           "👋 **Welcome to the official Gosu General TV Discord Server!**",
@@ -191,7 +192,7 @@ client.on("messageCreate", async (message) => {
           "",
           "✨ **4 — No Advertising**\nNo links, promos, or self-promotion without staff approval.",
           "",
-          "✨ **5 — Keep it Clean**\nNo hate speech, slurs, or slurs, or extreme drama.",
+          "✨ **5 — Keep it Clean**\nNo hate speech, slurs, or extreme drama.",
           "",
           "✨ **6 — Follow Staff Instructions**\nIf staff gives instructions, please follow them.",
           "",
@@ -207,8 +208,10 @@ client.on("messageCreate", async (message) => {
         .setStyle(ButtonStyle.Success)
     );
 
-    // 1단계: 배너 이미지를 먼저 전송합니다.
-    await message.channel.send(RULES_BANNER_URL);
+    // 1단계: 이미지를 '첨부 파일'로 먼저 전송 (크게 보이도록 유도)
+    await message.channel.send({ 
+        files: [{ attachment: RULES_BANNER_URL, name: 'must_read.png' }]
+    }); 
     
     // 2단계: 이어서 임베드와 버튼을 전송합니다.
     await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
@@ -216,13 +219,12 @@ client.on("messageCreate", async (message) => {
   }
 
   // =====================================================
-  // WELCOME PANEL: !welcome (이미지 상단 표시 적용)
+  // WELCOME PANEL: !welcome (첨부 파일 방식으로 전송)
   // =====================================================
   if (cmd === "!welcome") {
     const welcomeEmbed = new EmbedBuilder()
       .setColor("#1e90ff")
       .setTitle("✨ Welcome to the Gosu General TV Discord Server!")
-      // .setImage(WELCOME_BANNER_URL) // 이미지 상단 표시를 위해 제거
       .setDescription(
         [
           "Greetings, adventurer! 👋",
@@ -262,8 +264,10 @@ client.on("messageCreate", async (message) => {
         .setURL("https://discord.gg/gosugeneral")
     );
 
-    // 1단계: 배너 이미지를 먼저 전송합니다.
-    await message.channel.send(WELCOME_BANNER_URL); 
+    // 1단계: 이미지를 '첨부 파일'로 먼저 전송 (크게 보이도록 유도)
+    await message.channel.send({ 
+        files: [{ attachment: WELCOME_BANNER_URL, name: 'welcome.png' }]
+    }); 
 
     // 2단계: 이미지 다음에 임베드와 버튼을 전송합니다.
     await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
