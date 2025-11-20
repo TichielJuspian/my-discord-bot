@@ -170,31 +170,41 @@ client.once("ready", () => {
 });
 
 // =====================================================
-// PREFIX COMMANDS & CHAT FILTER (FIXED LOGIC)
+// PREFIX COMMANDS & CHAT FILTER (FINAL LOGIC)
 // =====================================================
 
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
-  // ---------------------------
-  // 0. COMMAND PARSING (Moved to top for filter exemption)
-  // ---------------------------
-  const args = message.content.trim().split(/ +/g);
-  const cmd = args[0]?.toLowerCase();
-  const isCommand = cmd && cmd.startsWith("!"); // !로 시작하면 명령어
-  
-  // ---------------------------
-  // 1. CHAT FILTER LOGIC
   // ---------------------------
-  const content = message.content.toLowerCase();
+  // 0. COMMAND PARSING
+  // ---------------------------
+  const args = message.content.trim().split(/ +/g);
+  const cmd = args[0]?.toLowerCase();
+  const isCommand = cmd && cmd.startsWith("!"); // !로 시작하면 명령어
+  
+  // ---------------------------
+  // 1. CHAT FILTER LOGIC (초성/특수문자 우회 방지 로직 적용)
+  // ---------------------------
   const member = message.member;
 
-  // FIX: 명령어인 경우 필터링을 면제합니다.
+  // 명령어인 경우 필터링을 면제합니다.
   const isExempt = FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId)) || isCommand;
 
   if (!isExempt) {
-    // Convert message content to lowercase and compare with the blacklisted words
-    const foundWord = BLACKLISTED_WORDS.find(word => content.includes(word));
+    // 1. 정규화(NFC)를 사용하여 분리된 초성/중성을 완성된 글자로 합칩니다.
+    const normalizedContent = message.content.normalize('NFC').toLowerCase();
+    
+    // 2. 한글, 영어, 숫자 외의 모든 문자를 제거하여 띄어쓰기, 특수문자 우회를 방지합니다.
+    const simplifiedContent = normalizedContent.replace(/[^가-힣a-z0-9]/g, '');
+
+    // 블랙리스트 단어도 띄어쓰기/특수문자 제거 후 비교합니다.
+    const foundWord = BLACKLISTED_WORDS.find(word => {
+        // 블랙리스트 단어 자체에서 특수문자를 제거합니다.
+        const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, '');
+        // 메시지 내용에 블랙리스트 단어가 포함되어 있는지 확인합니다.
+        return simplifiedContent.includes(simplifiedWord);
+    });
 
     if (foundWord) {
       // Delete message
@@ -206,16 +216,16 @@ client.on("messageCreate", async (message) => {
 
       // Send warning message (삭제되지 않음)
       await message.channel.send(
-        `🚫 ${member} **Watch your language!**` 
+        `🚫 ${member} **Watch your language!**` 
       );
-      
+      
       // Stop processing other commands after a blacklisted word is found
       return; 
     }
   }
   
   // ---------------------------
-  // 2. COMMAND LOGIC (Runs only if not filtered or is exempt)
+  // 2. COMMAND LOGIC
   // ---------------------------
 
   // ---- All !commands are auto-deleted after 1 second ----
@@ -224,13 +234,14 @@ client.on("messageCreate", async (message) => {
       if (!message.deleted) {
         message.delete().catch(() => {});
       }
-    }, 1000); 
+    }, 1000); 
   }
 
   // ---------------------------
   // Permission Checks
   // ---------------------------
-  const adminOnly = ["!setupjoin", "!color", "!welcome", "!reloadblacklist", "!addword", "!removeword", "!listwords", "!subscriber"]; 
+  // Admin Only Commands
+  const adminOnly = ["!setupjoin", "!color", "!welcome", "!subscriber"]; 
   if (adminOnly.includes(cmd)) {
     if (!isAdmin(message.member)) {
       const reply = await message.reply("⛔ Only **Admins/Developers** can use this command.");
@@ -239,9 +250,11 @@ client.on("messageCreate", async (message) => {
     }
   }
 
+  // Moderator (or Admin) Commands (블랙리스트 관리 명령어 포함)
   const modOnly = [
     "!ban", "!kick", "!mute", "!unmute", "!prune", 
-    "!addrole", "!removerole", 
+    "!addrole", "!removerole",
+    "!addword", "!removeword", "!listwords", "!reloadblacklist" // 👈 Moderator 권한 허용
   ];
   if (modOnly.includes(cmd)) {
     if (!isModerator(message.member)) {
@@ -257,7 +270,7 @@ client.on("messageCreate", async (message) => {
   }
   
   // =====================================================
-  // BLACKLIST MANAGEMENT COMMANDS (Admin Only)
+  // BLACKLIST MANAGEMENT COMMANDS (Moderator+)
   // =====================================================
 
   // ========== !addword ==========
@@ -736,7 +749,7 @@ client.on("messageCreate", async (message) => {
           "`!ping` — Check if the bot is online.",
           "`!invite` — Show the server invite link.",
           "",
-          "**Moderation (Moderator+)**",
+          "**Moderation / Filter Management (Moderator+)**",
           "`!ban @user [reason]` — Ban a user. (Reply stays)",
           "`!kick @user [reason]` — Kick a user. (Reply stays)",
           "`!mute @user [minutes]` — Timeout a user. (Reply stays)",
@@ -744,16 +757,17 @@ client.on("messageCreate", async (message) => {
           "`!prune [1-100]` — Delete recent messages. (Reply deletes after 1s)",
           "`!addrole @user RoleName` — Add a role to a user. (Reply deletes after 1s)",
           "`!removerole @user RoleName` — Remove a role from a user. (Reply deletes after 1s)",
+            "`!addword [word]` — Add a word to the filter list. (Reply deletes after 1s)",
+          "`!removeword [word]` — Remove a word from the filter list. (Reply deletes after 1s)",
+          "`!listwords` — Show the current blacklisted words.",
+          "`!reloadblacklist` — Reload the filter words from the JSON file. (Reply deletes after 1s)",
           "",
           "**Admin / Developer**",
           "`!setupjoin` — Create the rules panel.",
           "`!welcome` — Create the main welcome panel.",
           "`!subscriber` — Create the live notification panel.",
           "`!color` — Create the Color 3 role panel.",
-          "`!addword [word]` — Add a word to the filter list. (Reply deletes after 1s)",
-          "`!removeword [word]` — Remove a word from the filter list. (Reply deletes after 1s)",
-          "`!listwords` — Show the current blacklisted words.",
-          "`!reloadblacklist` — Reload the filter words from the JSON file. (Reply deletes after 1s)",
+         
         ].join("\n")
       );
 
@@ -872,7 +886,7 @@ client.on("interactionCreate", async (interaction) => {
       if (member.roles.cache.has(role.id)) {
         await member.roles.remove(role);
         return interaction.reply({
-          content: `Removed color role **${role.name}** to **${role.name}**.`,
+          content: `Removed color role **${role.name}**.`,
           ephemeral: true,
         });
       }
@@ -884,7 +898,7 @@ client.on("interactionCreate", async (interaction) => {
 
       await member.roles.add(role);
       return interaction.reply({
-        content: `You now have the color role **${role.name}** for **${role.name}**.`,
+        content: `You now have the color role **${role.name}**.`,
         ephemeral: true,
       });
     } catch (err) {
