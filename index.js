@@ -256,7 +256,7 @@ client.on("messageCreate", async (message) => {
   // ========== !addword ==========
   if (cmd === "!addword") {
     const newWord = args.slice(1).join(" ").toLowerCase().trim();
-    if (!newWord) return message.reply("Usage: `!addword [단어]`");
+    if (!newWord) return message.reply("Usage: `!addword [word]`");
 
     if (BLACKLISTED_WORDS.includes(newWord)) {
       return message.reply(`⚠ **${newWord}** (은)는 이미 금지어 목록에 있습니다.`);
@@ -270,7 +270,7 @@ client.on("messageCreate", async (message) => {
   // ========== !removeword ==========
   if (cmd === "!removeword") {
     const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
-    if (!wordToRemove) return message.reply("Usage: `!removeword [단어]`");
+    if (!wordToRemove) return message.reply("Usage: `!removeword [word]`");
 
     const initialLength = BLACKLISTED_WORDS.length;
     // 해당 단어를 제외한 새 배열을 만듭니다.
@@ -808,4 +808,5 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
+
 
