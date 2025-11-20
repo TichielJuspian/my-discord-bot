@@ -1,21 +1,23 @@
 const { Client, GatewayIntentBits, PermissionsBitField, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const fs = require('fs');
-require('dotenv').config();
+// ❗ 환경 변수 로드 (BOT_TOKEN, ROLE IDs 등)
+require('dotenv').config(); 
 
 // ----------------------------------------------------
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
-const MEMBER_ROLE = process.env.MEMBER_ROLE_ID;         // 멤버에게 부여할 기본 역할 ID (예: 12345...)
+// .env 파일에 다음 ID들을 설정해야 합니다. (예: ADMIN_ROLE_ID="123456789012345678")
+const MEMBER_ROLE = process.env.MEMBER_ROLE_ID;         // 멤버에게 부여할 기본 역할 ID (이 코드는 'GOSU_ROLE' 대신 이 변수명을 사용합니다)
 const ADMIN_ROLE = process.env.ADMIN_ROLE_ID;           // 관리자 역할 ID
-const GOSU_ROLE = process.env.GOSU_ROLE_ID;             // '고수' 역할 ID (Color Command용)
+const GOSU_ROLE = process.env.GOSU_ROLE_ID;             // '고수' 역할 ID (이전 코드와의 혼동을 막기 위해 사용하지 않지만, 필요시 설정)
 const MOD_ROLE = process.env.MOD_ROLE_ID;               // Moderation 명령어 사용 가능 역할 ID
-const SUB_ROLE = "497654614729031681";                  // 알림 구독 역할 ID
+const SUB_ROLE = "497654614729031681";                  // 알림 구독 역할 ID (예시 ID)
 
 // ----------------------------------------------------
 // FILE PATH CONSTANTS
 // ----------------------------------------------------
 const BLACKLIST_FILE_PATH = 'blacklist.json';
-const LOG_CONFIG_FILE_PATH = 'log_config.json';
+const LOG_CONFIG_FILE_PATH = 'log_config.json'; // 3단계 로그 설정을 저장하는 파일
 
 // ---------------------------
 // CHAT FILTER CONFIG
@@ -25,20 +27,23 @@ let BLACKLISTED_WORDS = []; // Global array for blocked words
 // 🔥 관리자만 필터 우회
 const FILTER_EXEMPT_ROLES = [
     ADMIN_ROLE,
+    MOD_ROLE,
 ];
 
 // ----------------------------------------------------
-// GLOBAL LOG CONFIG
+// GLOBAL LOG CONFIG (3단계 세분화된 로그 시스템)
 // ----------------------------------------------------
 let LOG_CHANNELS = {
     action: null, // User actions (join, leave, voice, role changes)
-    mod: null,    // Moderation actions (ban, kick, mute)
+    mod: null,    // Moderation actions (ban, kick, mute, external ban)
     filter: null  // Filter hits (blacklisted words)
 };
 
-// ----------------------------------------------------
-// Helper: Function to save BLACKLIST JSON file
-// ----------------------------------------------------
+// =====================================================
+// HELPER FUNCTIONS (파일 관리 및 로깅)
+// =====================================================
+
+// -------- BLACKLIST JSON 파일 저장 --------
 function saveBlacklist() {
     try {
         const jsonString = JSON.stringify(BLACKLISTED_WORDS, null, 2);
@@ -49,9 +54,7 @@ function saveBlacklist() {
     }
 }
 
-// ----------------------------------------------------
-// Helper: Function to load BLACKLIST JSON file
-// ----------------------------------------------------
+// -------- BLACKLIST JSON 파일 로드 --------
 function loadBlacklist() {
     try {
         const data = fs.readFileSync(BLACKLIST_FILE_PATH, 'utf8');
@@ -61,16 +64,14 @@ function loadBlacklist() {
         if (err.code === 'ENOENT') {
             console.error(`Error: ${BLACKLIST_FILE_PATH} file not found. Creating a new one.`);
             BLACKLISTED_WORDS = [];
-            saveBlacklist(); // Create an empty file
+            saveBlacklist(); 
         } else {
             console.error("Error loading blacklist.json:", err.message);
         }
     }
 }
 
-// ----------------------------------------------------
-// Helper: Function to save LOG JSON file
-// ----------------------------------------------------
+// -------- LOG JSON 파일 저장 --------
 function saveLogConfig() {
     try {
         const jsonString = JSON.stringify(LOG_CHANNELS, null, 2);
@@ -81,9 +82,7 @@ function saveLogConfig() {
     }
 }
 
-// ----------------------------------------------------
-// Helper: Function to load LOG JSON file
-// ----------------------------------------------------
+// -------- LOG JSON 파일 로드 --------
 function loadLogConfig() {
     try {
         const data = fs.readFileSync(LOG_CONFIG_FILE_PATH, 'utf8');
@@ -93,16 +92,14 @@ function loadLogConfig() {
     } catch (err) {
         if (err.code === 'ENOENT') {
             console.error(`Error: ${LOG_CONFIG_FILE_PATH} file not found. Creating a new one.`);
-            saveLogConfig(); // Create an empty file
+            saveLogConfig(); 
         } else {
             console.error("Error loading log_config.json:", err.message);
         }
     }
 }
 
-// ----------------------------------------------------
-// Helper: Function to send Log Embeds
-// ----------------------------------------------------
+// -------- Log Embed 전송 (3가지 타입) --------
 function sendLog(guild, logType, embed) {
     const channelId = LOG_CHANNELS[logType];
     if (!channelId) return;
@@ -115,10 +112,21 @@ function sendLog(guild, logType, embed) {
     }
 }
 
+// -------- 권한 확인 --------
+function hasAdminPermission(member) {
+    return member.roles.cache.has(ADMIN_ROLE) || member.permissions.has(PermissionsBitField.Flags.Administrator);
+}
 
-// ----------------------------------------------------
-// Client Initialization (Intent error corrected)
-// ----------------------------------------------------
+function hasModPermission(member) {
+    return member.roles.cache.has(ADMIN_ROLE) || member.roles.cache.has(MOD_ROLE) || member.permissions.has(PermissionsBitField.Flags.ManageMessages);
+}
+
+
+// =====================================================
+// CLIENT INITIALIZATION & READY EVENT
+// =====================================================
+
+// -------- Client 초기화 (올바른 Intents 설정) --------
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -132,25 +140,13 @@ const client = new Client({
     partials: ['MESSAGE', 'CHANNEL', 'REACTION', 'GUILD_MEMBER'],
 });
 
-// --------------------
-// Bot Ready Event
-// --------------------
+// -------- Bot Ready Event (파일 로드) --------
 client.once("ready", () => {
     console.log(`Bot logged in as ${client.user.tag}`);
     loadBlacklist();
     loadLogConfig(); 
 });
 
-// --------------------
-// Helper: Role Checking
-// --------------------
-function hasAdminPermission(member) {
-    return member.roles.cache.has(ADMIN_ROLE);
-}
-
-function hasModPermission(member) {
-    return member.roles.cache.has(ADMIN_ROLE) || member.roles.cache.has(MOD_ROLE);
-}
 
 // =====================================================
 // COMMANDS (MESSAGE CREATE)
@@ -160,20 +156,93 @@ client.on("messageCreate", async (message) => {
     if (!message.guild) return;
 
     const args = message.content.trim().split(/\s+/);
-    const cmd = args[0].toLowerCase();
+    const cmd = args[0]?.toLowerCase();
     const member = message.member;
+    const isCommand = cmd && cmd.startsWith("!");
 
     // ---------------------------
-    // Permission Checks
+    // Permission Checks & Filter Exemption
     // ---------------------------
     const isAdmin = hasAdminPermission(member);
     const isMod = hasModPermission(member);
-    const isExempt = FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId));
+    
+    // 필터 면제: 관리자/모더레이터 역할이 있거나, 명령어(Command)인 경우
+    const isExempt = FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId)) || isCommand;
 
+    // ---------------------------
+    // 1. CHAT FILTER LOGIC (안정적인 단어 단위 필터링)
+    // ---------------------------
+    if (!isExempt) {
+        // 1. 정규화 및 소문자 변환
+        const normalizedContent = message.content.normalize('NFC').toLowerCase();
+
+        // 2. 메시지를 띄어쓰기(공백) 기준으로 단어 배열로 분리
+        const contentWords = normalizedContent.split(/\s+/).filter(w => w.length > 0);
+
+        let foundWord = null;
+
+        for (const word of BLACKLISTED_WORDS) {
+            // 금지어에서 특수문자를 제거하여 '순수한 금지어' 준비
+            const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, '');
+
+            if (!simplifiedWord) continue;
+
+            for (const contentWord of contentWords) {
+                // 사용자의 단어에서도 특수문자를 제거하여 '순수한 사용자 단어' 준비
+                const simplifiedContentWord = contentWord.replace(/[^가-힣a-z0-9]/g, '');
+
+                // 순수한 사용자 단어가 순수한 금지어를 포함하는지 확인 (오탐 줄임)
+                if (simplifiedContentWord.includes(simplifiedWord)) {
+                    foundWord = word;
+                    break; 
+                }
+            }
+            if (foundWord) break;
+        }
+
+
+        if (foundWord) {
+            // ⭐ FILTER LOG 전송
+            const filterLogEmbed = new EmbedBuilder()
+                .setColor("#8B0000") 
+                .setTitle("🚨 FILTER HIT DETECTED")
+                .setDescription(`User **@${message.author.tag}** used a blacklisted word.`)
+                .addFields(
+                    { name: "Channel", value: `${message.channel}`, inline: true },
+                    { name: "Word Used", value: `\`${foundWord}\``, inline: true },
+                    { name: "Original Message", value: `\`\`\`${message.content.substring(0, 1000)}\`\`\`` }
+                )
+                .setTimestamp();
+            sendLog(message.guild, 'filter', filterLogEmbed);
+            
+            // 메시지 삭제
+            if (!message.deleted) {
+                message.delete().catch(() => {
+                    console.error(`Failed to delete message: ${message.id}`);
+                });
+            }
+
+            // 🌟 필터 경고 메시지 (경고 메시지 자체는 7초 후 삭제)
+            const warningEmbed = new EmbedBuilder()
+                .setColor("#FF0000")
+                .setTitle("🚫 Watch Your Language!")
+                .setDescription(`**${member}**, your message contained a blacklisted word and has been removed.`);
+
+            const warningMessage = await message.channel.send({ embeds: [warningEmbed] });
+            setTimeout(() => warningMessage.delete().catch(() => {}), 7000);
+
+            return;
+        }
+    }
+    
+    // ---------------------------
+    // 2. COMMAND LOGIC
+    // ---------------------------
+    if (!isCommand) return; 
+
+    // ---- 명령어 권한 체크 (재배치) ----
     // Admin Only Commands
-    const adminOnly = ["!setupjoin", "!color", "!welcome", "!subscriber", "!addblacklist", "!removeblacklist", "!listwords", "!reloadblacklist",
-                       "!addlog", "!deletelog", "!addactionlog", "!removeactionlog", "!addmodlog", "!removemodlog", "!addfilterlog", "!removefilterlog"];
-
+    const adminOnly = ["!setupjoin", "!color", "!welcome", "!subscriber", "!addlog", "!deletelog", "!addactionlog", "!removeactionlog", "!addmodlog", "!removemodlog", "!addfilterlog", "!removefilterlog"];
     if (adminOnly.includes(cmd) && !isAdmin) {
         const reply = await message.reply("⛔ Permission Denied. This command is restricted to **Admin**.");
         setTimeout(() => reply.delete().catch(() => {}), 1000);
@@ -181,19 +250,34 @@ client.on("messageCreate", async (message) => {
     }
 
     // Mod Only Commands
-    const modOnly = ["!ban", "!kick", "!mute", "!unmute"];
+    const modOnly = ["!ban", "!kick", "!mute", "!unmute", "!prune", "!addword", "!removeword", "!listwords", "!reloadblacklist", "!addrole", "!removerole"];
     if (modOnly.includes(cmd) && !isMod) {
         const reply = await message.reply("⛔ Permission Denied. This command is restricted to **Moderators**.");
-        setTimeout(() => reply.delete().delete().catch(() => {}), 1000);
+        setTimeout(() => reply.delete().catch(() => {}), 1000);
         return;
     }
-
-    // ---------------------------
-    // ADMIN COMMANDS
-    // ---------------------------
-
-    // ========== LOG MANAGEMENT COMMANDS (Admin Only) ==========
     
+    // 명령 실행 후 원본 메시지 삭제 (Moderation Log가 필요한 경우에만 Reply를 남기도록 수정)
+    const commandsToDeleteOriginal = [
+        "!ping", "!invite", "!help", "/?", "!prune", 
+        "!addword", "!removeword", "!reloadblacklist", 
+        "!setupjoin", "!color", "!welcome", "!subscriber",
+        "!addlog", "!deletelog", "!addactionlog", "!removeactionlog", "!addmodlog", "!removemodlog", "!addfilterlog", "!removefilterlog"
+    ];
+
+    if (commandsToDeleteOriginal.includes(cmd)) {
+        setTimeout(() => {
+            if (!message.deleted) {
+                message.delete().catch(() => {});
+            }
+        }, 1000); 
+    }
+    // !ban, !kick, !mute, !unmute, !addrole, !removerole, !listwords 명령어는 원본 메시지를 삭제하지 않거나 (Moderation Log를 위해) 각 블록에서 개별 처리됩니다.
+
+    // ---------------------------
+    // ADMIN COMMANDS (LOG MANAGEMENT)
+    // ---------------------------
+
     async function handleLogCommand(message, logType, enable) {
         const channelId = message.channel.id;
         const logName = {
@@ -248,334 +332,525 @@ client.on("messageCreate", async (message) => {
         setTimeout(() => reply.delete().catch(() => {}), 1000);
         return;
     }
-
-
-    // ========== BLACKLIST MANAGEMENT COMMANDS (생략) ==========
-    if (cmd === "!addblacklist") {
-        const word = args.slice(1).join(' ').trim().toLowerCase();
-        if (!word) {
-            const reply = await message.reply("Usage: `!addblacklist <word>`");
+    
+    // ---------------------------
+    // MODERATION COMMANDS (Moderator+)
+    // ---------------------------
+    
+    // ========== !addword (Blacklist Management) ==========
+    if (cmd === "!addword") {
+        const newWord = args.slice(1).join(" ").toLowerCase().trim();
+        if (!newWord) {
+            const reply = await message.reply("Usage: `!addword [word]`");
             return setTimeout(() => reply.delete().catch(() => {}), 1000);
         }
-        if (BLACKLISTED_WORDS.includes(word)) {
-            const reply = await message.reply(`'${word}' is already in the blacklist.`);
+
+        if (BLACKLISTED_WORDS.includes(newWord)) {
+            const reply = await message.reply(`⚠ **${newWord}** is already in the blacklist.`);
             return setTimeout(() => reply.delete().catch(() => {}), 1000);
         }
-        BLACKLISTED_WORDS.push(word);
-        saveBlacklist();
-        const reply = await message.reply(`✅ Added **${word}** to the blacklist.`);
+
+        BLACKLISTED_WORDS.push(newWord);
+        saveBlacklist(); 
+        const reply = await message.reply(`✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`);
         return setTimeout(() => reply.delete().catch(() => {}), 1000);
     }
 
-    if (cmd === "!removeblacklist") {
-        const word = args.slice(1).join(' ').trim().toLowerCase();
-        if (!word) {
-            const reply = await message.reply("Usage: `!removeblacklist <word>`");
+    // ========== !removeword (Blacklist Management) ==========
+    if (cmd === "!removeword") {
+        const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
+        if (!wordToRemove) {
+            const reply = await message.reply("Usage: `!removeword [word]`");
             return setTimeout(() => reply.delete().catch(() => {}), 1000);
         }
-        const index = BLACKLISTED_WORDS.indexOf(word);
-        if (index === -1) {
-            const reply = await message.reply(`'${word}' is not in the blacklist.`);
+
+        const initialLength = BLACKLISTED_WORDS.length;
+        BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(word => word !== wordToRemove);
+        
+        if (BLACKLISTED_WORDS.length === initialLength) {
+            const reply = await message.reply(`⚠ **${wordToRemove}** was not found in the blacklist.`);
             return setTimeout(() => reply.delete().catch(() => {}), 1000);
         }
-        BLACKLISTED_WORDS.splice(index, 1);
-        saveBlacklist();
-        const reply = await message.reply(`✅ Removed **${word}** from the blacklist.`);
+
+        saveBlacklist(); 
+        const reply = await message.reply(`✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`);
         return setTimeout(() => reply.delete().catch(() => {}), 1000);
     }
-
+    
+    // ========== !listwords (Blacklist Management) ==========
     if (cmd === "!listwords") {
         const words = BLACKLISTED_WORDS.length > 0 ? BLACKLISTED_WORDS.join(', ') : "The blacklist is empty.";
         const listEmbed = new EmbedBuilder()
-            .setColor("#0099ff")
-            .setTitle("🚫 Current Blacklisted Words")
+            .setColor("#FF0000")
+            .setTitle(`🚫 Current Blacklisted Words (${BLACKLISTED_WORDS.length} total)`)
             .setDescription(words.substring(0, 4096));
         await message.reply({ embeds: [listEmbed] });
+        // 원본 메시지 삭제는 건너뛰고, Reply는 유지됩니다.
         return;
     }
     
+    // ========== !reloadblacklist (Blacklist Management) ==========
     if (cmd === "!reloadblacklist") {
-        loadBlacklist();
+        loadBlacklist(); 
         const reply = await message.reply(`✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from blacklist.json.`);
         return setTimeout(() => reply.delete().catch(() => {}), 1000);
     }
-
-
-    // ---------------------------
-    // MODERATION COMMANDS (Mod Only)
-    // ---------------------------
-
-    // !ban
+    
+    // ========== !ban (Moderation) ==========
     if (cmd === "!ban") {
-        const target = message.mentions.members.first();
-        const reason = args.slice(2).join(" ") || "No reason provided.";
-        
-        if (!target) {
+        const user = message.mentions.members?.first();
+        const reason = args.slice(2).join(" ") || "No reason provided";
+        if (!user) {
             const reply = await message.reply("Usage: `!ban @user [reason]`");
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return; 
         }
-        const user = target.user;
 
         try {
-            await target.ban({ reason });
+            await user.ban({ reason });
+            const reply = await message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
+            
             // MOD LOG 전송
             const modLogEmbed = new EmbedBuilder()
-              .setColor("#DC143C")
-              .setTitle("🔨 User Banned (Command)")
-              .setDescription(`**Moderator:** ${message.author}\n**User:** **@${user.tag}**\n**Reason:** ${reason}`)
-              .setTimestamp();
+                .setColor("#DC143C")
+                .setTitle("🔨 User Banned (Command)")
+                .setDescription(`**Moderator:** ${message.author}\n**User:** **@${user.user.tag}**\n**Reason:** ${reason}`)
+                .setTimestamp();
             sendLog(message.guild, 'mod', modLogEmbed);
 
-            const reply = await message.reply(`🔨 Banned **@${user.tag}**. Reason: ${reason}`);
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return; 
         } catch (err) {
-            console.error(err);
-            const reply = await message.reply("Failed to ban the user. Check the bot's permissions and role hierarchy.");
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            const reply = await message.reply("⚠ Failed to ban that user. Check hierarchy/permissions.");
+            return; 
         }
     }
-    
-    // !kick
-    if (cmd === "!kick") {
-        const target = message.mentions.members.first();
-        const reason = args.slice(2).join(" ") || "No reason provided.";
 
-        if (!target) {
+    // ========== !kick (Moderation) ==========
+    if (cmd === "!kick") {
+        const user = message.mentions.members?.first();
+        const reason = args.slice(2).join(" ") || "No reason provided";
+        if (!user) {
             const reply = await message.reply("Usage: `!kick @user [reason]`");
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return; 
         }
-        const user = target.user;
 
         try {
-            await target.kick(reason);
+            await user.kick(reason);
+            const reply = await message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
+
             // MOD LOG 전송
             const modLogEmbed = new EmbedBuilder()
               .setColor("#FFD700")
               .setTitle("👢 User Kicked")
-              .setDescription(`**Moderator:** ${message.author}\n**User:** **@${user.tag}**\n**Reason:** ${reason}`)
+              .setDescription(`**Moderator:** ${message.author}\n**User:** **@${user.user.tag}**\n**Reason:** ${reason}`)
               .setTimestamp();
             sendLog(message.guild, 'mod', modLogEmbed);
 
-            const reply = await message.reply(`👢 Kicked **@${user.tag}**. Reason: ${reason}`);
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return; 
         } catch (err) {
-            const reply = await message.reply("Failed to kick the user. Check the bot's permissions and role hierarchy.");
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            const reply = await message.reply("⚠ Failed to kick that user. Check hierarchy/permissions.");
+            return; 
         }
     }
 
-    // !mute (Timeout)
+    // ========== !mute (Timeout) (Moderation) ==========
     if (cmd === "!mute") {
-        const target = message.mentions.members.first();
-        const minutes = parseInt(args[2]);
-
-        if (!target || isNaN(minutes) || minutes <= 0) {
+        const user = message.mentions.members?.first();
+        const minutes = parseInt(args[2]) || 10;
+        if (!user || minutes <= 0 || isNaN(minutes)) {
             const reply = await message.reply("Usage: `!mute @user <minutes>` (e.g., `!mute @user 5`)");
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return; 
         }
-        
-        const user = target.user;
 
         try {
-            await target.timeout(minutes * 60 * 1000, `Muted by ${message.author.tag}`);
+            await user.timeout(minutes * 60 * 1000, `Muted by ${message.author.tag}`);
+            const reply = await message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
+            
             // MOD LOG 전송
             const modLogEmbed = new EmbedBuilder()
               .setColor("#4682B4")
               .setTitle("🔇 User Timed Out/Muted")
-              .setDescription(`**Moderator:** ${message.author}\n**User:** **@${user.tag}**\n**Duration:** ${minutes} minutes`)
+              .setDescription(`**Moderator:** ${message.author}\n**User:** **@${user.user.tag}**\n**Duration:** ${minutes} minutes`)
               .setTimestamp();
             sendLog(message.guild, 'mod', modLogEmbed);
 
-            const reply = await message.reply(`🔇 Muted **@${user.tag}** for ${minutes} minutes.`);
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return; 
         } catch (err) {
-            const reply = await message.reply("Failed to mute the user. Check the bot's permissions.");
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            const reply = await message.reply("⚠ Failed to mute that user. Check permissions.");
+            return; 
         }
     }
 
-    // !unmute (Remove Timeout)
+    // ========== !unmute (Remove Timeout) (Moderation) ==========
     if (cmd === "!unmute") {
-        const target = message.mentions.members.first();
-
-        if (!target) {
+        const user = message.mentions.members?.first();
+        if (!user) {
             const reply = await message.reply("Usage: `!unmute @user`");
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return; 
         }
-        
-        const user = target.user;
 
         try {
-            await target.timeout(null, `Unmuted by ${message.author.tag}`);
+            await user.timeout(null, `Unmuted by ${message.author.tag}`);
+            const reply = await message.reply(`🔊 Unmuted **${user.user.tag}**.`);
+            
             // MOD LOG 전송
             const modLogEmbed = new EmbedBuilder()
               .setColor("#7FFF00")
               .setTitle("🔊 User Untimed Out/Unmuted")
-              .setDescription(`**Moderator:** ${message.author}\n**User:** **@${user.tag}**`)
+              .setDescription(`**Moderator:** ${message.author}\n**User:** **@${user.user.tag}**`)
               .setTimestamp();
             sendLog(message.guild, 'mod', modLogEmbed);
-
-            const reply = await message.reply(`🔊 Unmuted **@${user.tag}**.`);
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            
+            return; 
         } catch (err) {
-            const reply = await message.reply("Failed to unmute the user. Check the bot's permissions.");
-            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+            const reply = await message.reply("⚠ Failed to unmute that user. Check permissions.");
+            return; 
         }
     }
 
-    // ---------------------------
-    // CHAT FILTER LOGIC (⭐ 안정화 버전: 단어 단위 필터링)
-    // ---------------------------
-    if (!isExempt) {
-        // 1. 정규화(NFC)로 초성/중성 분리 우회 방지 및 소문자 변환
-        const normalizedContent = message.content.normalize('NFC').toLowerCase();
-
-        // 2. 메시지를 띄어쓰기(공백) 기준으로 단어 배열로 분리
-        const contentWords = normalizedContent.split(/\s+/).filter(w => w.length > 0);
-
-        let foundWord = null;
-
-        // 🌟 3. 단어 배열 순회하며 필터링
-        for (const word of BLACKLISTED_WORDS) {
-            // 금지어에서 특수문자를 제거하여 '순수한 금지어'를 준비합니다.
-            const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, '');
-
-            if (!simplifiedWord) continue;
-
-            for (const contentWord of contentWords) {
-                // 사용자의 단어에서도 특수문자를 제거하여 '순수한 사용자 단어'를 준비합니다.
-                const simplifiedContentWord = contentWord.replace(/[^가-힣a-z0-9]/g, '');
-
-                // 순수한 사용자 단어가 순수한 금지어를 포함하는지 확인 (오탐 줄임)
-                if (simplifiedContentWord.includes(simplifiedWord)) {
-                    foundWord = word;
-                    break; 
-                }
-            }
-            if (foundWord) break;
+    // ========== !prune (Clear Messages) (Moderation) ==========
+    if (cmd === "!prune") {
+        const amount = parseInt(args[1]);
+        if (!amount || amount < 1 || amount > 100) {
+            const reply = await message.reply("Usage: `!prune 1-100`");
+            return setTimeout(() => reply.delete().catch(() => {}), 1000);
         }
 
+        try {
+            await message.channel.bulkDelete(amount, true);
+            const m = await message.channel.send(`🧹 Deleted **${amount}** messages.`);
+            setTimeout(() => m.delete().catch(() => {}), 1000); 
+        } catch (err) {
+            const reply = await message.reply("⚠ Could not delete messages (maybe older than 14 days).");
+            return setTimeout(() => reply.delete().catch(() => {}), 1000);
+        }
+    }
+    
+    // ========== !addrole / !removerole (Moderation) ==========
+    // (이전 코드의 !addrole, !removerole 로직은 복잡한 색상 역할 로직과 충돌할 수 있으므로, 간결한 일반 역할 부여/제거 로직으로 대체합니다.)
+    
+    async function handleRoleCommand(message, action) {
+        const target = message.mentions.members?.first();
+        if (!target) {
+            const reply = await message.reply(`Usage: \`${cmd} @user RoleName\``);
+            return;
+        }
 
-        if (foundWord) {
-            // ⭐ FILTER LOG 전송
-            const filterLogEmbed = new EmbedBuilder()
-                .setColor("#8B0000") 
-                .setTitle("🚨 FILTER HIT DETECTED")
-                .setDescription(`User **@${message.author.tag}** used a blacklisted word.`)
-                .addFields(
-                    { name: "Channel", value: `${message.channel}`, inline: true },
-                    { name: "Word Used", value: `\`${foundWord}\``, inline: true },
-                    { name: "Original Message", value: `\`\`\`${message.content.substring(0, 1000)}\`\`\`` }
-                )
-                .setTimestamp();
-            sendLog(message.guild, 'filter', filterLogEmbed);
-            
-            // 삭제
-            if (!message.deleted) {
-                message.delete().catch(() => {
-                    console.error(`Failed to delete message: ${message.id}`);
-                });
+        const roleName = args.slice(2).join(" ").trim();
+        if (!roleName) {
+            const reply = await message.reply("Please provide a role name or ID.");
+            return;
+        }
+
+        const role = message.guild.roles.cache.find(
+            (r) => r.name.toLowerCase() === roleName.toLowerCase() || r.id === roleName
+        );
+        if (!role) {
+            const reply = await message.reply(`⚠ Could not find a role named or ID **${roleName}**.`);
+            return;
+        }
+
+        try {
+            if (action === 'add') {
+                await target.roles.add(role);
+                const reply = await message.reply(`✅ Added role **${role.name}** to **${target.user.tag}**.`);
+                return;
+            } else { // remove
+                await target.roles.remove(role);
+                const reply = await message.reply(`❎ Removed role **${role.name}** from **${target.user.tag}**.`);
+                return;
             }
-
-            // 🌟 필터 경고 메시지 (Embed)
-            const warningEmbed = new EmbedBuilder()
-                .setColor("#FF0000")
-                .setTitle("🚫 Watch Your Language!")
-                .setDescription(`**${member}**, your message contained a blacklisted word and has been removed.`);
-
-            await message.channel.send({ embeds: [warningEmbed] });
-
+        } catch (err) {
+            const reply = await message.reply(`⚠ Failed to ${action} the role. Check permissions and hierarchy.`);
             return;
         }
     }
 
+    if (cmd === "!addrole") { return handleRoleCommand(message, 'add'); }
+    if (cmd === "!removerole") { return handleRoleCommand(message, 'remove'); }
+    
+    
     // ---------------------------
-    // General Commands
+    // PANEL SETUP COMMANDS (Admin Only)
     // ---------------------------
+    
+    // (패널 설정 명령어는 이전 코드에서 복사하신 것과 동일한 로직으로 유지합니다. 역할 ID만 위에 선언된 MEMBER_ROLE, SUB_ROLE 등을 사용합니다.)
+    
+    // NOTE: IMAGE URLS - 이 URL들은 고객님의 디스코드 서버 ID를 포함하고 있으므로, 봇이 파일을 찾지 못할 경우 이미지가 깨질 수 있습니다.
+    // 만약 이미지가 깨지면 고객님 서버의 채널에 이미지를 업로드하고, 그 이미지의 URL로 교체해야 합니다.
+    
+    const RULES_BANNER_URL = "https://cdn.discordapp.com/attachments/495719121686626323/1440992642761752656/must_read.png?ex=69202c7a&is=691edafa&hm=0dd8a2b0a189b4bec6947c05877c17b0b9408dd8f99cb7eee8de4336122f67d4&";
+    const WELCOME_BANNER_URL = "https://cdn.discordapp.com/attachments/495719121686626323/1440988230492225646/welcome.png?ex=6920285e&is=691ed6de&hm=74ea90a10d279092b01dcccfaf0fd40fbbdf78308606f362bf2fe15e20c64b86&";
+    const NOTIFICATION_BANNER_URL = "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c985f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
 
-    // !help
-    if (cmd === "!help") {
-        const helpEmbed = new EmbedBuilder()
-            .setColor("#0099ff")
-            .setTitle("🤖 Bot Command List")
+    const COLOR_ROLES = [
+        // Role IDs must be modified!
+        { customId: "color_icey", emoji: "❄️", label: "~ icey azure ~", roleId: process.env.ICEY_AZURE_ROLE_ID || "ICEY_AZURE_ROLE_ID" },
+        { customId: "color_candy", emoji: "🍭", label: "~ candy ~", roleId: process.env.CANDY_ROLE_ID || "CANDY_ROLE_ID" },
+        { customId: "color_lilac", emoji: "🌸", label: "~ lilac ~", roleId: process.env.LILAC_ROLE_ID || "LILAC_ROLE_ID" },
+        { customId: "color_blush", emoji: "❤️", label: "~ blush ~", roleId: process.env.BLUSH_ROLE_ID || "BLUSH_ROLE_ID" },
+        { customId: "color_bubblegum", emoji: "🍥", label: "~ bubblegum ~", roleId: process.env.BUBBLEGUM_ROLE_ID || "BUBBLEGUM_ROLE_ID" },
+        { customId: "color_chocolate", emoji: "🍫", label: "~ chocolate ~", roleId: process.env.CHOCOLATE_ROLE_ID || "CHOCOLATE_ROLE_ID" },
+    ];
+
+
+    // ========== !setupjoin (Rules Panel) ==========
+    if (cmd === "!setupjoin") {
+        const joinEmbed = new EmbedBuilder()
+            .setColor("#1e90ff")
+            .setTitle("✨ Welcome to the Gosu General TV Community!")
             .setDescription(
                 [
-                    "**General**",
-                    "`!help` — Display this help message.",
+                    "Press **Agree To Rules** below to enter and enjoy the server! 🎊",
                     "",
-                    "**Moderation (Moderator Only)**",
-                    "`!ban @user [reason]` — Ban a user.",
-                    "`!kick @user [reason]` — Kick a user.",
-                    "`!mute @user <minutes>` — Timeout (Mute) a user.",
-                    "`!unmute @user` — Remove timeout (Unmute) a user.",
-                    "",
-                    "**Admin / Developer (Log Configuration)**",
-                    "`!addlog` / `!deletelog` — 모든 로그를 이 채널에 설정/해제합니다.",
-                    "`!addactionlog` / `!removeactionlog` — 활동 로그 (가입/퇴장, 음성, 역할)를 설정/해제합니다.",
-                    "`!addmodlog` / `!removemodlog` — 관리자 활동 로그 (킥/밴/뮤트)를 설정/해제합니다.",
-                    "`!addfilterlog` / `!removefilterlog` — 금지어 사용 로그를 설정/해제합니다.",
-                    "",
-                    "**Admin / Developer (Filter Management)**",
-                    "`!addblacklist <word>` — Add a word to the blacklist.",
-                    "`!removeblacklist <word>` — Remove a word from the blacklist.",
-                    "`!listwords` — List all blacklisted words.",
-                    "`!reloadblacklist` — Reload blacklist from file.",
+                    "--------------------------------------------------------",
+                    "### 📜 Server Rules (Click to Agree)",
+                    "✨ **1 – Be Respectful** (Treat everyone kindly.)",
+                    "✨ **2 – No Spam** (Avoid repeated messages/mentions.)",
+                    "✨ **3 – No NSFW or Harmful Content** (Nothing adult or unsafe.)",
+                    "✨ **4 – No Advertising** (No links/promos without staff approval.)",
+                    "✨ **5 – Keep it Clean** (No hate speech/slurs/drama.)",
+                    "✨ **6 – Follow Staff Instructions** (Please follow all staff guidance.)",
+                    "--------------------------------------------------------",
                 ].join("\n")
             );
-        await message.reply({ embeds: [helpEmbed] });
+
+        const buttons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("agree_rules") 
+                .setLabel("Agree To Rules")
+                .setStyle(ButtonStyle.Success)
+        );
+
+        await message.channel.send({ files: [{ attachment: RULES_BANNER_URL, name: 'must_read.png' }] });
+        await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
         return;
     }
     
-    // ... (여기에 !setupjoin, !color, !welcome 등 다른 명령어가 있다면 추가) ...
+    // ========== !welcome (Welcome Panel) ==========
+    if (cmd === "!welcome") {
+        const welcomeEmbed = new EmbedBuilder()
+            .setColor("#1e90ff")
+            .setTitle("✨ Welcome to the Gosu General TV Discord Server!")
+            .setDescription(
+                [
+                    "Greetings, adventurer!", 
+                    "Welcome to the **Gosu General TV** community server.",
+                    "---",
+                    "### 📌 What you can find here",
+                    "• Live stream notifications & announcements",
+                    "• Game discussions and guides",
+                    "• Clips, highlights, and community content",
+                    "• Chill chat with other Gosu viewers",
+                    "---",
+                    "Enjoy your stay and have fun! 💙",
+                ].join("\n")
+            )
+            .addFields(
+                { name: "Official Links", value: "📺 [YouTube](https://youtube.com/@Teamgosu)\n🟣 [Twitch](https://www.twitch.tv/gosugeneraltv)", inline: true },
+                { name: "Discord Invite Link", value: "🔗 [Invite Link](https://discord.gg/gosugeneral)", inline: true }
+            );
+
+        const buttons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setLabel("YouTube Channel").setStyle(ButtonStyle.Link).setURL("https://youtube.com/@Teamgosu"), 
+            new ButtonBuilder().setLabel("Twitch Channel").setStyle(ButtonStyle.Link).setURL("https://www.twitch.tv/gosugeneraltv"), 
+            new ButtonBuilder().setLabel("Invite Link").setStyle(ButtonStyle.Link).setURL("https://discord.gg/gosugeneral")
+        );
+
+        await message.channel.send({ files: [{ attachment: WELCOME_BANNER_URL, name: 'welcome.png' }] }); 
+        await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
+        return;
+    }
+    
+    // ========== !color (Color Role Panel) ==========
+    if (cmd === "!color") {
+        const colorEmbed = new EmbedBuilder()
+            .setColor("#FFAACD")
+            .setTitle("Color Roles")
+            .setDescription(
+                [
+                    "Choose one of the **Color** roles below.",
+                    "You can only have **one** of these colors at a time.",
+                    "Click a button to select or remove a color.",
+                ].join("\n")
+            );
+
+        const rows = [];
+        for (let i = 0; i < COLOR_ROLES.length; i += 3) {
+            const slice = COLOR_ROLES.slice(i, i + 3);
+            const row = new ActionRowBuilder();
+            slice.forEach((c) => {
+                row.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(c.customId)
+                        .setEmoji(c.emoji)
+                        .setStyle(ButtonStyle.Secondary)
+                );
+            });
+            rows.push(row);
+        }
+
+        await message.channel.send({ embeds: [colorEmbed], components: rows });
+        return;
+    }
+    
+    // ========== !subscriber (Live Notification Panel - Admin+) ==========
+    if (cmd === "!subscriber") {
+        const subEmbed = new EmbedBuilder()
+            .setColor("#FFCC33")
+            .setTitle("📺 Gosu General TV — Live Notifications")
+            .setDescription(
+                [
+                    "If you’d like to receive alerts when **Gosu General TV** goes live or posts important announcements,",
+                    "press `Subscribe / Unsubscribe` to get or remove the **Live Notifications** role.",
+                    "",
+                    "Note: Subscribing will temporarily replace your **Gosu** role. Press the button again to return to the Gosu role.",
+                    "",
+                    "Thank you for being part of the community! 💙",
+                ].join("\n")
+            );
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("sub_subscribe")
+                .setLabel("Subscribe / Unsubscribe")
+                .setStyle(ButtonStyle.Success)
+        );
+
+        await message.channel.send({ files: [{ attachment: NOTIFICATION_BANNER_URL, name: 'notification_banner.png' }] }); 
+        await message.channel.send({ embeds: [subEmbed], components: [row] });
+        return;
+    }
+    
+    // ---------------------------
+    // GENERAL COMMANDS
+    // ---------------------------
+    
+    // ========== !ping ==========
+    if (cmd === "!ping") {
+        return message.reply("Pong!");
+    }
+    
+    // ========== !invite ==========
+    if (cmd === "!invite") {
+        return message.reply("📨 **Server Invite:** https://discord.gg/gosugeneral");
+    }
+
+    // ========== !help or /? ==========
+    if (cmd === "!help" || cmd === "/?") {
+        const help = new EmbedBuilder()
+            .setColor("#00FFFF")
+            .setTitle("Gosu Bot — Commands")
+            .setDescription(
+                [
+                    "**General**",
+                    "`!ping` / `!invite` — Basic commands.",
+                    "",
+                    "**Moderation / Filter Management (Moderator+)**",
+                    "`!ban @user` / `!kick @user` / `!mute @user <min>` / `!unmute @user`",
+                    "`!prune [1-100]` — Delete messages.",
+                    "`!addword` / `!removeword` / `!listwords` / `!reloadblacklist` — Filter management.",
+                    "`!addrole` / `!removerole` — Manual role management.",
+                    "",
+                    "**Admin / Developer (Log & Panel Setup)**",
+                    "`!addlog` / `!deletelog` — Set/unset ALL logs to the current channel.",
+                    "`!addactionlog` / `!removeactionlog` — Activity logs (Join, Leave, Voice, Role).",
+                    "`!addmodlog` / `!removemodlog` — Moderation logs (Kick, Ban, Mute).",
+                    "`!addfilterlog` / `!removefilterlog` — Filter hit logs.",
+                    "`!setupjoin` / `!welcome` / `!subscriber` / `!color` — Panel setup.",
+                ].join("\n")
+            );
+        return message.reply({ embeds: [help] });
+    }
 });
 
 
 // =====================================================
-// BUTTON INTERACTIONS (SUBSCRIBE TOGGLE)
+// BUTTON INTERACTIONS (Rules + Colors + Subscribe Panel)
 // =====================================================
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isButton()) return;
 
     const { customId, guild, member } = interaction;
-    
-    // -------- Subscribe / Unsubscribe Toggle Button (단일 역할 토글 로직) --------
-    if (customId === "sub_subscribe") {
-        const subRole = guild.roles.cache.get(SUB_ROLE);
 
-        if (!subRole) {
-            return interaction.reply({
-                content: "⚠ Live Notification 역할 ID가 올바르게 설정되지 않았습니다. 관리자에게 문의하세요.",
-                ephemeral: true,
-            });
+    // -------- Agree To Rules (MEMBER_ROLE 부여) --------
+    if (customId === "agree_rules") {
+        const role = guild.roles.cache.get(MEMBER_ROLE); // MEMBER_ROLE 사용
+        if (!role) {
+            return interaction.reply({ content: "⚠ Member role is not configured correctly. Please contact staff.", ephemeral: true, });
+        }
+
+        if (member.roles.cache.has(role.id)) {
+            return interaction.reply({ content: "You already have access. Enjoy the server!", ephemeral: true, });
         }
 
         try {
-            // 1. 현재 멤버가 구독 역할을 가지고 있는지 확인
-            if (member.roles.cache.has(SUB_ROLE)) {
-                // 2. 역할 제거 (Unsubscribe)
-                await member.roles.remove(subRole);
-                return interaction.reply({
-                    content: `🔕 실시간 알림 역할 (**${subRole.name}**)이 **제거**되었습니다.`,
-                    ephemeral: true,
-                });
-            } else {
-                // 3. 역할 부여 (Subscribe)
-                await member.roles.add(subRole);
+            await member.roles.add(role);
+            return interaction.reply({ content: `✅ You accepted the rules and received the **${role.name}** role. Welcome!`, ephemeral: true, });
+        } catch (err) {
+            console.error("Agree rules error:", err);
+            return interaction.reply({ content: "⚠ Failed to assign the role. Please contact staff.", ephemeral: true, });
+        }
+    }
 
-                return interaction.reply({
-                    content: `✅ 실시간 알림 역할 (**${subRole.name}**)이 **부여**되었습니다.`,
-                    ephemeral: true,
-                });
+    // -------- Subscribe / Unsubscribe Toggle Button (SUB_ROLE, MEMBER_ROLE 상호 배타적 토글) --------
+    if (customId === "sub_subscribe") {
+        const subRole = guild.roles.cache.get(SUB_ROLE);
+        const memberRole = guild.roles.cache.get(MEMBER_ROLE); // MEMBER_ROLE 사용
+
+        if (!subRole || !memberRole) {
+            return interaction.reply({ content: "⚠ Subscription or Member role is not configured correctly. Please contact staff.", ephemeral: true, });
+        }
+
+        try {
+            if (member.roles.cache.has(SUB_ROLE)) {
+                // Unsubscribe: SUB_ROLE 제거, MEMBER_ROLE 부여
+                await member.roles.remove(subRole);
+                await member.roles.add(memberRole);
+                return interaction.reply({ content: `🔕 Live notifications **unsubscribed**. Your role has been reset to **${memberRole.name}**.`, ephemeral: true, });
+            } else {
+                // Subscribe: SUB_ROLE 부여, MEMBER_ROLE 제거
+                if (member.roles.cache.has(memberRole.id)) {
+                    await member.roles.remove(memberRole);
+                }
+                await member.roles.add(subRole);
+                return interaction.reply({ content: `✅ You are now **subscribed** to Live Notifications. Your **${memberRole.name}** role has been replaced.`, ephemeral: true, });
             }
         } catch (err) {
             console.error("Subscribe toggle error:", err);
-            return interaction.reply({
-                content: "⚠ 역할을 업데이트하지 못했습니다. 봇의 권한을 확인하세요.",
-                ephemeral: true,
-            });
+            return interaction.reply({ content: "⚠ Failed to update your roles. Please contact staff.", ephemeral: true, });
         }
     }
-    // ... (다른 버튼 로직이 있다면 여기에 추가) ...
+
+    // -------- Color buttons (Mutually Exclusive Logic) --------
+    const colorConfig = COLOR_ROLES.find((c) => c.customId === customId);
+    if (colorConfig) {
+        const role = guild.roles.cache.get(colorConfig.roleId);
+        if (!role) {
+            return interaction.reply({ content: "⚠ The color role for this button is not configured. Please contact staff.", ephemeral: true, });
+        }
+
+        try {
+            const colorRoleIds = COLOR_ROLES.map((c) => c.roleId);
+            const toRemove = member.roles.cache.filter((r) => colorRoleIds.includes(r.id));
+
+            if (member.roles.cache.has(role.id)) {
+                // Remove it
+                await member.roles.remove(role);
+                return interaction.reply({ content: `Removed color role **${role.name}**.`, ephemeral: true, });
+            }
+
+            // Remove all other colors, then add the new one
+            if (toRemove.size > 0) {
+                await member.roles.remove(toRemove);
+            }
+
+            await member.roles.add(role);
+            return interaction.reply({ content: `You now have the color role **${role.name}**.`, ephemeral: true, });
+        } catch (err) {
+            console.error("Color role error:", err);
+            return interaction.reply({ content: "⚠ Failed to update your color role. Check permissions.", ephemeral: true, });
+        }
+    }
 });
 
 
@@ -583,7 +858,7 @@ client.on("interactionCreate", async (interaction) => {
 // ACTION LOGS (Message Delete / Join / Leave / Voice / Role)
 // =====================================================
 
-// -------- Message Delete (일반적인 Action Log로 처리) --------
+// -------- Message Delete (Action Log) --------
 client.on("messageDelete", async (message) => {
     if (!message.guild || message.author?.bot || !message.author) return;
     if (!message.content) return; 
@@ -620,7 +895,7 @@ client.on("guildMemberRemove", async (member) => {
     const leaveEmbed = new EmbedBuilder()
         .setColor("#FF0000")
         .setTitle("🔴 Member Left")
-        .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+        .setAuthor({ name: user.tag, iconURL: user.user.displayAvatarURL() }) 
         .setDescription(`**@${user.tag}** left the server.`)
         .setTimestamp();
     sendLog(member.guild, 'action', leaveEmbed);
@@ -657,6 +932,7 @@ client.on("voiceStateUpdate", (oldState, newState) => {
 
 // -------- Guild Member Update (역할 변경) --------
 client.on("guildMemberUpdate", (oldMember, newMember) => {
+    // 역할 개수가 변경되지 않았다면 리턴
     if (oldMember.roles.cache.size === newMember.roles.cache.size) return;
 
     const addedRoles = newMember.roles.cache.filter(r => !oldMember.roles.cache.has(r.id));
