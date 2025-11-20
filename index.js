@@ -1,5 +1,5 @@
 // ===============================
-// Gosu Custom Discord Bot (Final Build)
+// Gosu Custom Discord Bot (Final Build - ALL LINKS UPDATED)
 // Discord.js v14
 // ===================================
 
@@ -24,19 +24,19 @@ const ADMIN_ROLE = "495718851288236032";     // Admin / Developer
 const SUB_ROLE = "497654614729031681";       // Live 알림 구독 롤 (SUBSCRIPTION ROLE ID로 교체 필요)
 
 // ----------------------------------------------------
-// WELCOME / RULES / NOTIFICATION BANNERS (최종 확정 이미지 링크)
+// WELCOME / RULES / NOTIFICATION BANNERS (최신 이미지 링크 적용됨)
 // ----------------------------------------------------
 // !setupjoin에 사용할 'must_read.png' 이미지 링크
 const RULES_BANNER_URL =
-  "https://cdn.discordapp.com/attachments/495719121686626323/1440983114662023248/must_read.png?ex=6920239a&is=691ed21a&hm=d93d55c6d1b5ab8fc6be1634729ff63b30100b1673f476c2764b92c23382353e&";
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440988172854104074/must_read.png?ex=69202850&is=691ed6d0&hm=240012962334457b6753831dcec00922d89a4fe8a99185affadd44e667e82814&";
 
 // !welcome에 사용할 'welcome.png' 이미지 링크
 const WELCOME_BANNER_URL =
-  "https://media.discordapp.net/attachments/495719121686626323/1440975720561115176/welcome.png?ex=69201cb7&is=691ecb37&hm=65040457a65b91150a8068cd0af132d5ffa3565c540a63f79870bf3a0cb348bf&=&format=webp&quality=lossless&width=818&height=191";
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440988230492225646/welcome.png?ex=6920285e&is=691ed6de&hm=74ea90a10d279092b01dcccfaf0fd40fbbdf78308606f362bf2fe15e20c64b86&";
 
 // !subscriber에 사용할 새로운 'NOTIFICATION.png' 이미지 링크
 const NOTIFICATION_BANNER_URL =
-  "https://cdn.discordapp.com/attachments/495719121686626323/1440985691377893396/NOTIFICATION.png?ex=69202601&is=691ed481&hm=015f51027ef0720318112acd07f8359fba9df7b08e6e14dd1ddf8da034e12a17&";
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c985f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
 
 
 // 컬러 역할들 (역할 ID 수정 필요)
@@ -224,15 +224,14 @@ client.on("messageCreate", async (message) => {
   }
 
   // =====================================================
-  // WELCOME PANEL: !welcome (옆으로 정렬 및 첨부 파일 방식으로 전송 - 제목 중복 제거)
+  // WELCOME PANEL: !welcome (옆으로 정렬 및 첨부 파일 방식으로 전송 - 제목 중복 제거됨)
   // =====================================================
   if (cmd === "!welcome") {
     const welcomeEmbed = new EmbedBuilder()
       .setColor("#1e90ff")
-      .setTitle("✨ Welcome to the Gosu General TV Discord Server!") // 이 제목을 메인으로 사용
+      .setTitle("✨ Welcome to the Gosu General TV Discord Server!")
       .setDescription(
         [
-          // 기존의 "👋 **Welcome to the official Gosu General TV Discord Server!**" 라인은 삭제함.
           "Greetings, adventurer!", 
           "",
           "Welcome to the **Gosu General TV** community server.",
@@ -283,7 +282,7 @@ client.on("messageCreate", async (message) => {
         .setURL("https://discord.gg/gosugeneral")
     );
 
-    // 1단계: 이미지를 '첨부 파일'로 먼저 전송
+    // 1단계: 이미지를 '첨부 파일'로 먼저 전송 (크게 보이도록 유도)
     await message.channel.send({ 
         files: [{ attachment: WELCOME_BANNER_URL, name: 'welcome.png' }]
     }); 
@@ -292,6 +291,7 @@ client.on("messageCreate", async (message) => {
     await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
     return;
   }
+
   // =====================================================
   // COLOR PANEL: !color (Admin only)
   // =====================================================
@@ -336,10 +336,9 @@ client.on("messageCreate", async (message) => {
       .setDescription(
         [
           "If you’d like to receive alerts when **Gosu General TV** goes live or posts important announcements,",
-          "press `Subscribe` to get the **Live Notifications** role.",
+          "press `Subscribe / Unsubscribe` to get or remove the **Live Notifications** role.",
           "",
-          "If you no longer want to receive these alerts,",
-          "type `!unsubscribe` to remove the role.",
+          "Note: Subscribing will temporarily replace your **Gosu** role. Press the button again to return to the Gosu role.",
           "",
           "Thank you for being part of the community! 💙",
         ].join("\n")
@@ -348,7 +347,7 @@ client.on("messageCreate", async (message) => {
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("sub_subscribe")
-        .setLabel("Subscribe")
+        .setLabel("Subscribe / Unsubscribe") 
         .setStyle(ButtonStyle.Success)
     );
 
@@ -493,59 +492,19 @@ client.on("messageCreate", async (message) => {
   }
 
   // =====================================================
-  // SUBSCRIBE / UNSUBSCRIBE (PUBLIC)
+  // SUBSCRIBE / UNSUBSCRIBE (PUBLIC - 명령어로의 접근은 비활성화)
   // =====================================================
 
   // ========== !subscribe ==========
   if (cmd === "!subscribe") {
-    const member = message.member;
-    if (member.roles.cache.has(SUB_ROLE)) {
-      return message.reply(
-        "🔔 You are already subscribed to **Gosu General TV Live** notifications."
-      );
-    }
-
-    const role = message.guild.roles.cache.get(SUB_ROLE);
-    if (!role) {
-      return message.reply(
-        "⚠ Subscription role is not configured correctly. Please contact staff."
-      );
-    }
-
-    try {
-      await member.roles.add(role);
-      return message.reply(
-        "✅ You are now **subscribed** to Gosu General TV Live notifications."
-      );
-    } catch (err) {
-      console.error("Subscribe error:", err);
-      return message.reply("⚠ Failed to add the subscription role.");
-    }
+    // 이 명령어는 버튼으로 대체되었으므로, 사용자에게 버튼 사용을 유도
+    return message.reply("🔔 Please use the **Subscribe / Unsubscribe** button in the notification channel to manage your role.");
   }
 
   // ========== !unsubscribe ==========
   if (cmd === "!unsubscribe") {
-    const member = message.member;
-    const role = message.guild.roles.cache.get(SUB_ROLE);
-    if (!role) {
-      return message.reply(
-        "⚠ Subscription role is not configured correctly. Please contact staff."
-      );
-    }
-
-    if (!member.roles.cache.has(SUB_ROLE)) {
-      return message.reply("🔕 You are **not currently subscribed**.");
-    }
-
-    try {
-      await member.roles.remove(role);
-      return message.reply(
-        "🔕 You have **unsubscribed** from Gosu General TV Live notifications."
-      );
-    } catch (err) {
-      console.error("Unsubscribe error:", err);
-      return message.reply("⚠ Failed to remove the subscription role.");
-    }
+    // 이 명령어는 버튼으로 대체되었으므로, 사용자에게 버튼 사용을 유도
+    return message.reply("🔕 Please use the **Subscribe / Unsubscribe** button in the notification channel to manage your role.");
   }
 
   // =====================================================
@@ -567,8 +526,7 @@ client.on("messageCreate", async (message) => {
           "**General**",
           "`!ping` — Check if the bot is online.",
           "`!invite` — Show the server invite link.",
-          "`!subscribe` — Subscribe to live notifications.",
-          "`!unsubscribe` — Unsubscribe from live notifications.",
+          "`!subscribe` / `!unsubscribe` — (Use the Notification Button) Subscribe/Unsubscribe to live notifications.",
           "",
           "**Moderation (Moderator+)**",
           "`!ban @user [reason]` — Ban a user.",
@@ -631,33 +589,45 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
-  // -------- Subscribe button --------
+  // -------- Subscribe / Unsubscribe Toggle Button (상호 배타적 로직) --------
   if (customId === "sub_subscribe") {
-    const role = guild.roles.cache.get(SUB_ROLE);
-    if (!role) {
-      return interaction.reply({
-        content: "⚠ Subscription role is not configured correctly. Please contact staff.",
-        ephemeral: true,
-      });
-    }
+    const subRole = guild.roles.cache.get(SUB_ROLE);
+    const gosuRole = guild.roles.cache.get(GOSU_ROLE);
 
-    if (member.roles.cache.has(SUB_ROLE)) {
+    if (!subRole || !gosuRole) {
       return interaction.reply({
-        content: "🔔 You are already subscribed to live notifications.",
+        content: "⚠ Subscription or Gosu role is not configured correctly. Please contact staff.",
         ephemeral: true,
       });
     }
 
     try {
-      await member.roles.add(role);
-      return interaction.reply({
-        content: "✅ You are now **subscribed** to Gosu General TV Live notifications.",
-        ephemeral: true,
-      });
+      // 1. 현재 구독 역할(SUB_ROLE)을 가지고 있는지 확인 (-> 구독 해제)
+      if (member.roles.cache.has(SUB_ROLE)) {
+        // 2. 구독 해제 (SUB_ROLE 제거 및 GOSU_ROLE 부여)
+        await member.roles.remove(subRole);
+        await member.roles.add(gosuRole);
+        return interaction.reply({
+          content: `🔕 Live notifications **unsubscribed**. Your role has been reset to **${gosuRole.name}**.`,
+          ephemeral: true,
+        });
+      } else {
+        // 3. 구독 (SUB_ROLE 부여 및 GOSU_ROLE 제거)
+        // Gosu Role을 가지고 있다면 제거합니다. (상호 배타적)
+        if (member.roles.cache.has(GOSU_ROLE)) {
+          await member.roles.remove(gosuRole);
+        }
+        await member.roles.add(subRole);
+
+        return interaction.reply({
+          content: `✅ You are now **subscribed** to Live Notifications. Your **${gosuRole.name}** role has been replaced.`,
+          ephemeral: true,
+        });
+      }
     } catch (err) {
-      console.error("Subscribe button error:", err);
+      console.error("Subscribe toggle error:", err);
       return interaction.reply({
-        content: "⚠ Failed to add the subscription role. Please contact staff.",
+        content: "⚠ Failed to update your roles. Please contact staff.",
         ephemeral: true,
       });
     }
