@@ -92,3 +92,8 @@
   "m1erda",
   "cabr0n"
 ]
+
+// --------------------
+// Login
+// --------------------
+client.login(process.env.Bot_Token);
