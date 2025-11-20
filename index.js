@@ -21,10 +21,10 @@ const {
 const GOSU_ROLE = "496717793388134410";      // 기본 Gosu 입장 롤 (Agree To Rules)
 const MOD_ROLE = "495727371140202506";       // Moderator
 const ADMIN_ROLE = "495718851288236032";     // Admin / Developer
-const SUB_ROLE = "497654614729031681";       // Live 알림 구독 롤
+const SUB_ROLE = "497654614729031681";       // Live 알림 구독 롤 (SUBSCRIPTION ROLE ID로 교체 필요)
 
 // ----------------------------------------------------
-// WELCOME / RULES BANNERS (최종 확정 이미지 링크)
+// WELCOME / RULES / NOTIFICATION BANNERS (최종 확정 이미지 링크)
 // ----------------------------------------------------
 // !setupjoin에 사용할 'must_read.png' 이미지 링크
 const RULES_BANNER_URL =
@@ -33,6 +33,11 @@ const RULES_BANNER_URL =
 // !welcome에 사용할 'welcome.png' 이미지 링크
 const WELCOME_BANNER_URL =
   "https://media.discordapp.net/attachments/495719121686626323/1440975720561115176/welcome.png?ex=69201cb7&is=691ecb37&hm=65040457a65b91150a8068cd0af132d5ffa3565c540a63f79870bf3a0cb348bf&=&format=webp&quality=lossless&width=818&height=191";
+
+// !subscriber에 사용할 새로운 'NOTIFICATION.png' 이미지 링크
+const NOTIFICATION_BANNER_URL =
+  "https://cdn.discordapp.com/attachments/495719121686626323/1440985691377893396/NOTIFICATION.png?ex=69202601&is=691ed481&hm=015f51027ef0720318112acd07f8359fba9df7b08e6e14dd1ddf8da034e12a17&";
+
 
 // 컬러 역할들 (역할 ID 수정 필요)
 const COLOR_ROLES = [
@@ -174,14 +179,15 @@ client.on("messageCreate", async (message) => {
     const joinEmbed = new EmbedBuilder()
       .setColor("#3498db")
       .setTitle("🌟 Welcome to the Gosu General TV Community!")
-     .setDescription(
+      .setDescription(
         [
           "👋 **Welcome to the official Gosu General TV Discord Server!**",
           "",
           "Here you can join events, get updates, talk with the community, and enjoy the content together.",
+          "Please make sure to read the rules below and press **Agree To Rules** to gain full access.",
           "",
           "----------------------------------------------",
-          "### 📜 **Server Rules**", // Markdown 헤딩으로 규칙 강조
+          "### 📜 **Server Rules**",
           "",
           "✨ **1 — Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.",
           "",
@@ -197,7 +203,7 @@ client.on("messageCreate", async (message) => {
           "",
           "----------------------------------------------",
           "Press **Agree To Rules** below to enter and enjoy the server! 🎉",
-        ].join("\n") // 각 줄을 줄바꿈 문자로 연결
+        ].join("\n")
       );
 
     const buttons = new ActionRowBuilder().addComponents(
@@ -217,17 +223,16 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-// =====================================================
-// WELCOME PANEL: !welcome (옆으로 정렬 적용)
-// =====================================================
-if (cmd === "!welcome") {
+  // =====================================================
+  // WELCOME PANEL: !welcome (옆으로 정렬 및 첨부 파일 방식으로 전송 - 제목 중복 제거)
+  // =====================================================
+  if (cmd === "!welcome") {
     const welcomeEmbed = new EmbedBuilder()
       .setColor("#1e90ff")
-      .setTitle("✨ Welcome to the Gosu General TV Discord Server!")
+      .setTitle("✨ Welcome to the Gosu General TV Discord Server!") // 이 제목을 메인으로 사용
       .setDescription(
         [
-          "👋 **Welcome to the official Gosu General TV Discord Server!**",
-          "",
+          // 기존의 "👋 **Welcome to the official Gosu General TV Discord Server!**" 라인은 삭제함.
           "Greetings, adventurer!", 
           "",
           "Welcome to the **Gosu General TV** community server.",
@@ -248,7 +253,7 @@ if (cmd === "!welcome") {
           "Enjoy your stay and have fun! 💙",
         ].join("\n")
       )
-      // Blue Protocol처럼 링크를 옆으로 정렬하기 위해 .addFields() 사용
+      // 링크를 Blue Protocol 서버처럼 옆으로 정렬하기 위해 .addFields() 사용
       .addFields(
         {
           name: "Official Links", // 첫 번째 컬럼
@@ -262,23 +267,23 @@ if (cmd === "!welcome") {
         }
       );
 
-    // 버튼 컴포넌트는 그대로 유지 (Link 버튼을 사용하고 있으므로)
+    // 버튼 컴포넌트
     const buttons = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setLabel("YouTube Channel")
         .setStyle(ButtonStyle.Link)
-        .setURL("https://youtube.com/@Teamgosu"), // 링크 수정됨
+        .setURL("https://youtube.com/@Teamgosu"), 
       new ButtonBuilder()
-        .setLabel("Twitch Channel") // 버튼 이름 추가
+        .setLabel("Twitch Channel")
         .setStyle(ButtonStyle.Link)
-        .setURL("https://www.twitch.tv/gosugeneraltv"), // Twitch 버튼 추가
+        .setURL("https://www.twitch.tv/gosugeneraltv"), 
       new ButtonBuilder()
         .setLabel("Invite Link")
         .setStyle(ButtonStyle.Link)
         .setURL("https://discord.gg/gosugeneral")
     );
 
-    // 1단계: 이미지를 '첨부 파일'로 먼저 전송 (크게 보이도록 유도)
+    // 1단계: 이미지를 '첨부 파일'로 먼저 전송
     await message.channel.send({ 
         files: [{ attachment: WELCOME_BANNER_URL, name: 'welcome.png' }]
     }); 
@@ -286,8 +291,7 @@ if (cmd === "!welcome") {
     // 2단계: 이미지 다음에 임베드와 버튼을 전송합니다.
     await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
     return;
-}
-
+  }
   // =====================================================
   // COLOR PANEL: !color (Admin only)
   // =====================================================
@@ -323,7 +327,7 @@ if (cmd === "!welcome") {
   }
 
   // =====================================================
-  // SUBSCRIBE PANEL: !subscriber (Moderator+)
+  // SUBSCRIBE PANEL: !subscriber (Moderator+ / 배너 로직 추가됨)
   // =====================================================
   if (cmd === "!subscriber") {
     const subEmbed = new EmbedBuilder()
@@ -348,6 +352,12 @@ if (cmd === "!welcome") {
         .setStyle(ButtonStyle.Success)
     );
 
+    // 1단계: 이미지를 '첨부 파일'로 먼저 전송 (크게 보이도록 유도)
+    await message.channel.send({ 
+        files: [{ attachment: NOTIFICATION_BANNER_URL, name: 'notification_banner.png' }]
+    }); 
+
+    // 2단계: 이미지 다음에 임베드와 버튼을 전송합니다.
     await message.channel.send({ embeds: [subEmbed], components: [row] });
     return;
   }
@@ -708,5 +718,3 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
-
-
