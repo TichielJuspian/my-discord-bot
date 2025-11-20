@@ -29,15 +29,50 @@ const MOD_ROLE = "495727371140202506";       // Moderator Role (관리 및 �
 const ADMIN_ROLE = "495718851288236032";     // Admin / Developer Role (최고 관리자 및 필터 면제 역할 ID)
 const SUB_ROLE = "497654614729031681";       // Live Notification Subscriber Role (알림 역할 ID)
 
-// ----------------------------------------------------
+// ---------------------------
 // CHAT FILTER CONFIG
-// ----------------------------------------------------
+// ---------------------------
 let BLACKLISTED_WORDS = []; // Global array for blocked words
 
+// 🔥 관리자만 필터 우회
 const FILTER_EXEMPT_ROLES = [
-  MOD_ROLE, 
-  ADMIN_ROLE, 
+  ADMIN_ROLE,
 ];
+
+// ---------------------------
+// CHAT FILTER LOGIC
+// ---------------------------
+if (!isExempt) {
+    // 1. 정규화(NFC)로 초성/중성 분리 우회 방지
+    const normalizedContent = message.content.normalize('NFC').toLowerCase();
+
+    // 2. 특수문자/공백 제거해서 우회 필터링
+    const simplifiedContent = normalizedContent.replace(/[^가-힣a-z0-9]/g, '');
+
+    const foundWord = BLACKLISTED_WORDS.find(word => {
+        const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, '');
+        return simplifiedContent.includes(simplifiedWord);
+    });
+
+    if (foundWord) {
+        // 삭제
+        if (!message.deleted) {
+            message.delete().catch(() => {
+                console.error(`Failed to delete message: ${message.id}`);
+            });
+        }
+
+        // 🌟 필터 경고 메시지 (Embed)
+        const warningEmbed = new EmbedBuilder()
+            .setColor("#FF0000")
+            .setTitle("🚫 Watch Your Language!")
+            .setDescription(`**${member}**, your message contained a blacklisted word and has been removed.`);
+
+        await message.channel.send({ embeds: [warningEmbed] });
+
+        return;
+    }
+}
 
 // ----------------------------------------------------
 // Helper: Function to save JSON file
@@ -909,3 +944,4 @@ client.on("interactionCreate", async (interaction) => {
 // Log in
 // --------------------
 client.login(process.env.Bot_Token);
+
