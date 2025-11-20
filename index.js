@@ -194,67 +194,78 @@ if (cmd === "!setupjoin") {
     return;
 }
 // =====================================================
-// WELCOME PANEL: !welcome (Blue Protocol 스타일)
+// WELCOME PANEL: !welcome (Blue Protocol 스타일 - 배너 먼저, 텍스트 나중)
 // =====================================================
 if (cmd === "!welcome") {
-    // 1. 이미지 설정을 제거한 임베드 메시지 생성
-    const welcomeEmbed = new EmbedBuilder()
-      .setColor("#1e90ff")
-      .setTitle("✨ Welcome to the Gosu General TV Discord Server!")
-      //.setImage(WELCOME_BANNER_URL) // <--- 이 부분을 주석 처리하거나 제거합니다.
-      .setDescription(
-        [
-          "Greetings, adventurer! 👋",
-          "",
-          "Welcome to the **Gosu General TV** community server.",
-          "Here you can hang out with the community, share plays, ask questions,",
-          "receive announcements, and join events together.",
-          "",
-          "Please make sure to read our server rules in the rules/join channel,",
-          "and press **Agree To Rules** there to gain full access.",
-          "",
-          "---",
-          "### 📌 What you can find here",
-          "• Live stream notifications & announcements",
-          "• Game discussions and guides",
-          "• Clips, highlights, and community content",
-          "• Chill chat with other Gosu viewers",
-          "",
-          "---",
-          "### 🔗 Official Links",
-          "📺 **YouTube** – https://youtube.com/@GosuGeneral",
-          "📨 **Invite Link** – https://discord.gg/gosugeneral",
-          "",
-          "Enjoy your stay and have fun! 💙",
-        ].join("\n")
-      );
+  // 1) 배너만 있는 카드 (이미지 전용)
+  const bannerEmbed = new EmbedBuilder()
+    .setColor("#1e90ff")
+    .setImage(WELCOME_BANNER_URL);
 
-    // 버튼 컴포넌트 추가
-    const buttons = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setLabel("YouTube Channel")
-        .setStyle(ButtonStyle.Link)
-        .setURL("https://youtube.com/@GosuGeneral"),
-      new ButtonBuilder()
-        .setLabel("Invite Link")
-        .setStyle(ButtonStyle.Link)
-        .setURL("https://discord.gg/gosugeneral")
-    );
+  // 2) 텍스트/링크 카드
+  const textEmbed = new EmbedBuilder()
+    .setColor("#1e90ff")
+    .setDescription(
+      [
+        "✨ **Welcome to the Gosu General TV Discord Server!**",
+        "",
+        "Greetings, adventurer! 👋",
+        "",
+        "Welcome to the **Gosu General TV** community server.",
+        "Here you can hang out with the community, share plays, ask questions,",
+        "receive announcements, and join events together.",
+        "",
+        "Please make sure to read our server rules in the rules/join channel,",
+        "and press **Agree To Rules** there to gain full access.",
+        "",
+        "---",
+        "### 📌 What you can find here",
+        "• Live stream notifications & announcements",
+        "• Game discussions and guides",
+        "• Clips, highlights, and community content",
+        "• Chill chat with other Gosu viewers",
+        "",
+        "Enjoy your stay and have fun! 💙",
+      ].join("\n")
+    )
+    .addFields(
+      {
+        name: "📺 Official Links",
+        value: [
+          "• **YouTube** – https://youtube.com/@teamgosu",
+          "• **Twitch** – https://www.twitch.tv/gosugeneraltv",
+        ].join("\n"),
+        inline: false,
+      },
+      {
+        name: "🔗 Invite Link",
+        value: "https://discord.gg/gosugeneral",
+        inline: false,
+      }
+    );
 
-    // ----------------------------------------------------
-    // 1단계: 이미지를 먼저 일반 메시지로 전송합니다.
-    // ----------------------------------------------------
-    // WELCOME_BANNER_URL에 있는 이미지를 첨부 파일로 전송합니다.
-    await message.channel.send({ 
-        files: [{ attachment: WELCOME_BANNER_URL, name: 'welcome_banner.png' }]
-    });
+  // 버튼들 (YouTube / Twitch / Invite)
+  const buttons = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel("YouTube Channel")
+      .setStyle(ButtonStyle.Link)
+      .setURL("https://youtube.com/@teamgosu"),
+    new ButtonBuilder()
+      .setLabel("Twitch Channel")
+      .setStyle(ButtonStyle.Link)
+      .setURL("https://www.twitch.tv/gosugeneraltv"),
+    new ButtonBuilder()
+      .setLabel("Invite Link")
+      .setStyle(ButtonStyle.Link)
+      .setURL("https://discord.gg/gosugeneral")
+  );
 
-    // ----------------------------------------------------
-    // 2단계: 이미지 다음에 임베드 메시지를 전송합니다.
-    // ----------------------------------------------------
-    await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
-    return;
+  // 순서 중요: 배너 먼저 보내고, 그 다음 텍스트 카드 + 버튼
+  await message.channel.send({ embeds: [bannerEmbed] });
+  await message.channel.send({ embeds: [textEmbed], components: [buttons] });
+  return;
 }
+
   // =====================================================
   // COLOR PANEL: !color (Admin only)
   // =====================================================
@@ -675,4 +686,5 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
+
 
