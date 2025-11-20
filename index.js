@@ -24,9 +24,10 @@ const BLACKLIST_FILE_PATH = 'blacklist.json';
 // ----------------------------------------------------
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
+// Admin 역할 ID를 495718851288236032로 설정합니다.
 const GOSU_ROLE = process.env.GOSU_ROLE_ID || "PUT_GOSU_ROLE_ID_HERE";       // Main Gosu Role (규칙 동의 후 부여되는 기본 역할 ID)
 const MOD_ROLE = process.env.MOD_ROLE_ID || "PUT_MOD_ROLE_ID_HERE";         // Moderator Role (관리 및 필터 면제 역할 ID)
-const ADMIN_ROLE = process.env.ADMIN_ROLE_ID || "PUT_ADMIN_ROLE_ID_HERE";   // Admin / Developer Role (최고 관리자 및 필터 면제 역할 ID)
+const ADMIN_ROLE = "495718851288236032";   // ⬅️ Admin 역할 ID 반영 완료
 const SUB_ROLE = process.env.SUB_ROLE_ID || "PUT_SUB_ROLE_ID_HERE";         // Live Notification Subscriber Role (알림 역할 ID)
 
 // ----------------------------------------------------
@@ -36,7 +37,7 @@ let BLACKLISTED_WORDS = []; // Global array for blocked words
 
 const FILTER_EXEMPT_ROLES = [
     MOD_ROLE,
-    ADMIN_ROLE,
+    ADMIN_ROLE, // ⬅️ Admin 역할 면제 목록에 추가 완료
 ];
 
 // ----------------------------------------------------
@@ -194,37 +195,47 @@ client.on("messageCreate", async (message) => {
 
     
 // ---------------------------
-// 1. CHAT FILTER LOGIC (수정된 로직)
+// 1. CHAT FILTER LOGIC (개선된 로직 및 Admin/Mod 예외 처리)
 // ---------------------------
-    // const member = message.member; // <-- 중복 제거됨
-
-    // const args = message.content.trim().split(/ +/g); // <-- 중복 제거됨
-    // const cmd = args[0]?.toLowerCase(); // <-- 중복 제거됨
-    // const isCommand = cmd && cmd.startsWith("!"); // <-- 중복 제거됨
-    const isExempt = FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId)) || isCommand;
+    // 명령어 사용자와 필터 면제 역할을 가진 멤버는 필터링을 건너뜁니다.
+    const isExempt = isCommand || FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId));
 
     if (!isExempt) {
         // 1. 정규화(NFC)를 사용하여 분리된 초성/중성을 완성된 글자로 합칩니다.
         const normalizedContent = message.content.normalize('NFC').toLowerCase();
 
-        // 2. [수정] 한글, 영어, 숫자, 그리고 '공백 문자(\s)'만 남기고 나머지는 제거합니다.
+        // 2. (개선) 모든 특수문자를 제거합니다. 띄어쓰기는 유지합니다.
+        // [가-힣a-z0-9]를 제외한 문자는 모두 제거합니다. (띄어쓰기는 정규식에 포함하지 않으므로 유지됨)
         const simplifiedContent = normalizedContent.replace(/[^가-힣a-z0-9\s]/g, '');
 
         let foundWord = null;
 
-        // 블랙리스트 단어도 띄어쓰기/특수문자 제거 후 비교합니다.
         for (const word of BLACKLISTED_WORDS) {
-            // 블랙리스트 단어 자체에서 공백을 포함한 특수문자를 제거합니다.
-            const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, '');
+            // 3. 금지어 자체에서 공백을 포함한 모든 특수문자를 제거합니다.
+            const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, ''); // 금지어에서는 띄어쓰기까지 제거
 
-            // 비교를 위해 메시지 내용에서 임시로 띄어쓰기를 제거한 버전을 만들어서 비교합니다.
-            const contentWithoutSpaces = simplifiedContent.replace(/\s/g, '');
+            if (simplifiedWord.length < 2) continue; // 단일 문자는 필터링하지 않음 (오탐 방지)
 
-            // 공백이 제거된 메시지 내용과 공백이 제거된 금지어를 비교합니다.
+            // 4. 메시지 내용에서 *임시로* 띄어쓰기를 제거한 버전을 만들어서 금지어 (띄어쓰기 제거됨) 와 비교합니다.
+            // 이렇게 하면 '바 보' (메시지)를 '바보' (금지어)로 찾을 수 있습니다.
+            const contentWithoutSpaces = simplifiedContent.replace(/\s/g, ''); 
+            
+            // 5. '띄어쓰기 제거 버전'으로 검사 (오탐 방지를 위해 이 검사를 덜 엄격하게 사용)
             if (contentWithoutSpaces.includes(simplifiedWord)) {
                 foundWord = word;
                 break;
             }
+
+            // 6. (추가) 메시지 내용(띄어쓰기 유지, 특수문자 제거)을 공백 기준으로 나눕니다.
+            const contentWords = simplifiedContent.split(/\s+/).filter(w => w.length > 0);
+
+            // 7. 금지어 (특수문자 제거)가 메시지 내용의 각 단어에 포함되어 있는지 확인 (오탐이 덜함)
+            // '바보'가 금지어일 때, 메시지 '나는 바보가 아니다' -> '바보'가 포함됨 -> 필터링
+            if (contentWords.some(w => w.includes(simplifiedWord))) {
+                foundWord = word;
+                break;
+            }
+
         }
 
         if (foundWord) {
@@ -248,8 +259,7 @@ client.on("messageCreate", async (message) => {
     // ---------------------------
     // 2. COMMAND LOGIC
     // ---------------------------
-    // (이하 명령어 로직은 이전 코드와 동일)
-
+    
     if (!isCommand) return; // 명령어가 아니면 이후 로직 실행 중단
 
     // ---- 명령어 메시지 자체 삭제 로직 ----
@@ -918,6 +928,4 @@ client.on("interactionCreate", async (interaction) => {
 // =====================================================
 // BOT LOGIN
 // =====================================================
-client.login(process.env.Bot_Token);
-
-
+client.login(process.env.BOT_TOKEN);
