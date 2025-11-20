@@ -170,53 +170,63 @@ client.once("ready", () => {
 });
 
 // =====================================================
-// PREFIX COMMANDS & CHAT FILTER (FINAL LOGIC)
+// PREFIX COMMANDS & CHAT FILTER (수정된 로직)
 // =====================================================
 
 client.on("messageCreate", async (message) => {
     if (!message.guild || message.author.bot) return;
 
-    // ---------------------------
-    // 0. COMMAND PARSING
-    // ---------------------------
+// ---------------------------
+// 0. COMMAND PARSING
+// ---------------------------
     const args = message.content.trim().split(/ +/g);
     const cmd = args[0]?.toLowerCase();
     const isCommand = cmd && cmd.startsWith("!"); // !로 시작하면 명령어
 
-    // ---------------------------
-    // 1. CHAT FILTER LOGIC (초성/특수문자 우회 방지 로직 적용)
-    // ---------------------------
+    
+// ---------------------------
+// 1. CHAT FILTER LOGIC (띄어쓰기 유지 및 우회 방지 완화 적용)
+// ---------------------------
     const member = message.member;
 
-    // 관리자/모더레이터 역할이 있거나, 명령어인 경우 필터링을 면제합니다.
+    const args = message.content.trim().split(/ +/g);
+    const cmd = args[0]?.toLowerCase();
+    const isCommand = cmd && cmd.startsWith("!");
     const isExempt = FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId)) || isCommand;
 
     if (!isExempt) {
         // 1. 정규화(NFC)를 사용하여 분리된 초성/중성을 완성된 글자로 합칩니다.
         const normalizedContent = message.content.normalize('NFC').toLowerCase();
 
-        // 2. 한글, 영어, 숫자 외의 모든 문자를 제거하여 띄어쓰기, 특수문자 우회를 방지합니다.
-        const simplifiedContent = normalizedContent.replace(/[^가-힣a-z0-9]/g, '');
+        // 2. [수정] 한글, 영어, 숫자, 그리고 '공백 문자(\s)'만 남기고 나머지는 제거합니다.
+        //    (띄어쓰기를 유지하여 오인 삭제를 줄입니다.)
+        const simplifiedContent = normalizedContent.replace(/[^가-힣a-z0-9\s]/g, '');
 
         let foundWord = null;
 
         // 블랙리스트 단어도 띄어쓰기/특수문자 제거 후 비교합니다.
         for (const word of BLACKLISTED_WORDS) {
-            // 블랙리스트 단어 자체에서 특수문자를 제거합니다.
+            // 블랙리스트 단어 자체에서 공백을 포함한 특수문자를 제거합니다.
             const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, '');
 
-            // 메시지 내용에 블랙리스트 단어가 포함되어 있는지 확인합니다.
-            if (simplifiedContent.includes(simplifiedWord)) {
+            // 메시지 내용(공백이 포함된)에 블랙리스트 단어가 포함되어 있는지 확인합니다.
+            // SimplifiedContent는 이제 띄어쓰기를 가지고 있습니다.
+            // 단, 블랙리스트 단어는 띄어쓰기가 제거되어 있기 때문에, 메시지 내용에서도
+            // 비교를 위해 임시로 띄어쓰기를 제거한 버전을 만들어서 비교합니다.
+            const contentWithoutSpaces = simplifiedContent.replace(/\s/g, '');
+
+
+            // [중요 수정] 공백이 제거된 메시지 내용과 공백이 제거된 금지어를 비교합니다.
+            // 이렇게 하면 "와 씨 발 대박" (-> "와씨발대박") 이 금지어 "씨발"에 걸립니다.
+            if (contentWithoutSpaces.includes(simplifiedWord)) {
                 foundWord = word;
                 break;
             }
         }
 
-
         if (foundWord) {
-            // 봇이 메시지 삭제 권한을 가지고 있는지 확인합니다.
+            // ... (메시지 삭제 및 경고 로직은 동일) ...
             if (message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                // Delete message
                 if (!message.deleted) {
                     message.delete().catch(err => {
                         console.error(`Failed to delete message: ${message.id}`, err);
@@ -226,13 +236,8 @@ client.on("messageCreate", async (message) => {
                 console.error("Bot lacks 'Manage Messages' permission to delete filtered messages.");
             }
 
-            // 🌟 경고 메시지 (7초 후 삭제) 🌟
             const warningMessage = await message.channel.send(`**${member}** Watch your language! Your message contained a blacklisted word and has been removed.`);
-
-            // 경고 메시지는 잠시 후 삭제됩니다.
-            setTimeout(() => warningMessage.delete().catch(() => {}), 7000); // 7초 후 삭제
-
-            // Stop processing other commands after a blacklisted word is found
+            setTimeout(() => warningMessage.delete().catch(() => {}), 7000);
             return;
         }
     }
@@ -918,3 +923,4 @@ client.on("interactionCreate", async (interaction) => {
 // Log in
 // --------------------
 client.login(process.env.BOT_TOKEN); // 봇 토큰은 .env 파일에서 불러와야 합니다.
+
