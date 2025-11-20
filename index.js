@@ -229,4 +229,455 @@ client.on("messageCreate", async (message) => {
           "Please make sure to read our server rules in the rules/join channel,",
           "and press **Agree To Rules** there to gain full access.",
           "",
-          "---
+          "---",
+          "### 📌 What you can find here",
+          "• Live stream notifications & announcements",
+          "• Game discussions and guides",
+          "• Clips, highlights, and community content",
+          "• Chill chat with other Gosu viewers",
+          "",
+          "---",
+          "### 🔗 Official Links",
+          "📺 **YouTube** – https://youtube.com/@GosuGeneral",
+          "📨 **Invite Link** – https://discord.gg/gosugeneral",
+          "",
+          "Enjoy your stay and have fun! 💙",
+        ].join("\n")
+      );
+
+    // 버튼 컴포넌트 추가
+    const buttons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("YouTube Channel")
+        .setStyle(ButtonStyle.Link)
+        .setURL("https://youtube.com/@GosuGeneral"),
+      new ButtonBuilder()
+        .setLabel("Invite Link")
+        .setStyle(ButtonStyle.Link)
+        .setURL("https://discord.gg/gosugeneral")
+    );
+
+    await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
+    return;
+  }
+
+  // =====================================================
+  // COLOR PANEL: !color (Admin only)
+  // =====================================================
+  if (cmd === "!color") {
+    const colorEmbed = new EmbedBuilder()
+      .setColor("#FFAACD")
+      .setTitle("Color 3 Roles")
+      .setDescription(
+        [
+          "Choose one of the **Color 3** roles below.",
+          "You can only have **one** of these colors at a time.",
+          "Click a button to select or remove a color.",
+        ].join("\n")
+      );
+
+    const rows = [];
+    for (let i = 0; i < COLOR_ROLES.length; i += 3) {
+      const slice = COLOR_ROLES.slice(i, i + 3);
+      const row = new ActionRowBuilder();
+      slice.forEach((c) => {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(c.customId)
+            .setEmoji(c.emoji)
+            .setStyle(ButtonStyle.Secondary)
+        );
+      });
+      rows.push(row);
+    }
+
+    await message.channel.send({ embeds: [colorEmbed], components: rows });
+    return;
+  }
+
+  // =====================================================
+  // SUBSCRIBE PANEL: !subscriber (Moderator+)
+  // =====================================================
+  if (cmd === "!subscriber") {
+    const subEmbed = new EmbedBuilder()
+      .setColor("#FFCC33")
+      .setTitle("📺 Gosu General TV — Live Notifications")
+      .setDescription(
+        [
+          "If you’d like to receive alerts when **Gosu General TV** goes live or posts important announcements,",
+          "press `Subscribe` to get the **Live Notifications** role.",
+          "",
+          "If you no longer want to receive these alerts,",
+          "type `!unsubscribe` to remove the role.",
+          "",
+          "Thank you for being part of the community! 💙",
+        ].join("\n")
+      );
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("sub_subscribe")
+        .setLabel("Subscribe")
+        .setStyle(ButtonStyle.Success)
+    );
+
+    await message.channel.send({ embeds: [subEmbed], components: [row] });
+    return;
+  }
+
+  // =====================================================
+  // MODERATION COMMANDS
+  // =====================================================
+
+  // ========== !ban ==========
+  if (cmd === "!ban") {
+    const user = message.mentions.members?.first();
+    if (!user) return message.reply("Usage: `!ban @user [reason]`");
+
+    const reason = args.slice(2).join(" ") || "No reason provided";
+    try {
+      await user.ban({ reason });
+      return message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
+    } catch (err) {
+      console.error("Ban error:", err);
+      return message.reply("⚠ Failed to ban that user.");
+    }
+  }
+
+  // ========== !kick ==========
+  if (cmd === "!kick") {
+    const user = message.mentions.members?.first();
+    if (!user) return message.reply("Usage: `!kick @user [reason]`");
+
+    const reason = args.slice(2).join(" ") || "No reason provided";
+    try {
+      await user.kick(reason);
+      return message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
+    } catch (err) {
+      console.error("Kick error:", err);
+      return message.reply("⚠ Failed to kick that user.");
+    }
+  }
+
+  // ========== !mute ==========
+  if (cmd === "!mute") {
+    const user = message.mentions.members?.first();
+    const minutes = parseInt(args[2]) || 10;
+    if (!user) return message.reply("Usage: `!mute @user [minutes]`");
+
+    try {
+      await user.timeout(minutes * 60 * 1000, `Muted by ${message.author.tag}`);
+      return message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
+    } catch (err) {
+      console.error("Mute error:", err);
+      return message.reply("⚠ Failed to mute that user.");
+    }
+  }
+
+  // ========== !unmute ==========
+  if (cmd === "!unmute") {
+    const user = message.mentions.members?.first();
+    if (!user) return message.reply("Usage: `!unmute @user`");
+
+    try {
+      await user.timeout(null, `Unmuted by ${message.author.tag}`);
+      return message.reply(`🔊 Unmuted **${user.user.tag}**.`);
+    } catch (err) {
+      console.error("Unmute error:", err);
+      return message.reply("⚠ Failed to unmute that user.");
+    }
+  }
+
+  // ========== !prune ==========
+  if (cmd === "!prune") {
+    const amount = parseInt(args[1]);
+    if (!amount || amount < 1 || amount > 100) {
+      return message.reply("Usage: `!prune 1-100`");
+    }
+
+    try {
+      await message.channel.bulkDelete(amount, true);
+      const m = await message.channel.send(`🧹 Deleted **${amount}** messages.`);
+      setTimeout(() => m.delete().catch(() => {}), 4000);
+    } catch (err) {
+      console.error("Prune error:", err);
+      return message.reply("⚠ Could not delete messages (maybe older than 14 days).");
+    }
+  }
+
+  // ========== !addrole ==========
+  if (cmd === "!addrole") {
+    const target = message.mentions.members?.first();
+    if (!target) return message.reply("Usage: `!addrole @user RoleName`");
+
+    const roleName = args.slice(2).join(" ");
+    if (!roleName) return message.reply("Please provide a role name.");
+
+    const role = message.guild.roles.cache.find(
+      (r) => r.name.toLowerCase() === roleName.toLowerCase()
+    );
+    if (!role) return message.reply(`⚠ Could not find a role named **${roleName}**.`);
+
+    try {
+      await target.roles.add(role);
+      return message.reply(`✅ Added role **${role.name}** to **${target.user.tag}**.`);
+    } catch (err) {
+      console.error("Add role error:", err);
+      return message.reply("⚠ Failed to add that role.");
+    }
+  }
+
+  // ========== !removerole ==========
+  if (cmd === "!removerole") {
+    const target = message.mentions.members?.first();
+    if (!target) return message.reply("Usage: `!removerole @user RoleName`");
+
+    const roleName = args.slice(2).join(" ");
+    if (!roleName) return message.reply("Please provide a role name.");
+
+    const role = message.guild.roles.cache.find(
+      (r) => r.name.toLowerCase() === roleName.toLowerCase()
+    );
+    if (!role) return message.reply(`⚠ Could not find a role named **${roleName}**.`);
+
+    if (!target.roles.cache.has(role.id)) {
+      return message.reply(
+        `⚠ **${target.user.tag}** does not currently have the **${role.name}** role.`
+      );
+    }
+
+    try {
+      await target.roles.remove(role);
+      return message.reply(`❎ Removed role **${role.name}** from **${target.user.tag}**.`);
+    } catch (err) {
+      console.error("Remove role error:", err);
+      return message.reply("⚠ Failed to remove that role.");
+    }
+  }
+
+  // =====================================================
+  // SUBSCRIBE / UNSUBSCRIBE (PUBLIC)
+  // =====================================================
+
+  // ========== !subscribe ==========
+  if (cmd === "!subscribe") {
+    const member = message.member;
+    if (member.roles.cache.has(SUB_ROLE)) {
+      return message.reply(
+        "🔔 You are already subscribed to **Gosu General TV Live** notifications."
+      );
+    }
+
+    const role = message.guild.roles.cache.get(SUB_ROLE);
+    if (!role) {
+      return message.reply(
+        "⚠ Subscription role is not configured correctly. Please contact staff."
+      );
+    }
+
+    try {
+      await member.roles.add(role);
+      return message.reply(
+        "✅ You are now **subscribed** to Gosu General TV Live notifications."
+      );
+    } catch (err) {
+      console.error("Subscribe error:", err);
+      return message.reply("⚠ Failed to add the subscription role.");
+    }
+  }
+
+  // ========== !unsubscribe ==========
+  if (cmd === "!unsubscribe") {
+    const member = message.member;
+    const role = message.guild.roles.cache.get(SUB_ROLE);
+    if (!role) {
+      return message.reply(
+        "⚠ Subscription role is not configured correctly. Please contact staff."
+      );
+    }
+
+    if (!member.roles.cache.has(SUB_ROLE)) {
+      return message.reply("🔕 You are **not currently subscribed**.");
+    }
+
+    try {
+      await member.roles.remove(role);
+      return message.reply(
+        "🔕 You have **unsubscribed** from Gosu General TV Live notifications."
+      );
+    } catch (err) {
+      console.error("Unsubscribe error:", err);
+      return message.reply("⚠ Failed to remove the subscription role.");
+    }
+  }
+
+  // =====================================================
+  // INVITE + HELP
+  // =====================================================
+
+  // ========== !invite ==========
+  if (cmd === "!invite") {
+    return message.reply("📨 **Server Invite:** https://discord.gg/gosugeneral");
+  }
+
+  // ========== !help or /? ==========
+  if (cmd === "!help" || cmd === "/?") {
+    const help = new EmbedBuilder()
+      .setColor("#00FFFF")
+      .setTitle("Gosu Bot — Commands")
+      .setDescription(
+        [
+          "**General**",
+          "`!ping` — Check if the bot is online.",
+          "`!invite` — Show the server invite link.",
+          "`!subscribe` — Subscribe to live notifications.",
+          "`!unsubscribe` — Unsubscribe from live notifications.",
+          "",
+          "**Moderation (Moderator+)**",
+          "`!ban @user [reason]` — Ban a user.",
+          "`!kick @user [reason]` — Kick a user.",
+          "`!mute @user [minutes]` — Timeout a user.",
+          "`!unmute @user` — Remove timeout.",
+          "`!prune [1-100]` — Delete recent messages.",
+          "`!addrole @user RoleName` — Add a role to a user.",
+          "`!removerole @user RoleName` — Remove a role from a user.",
+          "`!subscriber` — Create the live notification panel.",
+          "",
+          "**Admin / Developer**",
+          "`!setupjoin` — Create the rules panel.",
+          "`!welcome` — Create the main welcome panel.",
+          "`!color` — Create the Color 3 role panel.",
+        ].join("\n")
+      );
+
+    return message.reply({ embeds: [help] });
+  }
+});
+
+// =====================================================
+// BUTTON INTERACTIONS (Rules + Colors + Subscribe Panel)
+// =====================================================
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  const { customId, guild, member } = interaction;
+
+  // -------- Agree To Rules --------
+  if (customId === "agree_rules") {
+    const role = guild.roles.cache.get(GOSU_ROLE);
+    if (!role) {
+      return interaction.reply({
+        content: "⚠ Member role is not configured correctly. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+
+    if (member.roles.cache.has(role.id)) {
+      return interaction.reply({
+        content: "You already have access. Enjoy the server!",
+        ephemeral: true,
+      });
+    }
+
+    try {
+      await member.roles.add(role);
+      return interaction.reply({
+        content: `✅ You accepted the rules and received the **${role.name}** role. Welcome!`,
+        ephemeral: true,
+      });
+    } catch (err) {
+      console.error("Agree rules error:", err);
+      return interaction.reply({
+        content: "⚠ Failed to assign the role. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // -------- Subscribe button --------
+  if (customId === "sub_subscribe") {
+    const role = guild.roles.cache.get(SUB_ROLE);
+    if (!role) {
+      return interaction.reply({
+        content: "⚠ Subscription role is not configured correctly. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+
+    if (member.roles.cache.has(SUB_ROLE)) {
+      return interaction.reply({
+        content: "🔔 You are already subscribed to live notifications.",
+        ephemeral: true,
+      });
+    }
+
+    try {
+      await member.roles.add(role);
+      return interaction.reply({
+        content: "✅ You are now **subscribed** to Gosu General TV Live notifications.",
+        ephemeral: true,
+      });
+    } catch (err) {
+      console.error("Subscribe button error:", err);
+      return interaction.reply({
+        content: "⚠ Failed to add the subscription role. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+  }
+
+  // -------- Color buttons --------
+  const colorConfig = COLOR_ROLES.find((c) => c.customId === customId);
+  if (colorConfig) {
+    const role = guild.roles.cache.get(colorConfig.roleId);
+    if (!role) {
+      return interaction.reply({
+        content: "⚠ The color role for this button is not configured. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+
+    if (!guild.members.me.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+      return interaction.reply({
+        content: "⚠ I do not have permission to **Manage Roles**.",
+        ephemeral: true,
+      });
+    }
+
+    try {
+      const colorRoleIds = COLOR_ROLES.map((c) => c.roleId);
+      const toRemove = member.roles.cache.filter((r) => colorRoleIds.includes(r.id));
+
+      // 이미 이 색을 갖고 있으면 → 제거
+      if (member.roles.cache.has(role.id)) {
+        await member.roles.remove(role);
+        return interaction.reply({
+          content: `Removed color role **${role.name}**.`,
+          ephemeral: true,
+        });
+      }
+
+      // 다른 색들 모두 제거 후 새 색 부여
+      if (toRemove.size > 0) {
+        await member.roles.remove(toRemove);
+      }
+
+      await member.roles.add(role);
+      return interaction.reply({
+        content: `You now have the color role **${role.name}**.`,
+        ephemeral: true,
+      });
+    } catch (err) {
+      console.error("Color role error:", err);
+      return interaction.reply({
+        content: "⚠ Failed to update your color role. Please contact staff.",
+        ephemeral: true,
+      });
+    }
+  }
+});
+
+// --------------------
+// Login
+// --------------------
+client.login(process.env.Bot_Token);
