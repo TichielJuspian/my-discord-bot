@@ -197,11 +197,11 @@ client.on("messageCreate", async (message) => {
         });
       }
 
-      // Send warning message to user (deletes after 3 seconds)
-      const warningMessage = await message.channel.send(
-        `🚫 ${member} **Watch your language!** The word (**${foundWord}**) is not allowed here.`
+      // Send warning message to user (지우지 않음 + 문구 수정)
+      await message.channel.send(
+        `🚫 ${member} **Watch your language!**` // 요청하신 간결한 문구
       );
-      setTimeout(() => warningMessage.delete().catch(() => {}), 3000);
+      // ❗ 금지어 사용 경고 문구는 타이머를 제거하여 삭제되지 않도록 했습니다.
 
       // Stop processing other commands after a blacklisted word is found
       return; 
@@ -220,7 +220,7 @@ client.on("messageCreate", async (message) => {
       if (!message.deleted) {
         message.delete().catch(() => {});
       }
-    }, 1000);
+    }, 1000); // ❗ 명령어 입력 메시지 삭제도 1초로 통일
   }
 
   // ---------------------------
@@ -229,7 +229,10 @@ client.on("messageCreate", async (message) => {
   const adminOnly = ["!setupjoin", "!color", "!welcome", "!reloadblacklist", "!addword", "!removeword", "!listwords", "!subscriber"]; 
   if (adminOnly.includes(cmd)) {
     if (!isAdmin(message.member)) {
-      return message.reply("⛔ Only **Admins/Developers** can use this command.");
+      // 권한 부족 경고 메시지도 1초 뒤 삭제
+      const reply = await message.reply("⛔ Only **Admins/Developers** can use this command.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
     }
   }
 
@@ -239,12 +242,16 @@ client.on("messageCreate", async (message) => {
   ];
   if (modOnly.includes(cmd)) {
     if (!isModerator(message.member)) {
-      return message.reply("⛔ Only **Moderators** can use this command.");
+      // 권한 부족 경고 메시지도 1초 뒤 삭제
+      const reply = await message.reply("⛔ Only **Moderators** can use this command.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      return;
     }
   }
 
   // ========== !PING ==========
   if (cmd === "!ping") {
+    // 응답 메시지는 유지
     return message.reply("Pong!");
   }
   
@@ -255,32 +262,48 @@ client.on("messageCreate", async (message) => {
   // ========== !addword ==========
   if (cmd === "!addword") {
     const newWord = args.slice(1).join(" ").toLowerCase().trim();
-    if (!newWord) return message.reply("Usage: `!addword [word]`");
+    if (!newWord) {
+      const reply = await message.reply("Usage: `!addword [word]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     if (BLACKLISTED_WORDS.includes(newWord)) {
-      return message.reply(`⚠ **${newWord}** is already in the blacklist.`);
+      const reply = await message.reply(`⚠ **${newWord}** is already in the blacklist.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
 
     BLACKLISTED_WORDS.push(newWord);
     saveBlacklist(); // Save to file
-    return message.reply(`✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`);
+    const reply = await message.reply(`✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`);
+    setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+    return;
   }
 
   // ========== !removeword ==========
   if (cmd === "!removeword") {
     const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
-    if (!wordToRemove) return message.reply("Usage: `!removeword [word]`");
+    if (!wordToRemove) {
+      const reply = await message.reply("Usage: `!removeword [word]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     const initialLength = BLACKLISTED_WORDS.length;
     // Create a new array excluding the word
     BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(word => word !== wordToRemove);
     
     if (BLACKLISTED_WORDS.length === initialLength) {
-      return message.reply(`⚠ **${wordToRemove}** was not found in the blacklist.`);
+      const reply = await message.reply(`⚠ **${wordToRemove}** was not found in the blacklist.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
 
     saveBlacklist(); // Save to file
-    return message.reply(`✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`);
+    const reply = await message.reply(`✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`);
+    setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+    return;
   }
 
   // ========== !listwords ==========
@@ -295,13 +318,15 @@ client.on("messageCreate", async (message) => {
       )
       .setFooter({ text: "Showing the first 50 words." });
 
+    // 리스트는 삭제되지 않고 유지
     return message.reply({ embeds: [listEmbed] });
   }
 
   // ========== !reloadblacklist (Reload from file) ==========
   if (cmd === "!reloadblacklist") {
         loadBlacklist(); 
-        message.reply(`✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from blacklist.json.`);
+        const reply = await message.reply(`✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from blacklist.json.`);
+        setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
         return;
   }
 
@@ -498,30 +523,46 @@ client.on("messageCreate", async (message) => {
   // ========== !ban ==========
   if (cmd === "!ban") {
     const user = message.mentions.members?.first();
-    if (!user) return message.reply("Usage: `!ban @user [reason]`");
+    if (!user) {
+      const reply = await message.reply("Usage: `!ban @user [reason]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     const reason = args.slice(2).join(" ") || "No reason provided";
     try {
       await user.ban({ reason });
-      return message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
+      const reply = await message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     } catch (err) {
       console.error("Ban error:", err);
-      return message.reply("⚠ Failed to ban that user.");
+      const reply = await message.reply("⚠ Failed to ban that user.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
   }
 
   // ========== !kick ==========
   if (cmd === "!kick") {
     const user = message.mentions.members?.first();
-    if (!user) return message.reply("Usage: `!kick @user [reason]`");
+    if (!user) {
+      const reply = await message.reply("Usage: `!kick @user [reason]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     const reason = args.slice(2).join(" ") || "No reason provided";
     try {
       await user.kick(reason);
-      return message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
+      const reply = await message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     } catch (err) {
       console.error("Kick error:", err);
-      return message.reply("⚠ Failed to kick that user.");
+      const reply = await message.reply("⚠ Failed to kick that user.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
   }
 
@@ -529,28 +570,44 @@ client.on("messageCreate", async (message) => {
   if (cmd === "!mute") {
     const user = message.mentions.members?.first();
     const minutes = parseInt(args[2]) || 10;
-    if (!user) return message.reply("Usage: `!mute @user [minutes]`");
+    if (!user) {
+      const reply = await message.reply("Usage: `!mute @user [minutes]`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     try {
       await user.timeout(minutes * 60 * 1000, `Muted by ${message.author.tag}`);
-      return message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
+      const reply = await message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     } catch (err) {
       console.error("Mute error:", err);
-      return message.reply("⚠ Failed to mute that user.");
+      const reply = await message.reply("⚠ Failed to mute that user.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
   }
 
   // ========== !unmute ==========
   if (cmd === "!unmute") {
     const user = message.mentions.members?.first();
-    if (!user) return message.reply("Usage: `!unmute @user`");
+    if (!user) {
+      const reply = await message.reply("Usage: `!unmute @user`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     try {
       await user.timeout(null, `Unmuted by ${message.author.tag}`);
-      return message.reply(`🔊 Unmuted **${user.user.tag}**.`);
+      const reply = await message.reply(`🔊 Unmuted **${user.user.tag}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     } catch (err) {
       console.error("Unmute error:", err);
-      return message.reply("⚠ Failed to unmute that user.");
+      const reply = await message.reply("⚠ Failed to unmute that user.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
   }
 
@@ -558,66 +615,104 @@ client.on("messageCreate", async (message) => {
   if (cmd === "!prune") {
     const amount = parseInt(args[1]);
     if (!amount || amount < 1 || amount > 100) {
-      return message.reply("Usage: `!prune 1-100`");
+      const reply = await message.reply("Usage: `!prune 1-100`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
 
     try {
       await message.channel.bulkDelete(amount, true);
       const m = await message.channel.send(`🧹 Deleted **${amount}** messages.`);
-      setTimeout(() => m.delete().catch(() => {}), 4000);
+      setTimeout(() => m.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제 (기존 4초에서 변경)
     } catch (err) {
       console.error("Prune error:", err);
-      return message.reply("⚠ Could not delete messages (maybe older than 14 days).");
+      const reply = await message.reply("⚠ Could not delete messages (maybe older than 14 days).");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
   }
 
   // ========== !addrole ==========
   if (cmd === "!addrole") {
     const target = message.mentions.members?.first();
-    if (!target) return message.reply("Usage: `!addrole @user RoleName`");
+    if (!target) {
+      const reply = await message.reply("Usage: `!addrole @user RoleName`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     const roleName = args.slice(2).join(" ");
-    if (!roleName) return message.reply("Please provide a role name.");
+    if (!roleName) {
+      const reply = await message.reply("Please provide a role name.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     const role = message.guild.roles.cache.find(
       (r) => r.name.toLowerCase() === roleName.toLowerCase()
     );
-    if (!role) return message.reply(`⚠ Could not find a role named **${roleName}**.`);
+    if (!role) {
+      const reply = await message.reply(`⚠ Could not find a role named **${roleName}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     try {
       await target.roles.add(role);
-      return message.reply(`✅ Added role **${role.name}** to **${target.user.tag}**.`);
+      const reply = await message.reply(`✅ Added role **${role.name}** to **${target.user.tag}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     } catch (err) {
       console.error("Add role error:", err);
-      return message.reply("⚠ Failed to add that role.");
+      const reply = await message.reply("⚠ Failed to add that role.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
   }
 
   // ========== !removerole ==========
   if (cmd === "!removerole") {
     const target = message.mentions.members?.first();
-    if (!target) return message.reply("Usage: `!removerole @user RoleName`");
+    if (!target) {
+      const reply = await message.reply("Usage: `!removerole @user RoleName`");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     const roleName = args.slice(2).join(" ");
-    if (!roleName) return message.reply("Please provide a role name.");
+    if (!roleName) {
+      const reply = await message.reply("Please provide a role name.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     const role = message.guild.roles.cache.find(
       (r) => r.name.toLowerCase() === roleName.toLowerCase()
     );
-    if (!role) return message.reply(`⚠ Could not find a role named **${roleName}**.`);
+    if (!role) {
+      const reply = await message.reply(`⚠ Could not find a role named **${roleName}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
+    }
 
     if (!target.roles.cache.has(role.id)) {
-      return message.reply(
+      const reply = await message.reply(
         `⚠ **${target.user.tag}** does not currently have the **${role.name}** role.`
       );
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
 
     try {
       await target.roles.remove(role);
-      return message.reply(`❎ Removed role **${role.name}** from **${target.user.tag}**.`);
+      const reply = await message.reply(`❎ Removed role **${role.name}** from **${target.user.tag}**.`);
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     } catch (err) {
       console.error("Remove role error:", err);
-      return message.reply("⚠ Failed to remove that role.");
+      const reply = await message.reply("⚠ Failed to remove that role.");
+      setTimeout(() => reply.delete().catch(() => {}), 1000); // ❗ 1초 뒤 삭제
+      return;
     }
   }
 
@@ -806,5 +901,3 @@ client.on("interactionCreate", async (interaction) => {
 // Login
 // --------------------
 client.login(process.env.Bot_Token);
-
-
