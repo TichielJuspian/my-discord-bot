@@ -117,16 +117,16 @@ function sendLog(guild, logType, embed) {
 
 
 // ----------------------------------------------------
-// Client Initialization (Intents must be correct for logging)
+// Client Initialization (Intent error corrected)
 // ----------------------------------------------------
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers, // Member Add/Remove, Role Update
+        GatewayIntentBits.GuildMembers, 
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates, // Voice Log
-        GatewayIntentBits.GuildBans, // Ban Log
+        GatewayIntentBits.GuildVoiceStates, 
+        GatewayIntentBits.GuildBans, 
         GatewayIntentBits.MessageReactions,
     ],
     partials: ['MESSAGE', 'CHANNEL', 'REACTION', 'GUILD_MEMBER'],
@@ -138,7 +138,7 @@ const client = new Client({
 client.once("ready", () => {
     console.log(`Bot logged in as ${client.user.tag}`);
     loadBlacklist();
-    loadLogConfig(); // 로그 설정 로드
+    loadLogConfig(); 
 });
 
 // --------------------
@@ -157,7 +157,7 @@ function hasModPermission(member) {
 // =====================================================
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
-    if (!message.guild) return; // DM 무시
+    if (!message.guild) return;
 
     const args = message.content.trim().split(/\s+/);
     const cmd = args[0].toLowerCase();
@@ -194,7 +194,6 @@ client.on("messageCreate", async (message) => {
 
     // ========== LOG MANAGEMENT COMMANDS (Admin Only) ==========
     
-    // Helper function for log setting commands
     async function handleLogCommand(message, logType, enable) {
         const channelId = message.channel.id;
         const logName = {
@@ -223,31 +222,13 @@ client.on("messageCreate", async (message) => {
         setTimeout(() => reply.delete().catch(() => {}), 1000);
     }
 
-    // !addactionlog / !removeactionlog
-    if (cmd === "!addactionlog") {
-        return handleLogCommand(message, 'action', true);
-    }
-    if (cmd === "!removeactionlog") {
-        return handleLogCommand(message, 'action', false);
-    }
+    if (cmd === "!addactionlog") { return handleLogCommand(message, 'action', true); }
+    if (cmd === "!removeactionlog") { return handleLogCommand(message, 'action', false); }
+    if (cmd === "!addmodlog") { return handleLogCommand(message, 'mod', true); }
+    if (cmd === "!removemodlog") { return handleLogCommand(message, 'mod', false); }
+    if (cmd === "!addfilterlog") { return handleLogCommand(message, 'filter', true); }
+    if (cmd === "!removefilterlog") { return handleLogCommand(message, 'filter', false); }
 
-    // !addmodlog / !removemodlog
-    if (cmd === "!addmodlog") {
-        return handleLogCommand(message, 'mod', true);
-    }
-    if (cmd === "!removemodlog") {
-        return handleLogCommand(message, 'mod', false);
-    }
-
-    // !addfilterlog / !removefilterlog
-    if (cmd === "!addfilterlog") {
-        return handleLogCommand(message, 'filter', true);
-    }
-    if (cmd === "!removefilterlog") {
-        return handleLogCommand(message, 'filter', false);
-    }
-
-    // !addlog (All logs shortcut)
     if (cmd === "!addlog") {
         LOG_CHANNELS.action = message.channel.id;
         LOG_CHANNELS.mod = message.channel.id;
@@ -258,7 +239,6 @@ client.on("messageCreate", async (message) => {
         return;
     }
 
-    // !deletelog (All logs shortcut)
     if (cmd === "!deletelog") {
         LOG_CHANNELS.action = null;
         LOG_CHANNELS.mod = null;
@@ -270,7 +250,7 @@ client.on("messageCreate", async (message) => {
     }
 
 
-    // ========== BLACKLIST MANAGEMENT COMMANDS ==========
+    // ========== BLACKLIST MANAGEMENT COMMANDS (생략) ==========
     if (cmd === "!addblacklist") {
         const word = args.slice(1).join(' ').trim().toLowerCase();
         if (!word) {
@@ -444,26 +424,44 @@ client.on("messageCreate", async (message) => {
     }
 
     // ---------------------------
-    // CHAT FILTER LOGIC
+    // CHAT FILTER LOGIC (⭐ 안정화 버전: 단어 단위 필터링)
     // ---------------------------
     if (!isExempt) {
-        // 1. 정규화(NFC)로 초성/중성 분리 우회 방지
+        // 1. 정규화(NFC)로 초성/중성 분리 우회 방지 및 소문자 변환
         const normalizedContent = message.content.normalize('NFC').toLowerCase();
 
-        // 2. 특수문자/공백 제거해서 우회 필터링
-        const simplifiedContent = normalizedContent.replace(/[^가-힣a-z0-9]/g, '');
+        // 2. 메시지를 띄어쓰기(공백) 기준으로 단어 배열로 분리
+        const contentWords = normalizedContent.split(/\s+/).filter(w => w.length > 0);
 
-        const foundWord = BLACKLISTED_WORDS.find(word => {
+        let foundWord = null;
+
+        // 🌟 3. 단어 배열 순회하며 필터링
+        for (const word of BLACKLISTED_WORDS) {
+            // 금지어에서 특수문자를 제거하여 '순수한 금지어'를 준비합니다.
             const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, '');
-            return simplifiedContent.includes(simplifiedWord);
-        });
+
+            if (!simplifiedWord) continue;
+
+            for (const contentWord of contentWords) {
+                // 사용자의 단어에서도 특수문자를 제거하여 '순수한 사용자 단어'를 준비합니다.
+                const simplifiedContentWord = contentWord.replace(/[^가-힣a-z0-9]/g, '');
+
+                // 순수한 사용자 단어가 순수한 금지어를 포함하는지 확인 (오탐 줄임)
+                if (simplifiedContentWord.includes(simplifiedWord)) {
+                    foundWord = word;
+                    break; 
+                }
+            }
+            if (foundWord) break;
+        }
+
 
         if (foundWord) {
             // ⭐ FILTER LOG 전송
             const filterLogEmbed = new EmbedBuilder()
                 .setColor("#8B0000") 
                 .setTitle("🚨 FILTER HIT DETECTED")
-                .setDescription(`User **@${message.author.tag}** used a blacklisted word.`) // @username.tag 형식
+                .setDescription(`User **@${message.author.tag}** used a blacklisted word.`)
                 .addFields(
                     { name: "Channel", value: `${message.channel}`, inline: true },
                     { name: "Word Used", value: `\`${foundWord}\``, inline: true },
