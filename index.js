@@ -60,6 +60,42 @@ client.on("messageCreate", async (message) => {
     );
   }
 
+  // ---------- Moderator help: /? or !help ----------
+  if (lower === "/?" || lower.startsWith("!help")) {
+    if (!isModerator(message.member)) {
+      return message.reply(
+        "⛔ This help menu is only available to **Server Moderators or higher**."
+      );
+    }
+
+    const helpEmbed = new EmbedBuilder()
+      .setTitle("Gosu Bot — Moderator Commands")
+      .setColor(0x00b0f4)
+      .setDescription(
+        [
+          "**Prefix:** `!`",
+          "",
+          "**General**",
+          "`!ping` — Check if the bot is online.",
+          "`!invite` — Show the server invite link.",
+          "",
+          "**Moderation**",
+          "`!setupjoin` — Create the rules panel with the Agree button.",
+          "`!ban @user [reason]` — Ban a user from the server.",
+          "`!kick @user [reason]` — Kick a user from the server.",
+          "`!mute @user [minutes]` — Timeout a user (default 10 minutes).",
+          "`!addrole @user @Role` — Add any role to a user (role must be below the bot).",
+          "`!prune [1-100]` — Delete recent messages in this channel.",
+          "",
+          "**Notes**",
+          "- All mod commands require **Server Moderator role or Administrator**.",
+          "- Make sure the bot's role is above the roles it needs to manage.",
+        ].join("\n")
+      );
+
+    return message.reply({ embeds: [helpEmbed] });
+  }
+
   // ---------- Moderator-only commands below ----------
   if (
     lower.startsWith("!setupjoin") ||
@@ -94,7 +130,7 @@ client.on("messageCreate", async (message) => {
         .setDescription(
           [
             "**Rule 1 — Respect Everyone**",
-            "Treat all members with respect. No harassment, personal attacks, discrimination, or toxic behavior.",
+            "Treat all members with respect. no harassment, personal attacks, discrimination, or toxic behavior.",
             "",
             "**Rule 2 — No Spam or Excessive Mentions**",
             "Do not spam messages, images, emojis, links, or ping people excessively.",
@@ -201,7 +237,10 @@ client.on("messageCreate", async (message) => {
     const durationMs = minutes * 60 * 1000;
 
     try {
-      await target.timeout(durationMs, `Muted by ${message.author.tag} for ${minutes} minutes`);
+      await target.timeout(
+        durationMs,
+        `Muted by ${message.author.tag} for ${minutes} minutes`
+      );
       return message.reply(
         `🔇 Muted **${target.user.tag}** for **${minutes}** minute(s).`
       );
