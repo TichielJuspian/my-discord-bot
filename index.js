@@ -525,7 +525,7 @@ client.on("messageCreate", async (message) => {
     const user = message.mentions.members?.first();
     if (!user) {
       const reply = await message.reply("Usage: `!ban @user [reason]`");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
@@ -533,12 +533,12 @@ client.on("messageCreate", async (message) => {
     try {
       await user.ban({ reason });
       const reply = await message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     } catch (err) {
       console.error("Ban error:", err);
       const reply = await message.reply("⚠ Failed to ban that user.");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
   }
@@ -548,7 +548,7 @@ client.on("messageCreate", async (message) => {
     const user = message.mentions.members?.first();
     if (!user) {
       const reply = await message.reply("Usage: `!kick @user [reason]`");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
@@ -556,12 +556,12 @@ client.on("messageCreate", async (message) => {
     try {
       await user.kick(reason);
       const reply = await message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     } catch (err) {
       console.error("Kick error:", err);
       const reply = await message.reply("⚠ Failed to kick that user.");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
   }
@@ -572,19 +572,19 @@ client.on("messageCreate", async (message) => {
     const minutes = parseInt(args[2]) || 10;
     if (!user) {
       const reply = await message.reply("Usage: `!mute @user [minutes]`");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
     try {
       await user.timeout(minutes * 60 * 1000, `Muted by ${message.author.tag}`);
       const reply = await message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     } catch (err) {
       console.error("Mute error:", err);
       const reply = await message.reply("⚠ Failed to mute that user.");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
   }
@@ -594,19 +594,19 @@ client.on("messageCreate", async (message) => {
     const user = message.mentions.members?.first();
     if (!user) {
       const reply = await message.reply("Usage: `!unmute @user`");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
 
     try {
       await user.timeout(null, `Unmuted by ${message.author.tag}`);
       const reply = await message.reply(`🔊 Unmuted **${user.user.tag}**.`);
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     } catch (err) {
       console.error("Unmute error:", err);
       const reply = await message.reply("⚠ Failed to unmute that user.");
-      setTimeout(() => reply.delete().catch(() => {}), 1000);
+      // setTimeout(() => reply.delete().catch(() => {}), 1000); // 👈 삭제 안 함
       return;
     }
   }
@@ -737,23 +737,23 @@ client.on("messageCreate", async (message) => {
           "`!invite` — Show the server invite link.",
           "",
           "**Moderation (Moderator+)**",
-          "`!ban @user [reason]` — Ban a user.",
-          "`!kick @user [reason]` — Kick a user.",
-          "`!mute @user [minutes]` — Timeout a user.",
-          "`!unmute @user` — Remove timeout.",
-          "`!prune [1-100]` — Delete recent messages.",
-          "`!addrole @user RoleName` — Add a role to a user.",
-          "`!removerole @user RoleName` — Remove a role from a user.",
+          "`!ban @user [reason]` — Ban a user. (Reply stays)",
+          "`!kick @user [reason]` — Kick a user. (Reply stays)",
+          "`!mute @user [minutes]` — Timeout a user. (Reply stays)",
+          "`!unmute @user` — Remove timeout. (Reply stays)",
+          "`!prune [1-100]` — Delete recent messages. (Reply deletes after 1s)",
+          "`!addrole @user RoleName` — Add a role to a user. (Reply deletes after 1s)",
+          "`!removerole @user RoleName` — Remove a role from a user. (Reply deletes after 1s)",
           "",
           "**Admin / Developer**",
           "`!setupjoin` — Create the rules panel.",
           "`!welcome` — Create the main welcome panel.",
           "`!subscriber` — Create the live notification panel.",
           "`!color` — Create the Color 3 role panel.",
-          "`!addword [word]` — Add a word to the filter list.",
-          "`!removeword [word]` — Remove a word from the filter list.",
+          "`!addword [word]` — Add a word to the filter list. (Reply deletes after 1s)",
+          "`!removeword [word]` — Remove a word from the filter list. (Reply deletes after 1s)",
           "`!listwords` — Show the current blacklisted words.",
-          "`!reloadblacklist` — Reload the filter words from the JSON file.",
+          "`!reloadblacklist` — Reload the filter words from the JSON file. (Reply deletes after 1s)",
         ].join("\n")
       );
 
@@ -900,5 +900,4 @@ client.on("interactionCreate", async (interaction) => {
 // --------------------
 // Log in
 // --------------------
-client.login(process.env.Bot_Token);
-
+client.login(process.env.DISCORD_TOKEN);
