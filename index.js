@@ -899,24 +899,45 @@ if (cmd === "!removeword") {
     }
 
     // !subscriber — Create the Live Notification Panel
+    // !subscriber — Create the Live Notification Panel
     if (cmd === "!subscriber") {
+        const member = message.member;
         if (!isAdmin(member)) {
             return message.reply(
                 "❌ You do not have permission to use this command."
             );
         }
 
-        const panelEmbed = new EmbedBuilder()
+        // 1) 배너 이미지 (위에 크게)
+        await message.channel.send({
+            files: [{ attachment: NOTIFICATION_BANNER_URL, name: "notification.png" }],
+        });
+
+        // 2) welcome 스타일 설명 embed
+        const subscriberEmbed = new EmbedBuilder()
             .setColor("#00BFFF")
             .setTitle("🔔 Live Notification Subscription")
             .setDescription(
-                "Click the button below to toggle **Live Stream/Upload Notifications**.\n\n" +
-                    "• Press once → Subscribe\n" +
-                    "• Press again → Unsubscribe"
+                [
+                    "Stay updated with **Live Streams** and **New Uploads**!",
+                    "",
+                    "By subscribing, you will receive:",
+                    "• 🔴 Live stream alerts",
+                    "• 🆕 New YouTube upload notifications",
+                    "• 📢 Special announcements",
+                    "",
+                    "---",
+                    "### 📌 How It Works",
+                    "• Press once → **Subscribe**",
+                    "• Press again → **Unsubscribe**",
+                    "",
+                    "---",
+                    "Enjoy real-time updates and never miss a stream! 💙",
+                ].join("\n")
             )
-            .setImage(NOTIFICATION_BANNER_URL)
             .setFooter({ text: "Gosu General TV – Notification System" });
 
+        // 3) 버튼
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("subscribe_toggle")
@@ -924,8 +945,8 @@ if (cmd === "!removeword") {
                 .setStyle(ButtonStyle.Primary)
         );
 
-        await message.channel.send({ embeds: [panelEmbed], components: [row] });
-        return message.reply("✅ **Subscriber panel has been created.**");
+        await message.channel.send({ embeds: [subscriberEmbed], components: [row] });
+        return; // 깔끔하게 끝 (추가 텍스트 reply 없음)
     }
 
     // MODERATION COMMANDS
@@ -1477,5 +1498,6 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
