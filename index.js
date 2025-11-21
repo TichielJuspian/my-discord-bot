@@ -20,9 +20,18 @@ const fs = require("fs"); // File system module
 // ----------------------------------------------------
 // FILE PATH CONSTANT
 // ----------------------------------------------------
-const BLACKLIST_FILE_PATH = "blacklist.json";
-const CONFIG_FILE_PATH = "config.json"; // Log channel settings file
+const path = require("path"); // ⬅️ add this line
+
+const DATA_DIR = "/Data"; // Railway Volume mount path
+
+const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
+const CONFIG_FILE_PATH   = path.join(DATA_DIR, "config.json"); // Log channel settings file
 let BOT_CONFIG = {}; // Stores log channel IDs
+
+// Ensure DATA_DIR exists (for local + Railway)
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
 // ----------------------------------------------------
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
@@ -1509,4 +1518,5 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
