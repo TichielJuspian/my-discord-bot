@@ -36,7 +36,7 @@ const SUB_ROLE = process.env.SUB_ROLE_ID || "PUT_SUB_ROLE_ID_HERE";        �
 // ----------------------------------------------------
 // CUSTOM VOICE CHAT CONFIG (NEW FEATURE)
 // ----------------------------------------------------
-// 🚨 다중 채널 ID로 변경
+// 🚨 다중 채널 ID
 const CREATE_VOICE_CHANNEL_IDS = [
     "720658789832851487", // 기존 채널 ID
     "1441159364298936340" // 추가 요청된 채널 ID
@@ -222,7 +222,6 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     const member = newState.member || oldState.member;
     
     // --- 1. Channel Creation Logic ---
-    // 🚨 다중 채널 ID 확인으로 변경
     if (CREATE_VOICE_CHANNEL_IDS.includes(newState.channelId)) {
         // User joined one of the creation channels
         const guild = newState.guild;
@@ -242,14 +241,23 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
                 name: channelName,
                 type: ChannelType.GuildVoice,
                 parent: category.id, // Put it under the same category
+                userLimit: 5, // 최대 인원수 5명으로 제한 (0은 제한 없음)
                 permissionOverwrites: [
                     {
                         id: guild.id, // @everyone role
+                        // @everyone에게는 채널 보기만 허용, 접속은 차단 (프라이빗 설정)
                         allow: [PermissionsBitField.Flags.ViewChannel],
+                        deny: [PermissionsBitField.Flags.Connect], 
                     },
                     {
                         id: member.id, // Owner of the channel
-                        allow: [PermissionsBitField.Flags.ManageChannels, PermissionsBitField.Flags.MuteMembers, PermissionsBitField.Flags.DeafenMembers],
+                        allow: [
+                            PermissionsBitField.Flags.ManageChannels, // ⬅️ 채널 관리 권한 유지
+                            // PermissionsBitField.Flags.MoveMembers, // 🚨 제거됨: 강제 이동 권한 제거
+                            PermissionsBitField.Flags.MuteMembers, // 뮤트 권한
+                            PermissionsBitField.Flags.DeafenMembers, // 디프닝 권한
+                            PermissionsBitField.Flags.Connect, // 접속 권한
+                        ],
                     },
                 ],
             });
@@ -270,7 +278,6 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
 
     // --- 2. Channel Deletion Logic ---
     // User left a channel, and the channel they left is not one of the creation channels
-    // 🚨 다중 채널 ID 확인으로 변경
     if (oldState.channelId && !CREATE_VOICE_CHANNEL_IDS.includes(oldState.channelId)) {
         
         const oldChannel = oldState.channel;
