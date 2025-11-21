@@ -25,10 +25,10 @@ const CONFIG_FILE_PATH = "config.json"; // Log channel settings file
 let BOT_CONFIG = {}; // Stores log channel IDs
 
 // ----------------------------------------------------
-// ROLE IDs (❗ EDIT TO MATCH YOUR SERVER ❗)
+// ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
 // Main Gosu role (granted after agreeing to rules)
-const GOSU_ROLE = process.env.GOSU_ROLE_ID || "496717793388134410";
+const GOSU_ROLE = "496717793388134410";
 // Moderator role (filter exemption, moderation commands)
 const MOD_ROLE = "495727371140202506";
 // Admin role
@@ -39,10 +39,10 @@ const SUB_ROLE = "497654614729031681";
 // ----------------------------------------------------
 // VOICE CHANNEL CREATOR CONFIG
 // ----------------------------------------------------
-// If a member joins one of these channels, a temporary VO channel is created.
+// Voice channels that trigger auto personal VO channel
 const CREATE_CHANNEL_IDS = [
-    "720658789832851487",      // First VO Creator channel
-    "1441159364298936340",     // Second VO Creator channel
+    "720658789832851487",
+    "1441159364298936340",
 ];
 
 // ----------------------------------------------------
@@ -207,6 +207,46 @@ const WELCOME_BANNER_URL =
 const NOTIFICATION_BANNER_URL =
     "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c985f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
 
+// Color Roles (used by existing color buttons; no command to create new panel)
+const COLOR_ROLES = [
+    {
+        customId: "color_icey",
+        emoji: "❄️",
+        label: "~ icey azure ~",
+        roleId: process.env.ICEY_AZURE_ROLE_ID || "PUT_ICEY_AZURE_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_candy",
+        emoji: "🍭",
+        label: "~ candy ~",
+        roleId: process.env.CANDY_ROLE_ID || "PUT_CANDY_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_lilac",
+        emoji: "🌸",
+        label: "~ lilac ~",
+        roleId: process.env.LILAC_ROLE_ID || "PUT_LILAC_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_blush",
+        emoji: "❤️",
+        label: "~ blush ~",
+        roleId: process.env.BLUSH_ROLE_ID || "PUT_BLUSH_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_bubblegum",
+        emoji: "🍥",
+        label: "~ bubblegum ~",
+        roleId: process.env.BUBBLEGUM_ROLE_ID || "PUT_BUBBLEGUM_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_chocolate",
+        emoji: "🍫",
+        label: "~ chocolate ~",
+        roleId: process.env.CHOCOLATE_ROLE_ID || "PUT_CHOCOLATE_ROLE_ID_HERE",
+    },
+];
+
 // --------------------
 // Client Initialization
 // --------------------
@@ -258,17 +298,17 @@ client.once("ready", () => {
 });
 
 // =====================================================
-// VOICE CHANNEL CREATOR (Create/Delete Temporary VO Channels)
+// VOICE CHANNEL CREATOR
 // =====================================================
 client.on("voiceStateUpdate", async (oldState, newState) => {
     const guild = newState.guild || oldState.guild;
     if (!guild) return;
 
-    // 1. User joins a VO Creator channel → create temporary channel
+    // 1. Join – create personal VO channel
     if (newState.channelId && CREATE_CHANNEL_IDS.includes(newState.channelId)) {
         const member = newState.member;
         const createChannel = newState.channel;
-        const category = createChannel.parent;
+        const category = createChannel ? createChannel.parent : null;
 
         if (!member || !category) return;
 
@@ -324,8 +364,11 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
         }
     }
 
-    // 2. User leaves a temporary VO channel → delete if empty
-    if (oldState.channelId && !CREATE_CHANNEL_IDS.includes(oldState.channelId)) {
+    // 2. Delete – when temporary VO is empty
+    if (
+        oldState.channelId &&
+        !CREATE_CHANNEL_IDS.includes(oldState.channelId)
+    ) {
         const oldChannel = oldState.channel;
         if (!oldChannel) return;
 
@@ -344,7 +387,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
                 );
             } catch (error) {
                 console.error(
-                    `Failed to delete empty temporary VO channel (${oldChannel.name}):`,
+                    `🔴 Failed to delete empty temporary VO channel (${oldChannel.name}):`,
                     error.message
                 );
                 console.error(
@@ -376,7 +419,7 @@ client.on("messageCreate", async (message) => {
         let foundLinkFilterMatch = null;
         const normalizedMessage = message.content.toLowerCase();
 
-        // #1 Discord Invite Filter
+        // #1 Discord invite filter
         const allowedInvites = ["discord.gg/gosugeneral", "discord.gg/xgxD5hB"];
         const inviteMatches = normalizedMessage.match(
             /(discord\.gg)\/(\w+)/g
@@ -389,14 +432,14 @@ client.on("messageCreate", async (message) => {
         if (containsDiscordInvite && !isAllowedInvite) {
             foundLinkFilterMatch = "Unpermitted Discord Invite";
         }
-        // #2 OnlyFans Filter
+        // #2 OnlyFans filter
         else if (
             normalizedMessage.includes("only fans") ||
             normalizedMessage.includes("onlyfans")
         ) {
             foundLinkFilterMatch = "Explicit Content Keyword (OnlyFans)";
         }
-        // #3 General Link/URL Filter
+        // #3 General URL filter
         const generalUrlMatches = normalizedMessage.match(
             /(https?:\/\/)?(www\.)?(\w+)\.(\w+)\/(\w)+/g
         );
@@ -421,7 +464,6 @@ client.on("messageCreate", async (message) => {
             }
         }
 
-        // If enhanced link filter triggered
         if (foundLinkFilterMatch) {
             if (BOT_CONFIG.msgLogChannelId) {
                 const logChannel =
@@ -494,11 +536,10 @@ client.on("messageCreate", async (message) => {
             return;
         }
 
-        // Existing BLACKLISTED_WORDS filter
+        // BLACKLISTED_WORDS filter
         const normalizedContentExisting = message.content
             .normalize("NFC")
             .toLowerCase();
-
         const simplifiedContent = normalizedContentExisting.replace(
             /[^가-힣a-z0-9\s]/g,
             ""
@@ -605,7 +646,7 @@ client.on("messageCreate", async (message) => {
         }
     }, 1000);
 
-    // Permission groups
+    // Permission checks
     const adminOnly = [
         "!clearmsglog",
         "!setmodlog",
@@ -619,6 +660,15 @@ client.on("messageCreate", async (message) => {
         "!welcome",
         "!subscriber",
     ];
+    if (adminOnly.includes(cmd)) {
+        if (!isAdmin(message.member)) {
+            const reply = await message.reply(
+                "⛔ Only **Admins/Developers** can use this command."
+            );
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+    }
 
     const modOnly = [
         "!kick",
@@ -631,17 +681,6 @@ client.on("messageCreate", async (message) => {
         "!removeword",
         "!listwords",
     ];
-
-    if (adminOnly.includes(cmd)) {
-        if (!isAdmin(message.member)) {
-            const reply = await message.reply(
-                "⛔ Only **Admins/Developers** can use this command."
-            );
-            setTimeout(() => reply.delete().catch(() => {}), 1000);
-            return;
-        }
-    }
-
     if (modOnly.includes(cmd)) {
         if (!isModerator(message.member)) {
             const reply = await message.reply(
@@ -652,9 +691,7 @@ client.on("messageCreate", async (message) => {
         }
     }
 
-    // =====================================================
     // LOG SETTING & CLEARING COMMANDS (Admin Only)
-    // =====================================================
     const logCommands = {
         "!setactionlog": { key: "actionLogChannelId", type: "ACTION" },
         "!clearactionlog": { key: "actionLogChannelId", type: "ACTION" },
@@ -674,7 +711,6 @@ client.on("messageCreate", async (message) => {
                     : message.mentions.channels.first() ||
                       message.guild.channels.cache.get(args[1]);
 
-            // type 0 is GUILD_TEXT in raw type
             if (!channel || channel.type !== 0) {
                 const reply = await message.reply(
                     `Usage: \`${cmd}\` (in log channel) or \`${cmd} #channel\``
@@ -707,16 +743,12 @@ client.on("messageCreate", async (message) => {
         return;
     }
 
-    // ========== !PING ==========
+    // !ping
     if (cmd === "!ping") {
         return message.reply("Pong!");
     }
 
-    // =====================================================
     // BLACKLIST MANAGEMENT COMMANDS
-    // =====================================================
-
-    // ========== !addword ==========
     if (cmd === "!addword") {
         const newWord = args.slice(1).join(" ").toLowerCase().trim();
         if (!newWord) {
@@ -742,7 +774,6 @@ client.on("messageCreate", async (message) => {
         return;
     }
 
-    // ========== !removeword ==========
     if (cmd === "!removeword") {
         const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
         if (!wordToRemove) {
@@ -772,7 +803,6 @@ client.on("messageCreate", async (message) => {
         return;
     }
 
-    // ========== !listwords ==========
     if (cmd === "!listwords") {
         const listEmbed = new EmbedBuilder()
             .setColor("#FF0000")
@@ -790,7 +820,6 @@ client.on("messageCreate", async (message) => {
         return message.reply({ embeds: [listEmbed] });
     }
 
-    // ========== !reloadblacklist (Admin Only) ==========
     if (cmd === "!reloadblacklist") {
         loadBlacklist();
         const reply = await message.reply(
@@ -800,11 +829,7 @@ client.on("messageCreate", async (message) => {
         return;
     }
 
-    // =====================================================
     // PANEL SETUP COMMANDS (Admin Only)
-// =====================================================
-
-    // ========== !setupjoin (Rules Panel) ==========
     if (cmd === "!setupjoin") {
         const joinEmbed = new EmbedBuilder()
             .setColor("#1e90ff")
@@ -855,7 +880,6 @@ client.on("messageCreate", async (message) => {
         return;
     }
 
-    // ========== !welcome (Welcome Panel) ==========
     if (cmd === "!welcome") {
         const welcomeEmbed = new EmbedBuilder()
             .setColor("#1e90ff")
@@ -919,9 +943,7 @@ client.on("messageCreate", async (message) => {
         return;
     }
 
-    // =====================================================
     // !subscriber — Create the Live Notification Panel
-    // =====================================================
     if (cmd === "!subscriber") {
         if (!isAdmin(member)) {
             return message.reply(
@@ -951,11 +973,7 @@ client.on("messageCreate", async (message) => {
         return message.reply("✅ **Subscriber panel has been created.**");
     }
 
-    // =====================================================
     // MODERATION COMMANDS
-    // =====================================================
-
-    // ========== !ban (Admin Only) ==========
     if (cmd === "!ban") {
         const user = message.mentions.members?.first();
         if (!user) {
@@ -969,18 +987,17 @@ client.on("messageCreate", async (message) => {
         try {
             await user.ban({ reason });
             sendModLog(message.guild, user.user, "BAN", message.author, reason);
-            const reply = await message.reply(
+            await message.reply(
                 `🔨 Banned **${user.user.tag}**. Reason: ${reason}`
             );
             return;
         } catch (err) {
             console.error("Ban error:", err);
-            const reply = await message.reply("⚠ Failed to ban that user.");
+            await message.reply("⚠ Failed to ban that user.");
             return;
         }
     }
 
-    // ========== !kick ==========
     if (cmd === "!kick") {
         const user = message.mentions.members?.first();
         if (!user) {
@@ -994,18 +1011,17 @@ client.on("messageCreate", async (message) => {
         try {
             await user.kick(reason);
             sendModLog(message.guild, user.user, "KICK", message.author, reason);
-            const reply = await message.reply(
+            await message.reply(
                 `👢 Kicked **${user.user.tag}**. Reason: ${reason}`
             );
             return;
         } catch (err) {
             console.error("Kick error:", err);
-            const reply = await message.reply("⚠ Failed to kick that user.");
+            await message.reply("⚠ Failed to kick that user.");
             return;
         }
     }
 
-    // ========== !mute ==========
     if (cmd === "!mute") {
         const user = message.mentions.members?.first();
         const minutes = parseInt(args[2]) || 10;
@@ -1029,18 +1045,17 @@ client.on("messageCreate", async (message) => {
                 reason,
                 minutes
             );
-            const reply = await message.reply(
+            await message.reply(
                 `🔇 Muted **${user.user.tag}** for ${minutes} minutes.`
             );
             return;
         } catch (err) {
             console.error("Mute error:", err);
-            const reply = await message.reply("⚠ Failed to mute that user.");
+            await message.reply("⚠ Failed to mute that user.");
             return;
         }
     }
 
-    // ========== !unmute ==========
     if (cmd === "!unmute") {
         const user = message.mentions.members?.first();
         if (!user) {
@@ -1057,18 +1072,15 @@ client.on("messageCreate", async (message) => {
                 message.author,
                 "Manual Unmute"
             );
-            const reply = await message.reply(
-                `🔊 Unmuted **${user.user.tag}**.`
-            );
+            await message.reply(`🔊 Unmuted **${user.user.tag}**.`);
             return;
         } catch (err) {
             console.error("Unmute error:", err);
-            const reply = await message.reply("⚠ Failed to unmute that user.");
+            await message.reply("⚠ Failed to unmute that user.");
             return;
         }
     }
 
-    // ========== !prune ==========
     if (cmd === "!prune") {
         const amount = parseInt(args[1]);
         if (!amount || amount < 1 || amount > 100) {
@@ -1093,7 +1105,6 @@ client.on("messageCreate", async (message) => {
         }
     }
 
-    // ========== !addrole ==========
     if (cmd === "!addrole") {
         const target = message.mentions.members?.first();
         if (!target) {
@@ -1121,18 +1132,17 @@ client.on("messageCreate", async (message) => {
 
         try {
             await target.roles.add(role);
-            const reply = await message.reply(
+            await message.reply(
                 `✅ Added role **${role.name}** to **${target.user.tag}**.`
             );
             return;
         } catch (err) {
             console.error("Add role error:", err);
-            const reply = await message.reply("⚠ Failed to add that role.");
+            await message.reply("⚠ Failed to add that role.");
             return;
         }
     }
 
-    // ========== !removerole ==========
     if (cmd === "!removerole") {
         const target = message.mentions.members?.first();
         if (!target) {
@@ -1167,59 +1177,54 @@ client.on("messageCreate", async (message) => {
 
         try {
             await target.roles.remove(role);
-            const reply = await message.reply(
+            await message.reply(
                 `❎ Removed role **${role.name}** from **${target.user.tag}**.`
             );
             return;
         } catch (err) {
             console.error("Remove role error:", err);
-            const reply = await message.reply("⚠ Failed to remove that role.");
+            await message.reply("⚠ Failed to remove that role.");
             return;
         }
     }
 
-    // =====================================================
     // INVITE + HELP
-    // =====================================================
-
-    // ========== !invite ==========
     if (cmd === "!invite") {
         return message.reply(
             "📨 **Server Invite:** https://discord.gg/gosugeneral"
         );
     }
 
-    // ========== !help or /? ==========
     if (cmd === "!help" || cmd === "/?") {
         const help = new EmbedBuilder()
             .setColor("#00FFFF")
             .setTitle("Gosu Bot — Commands")
             .setDescription(
                 [
-                    "**General (Everyone)**",
+                    "**General**",
                     "`!ping` — Check if the bot is online.",
                     "`!invite` — Show the server invite link.",
                     "",
-                    "**Moderator Only (Moderator+)**",
+                    "**Moderator Commands**",
                     "`!kick @user [reason]` — Kick a user.",
-                    "`!mute @user [minutes] [reason]` — Timeout (mute) a user.",
+                    "`!mute @user [minutes] [reason]` — Timeout a user.",
                     "`!unmute @user` — Remove timeout.",
-                    "`!prune [1-100]` — Delete recent messages in bulk.",
-                    "`!addrole @user RoleName` — Add a role to a user.",
-                    "`!removerole @user RoleName` — Remove a role from a user.",
-                    "`!addword [word]` — Add a word to the filter blacklist.",
-                    "`!removeword [word]` — Remove a word from the filter blacklist.",
+                    "`!addrole @user RoleName` — Add a role.",
+                    "`!removerole @user RoleName` — Remove a role.",
+                    "`!prune [1-100]` — Delete recent messages.",
+                    "`!addword [word]` — Add a word to the filter list.",
+                    "`!removeword [word]` — Remove a word from the filter list.",
                     "`!listwords` — Show the current blacklisted words.",
                     "",
-                    "**Admin / Developer Only**",
-                    "`!setactionlog [#channel]` — Set channel for join/leave/role change logs.",
+                    "**Admin Commands**",
+                    "`!setactionlog [#channel]` — Set channel for Join/Leave/Role changes log.",
                     "`!clearactionlog` — Clear the Action Log channel setting.",
-                    "`!setmsglog [#channel]` — Set channel for message delete/edit/filter logs.",
+                    "`!setmsglog [#channel]` — Set channel for Message Delete/Edit/Filter log.",
                     "`!clearmsglog` — Clear the Message Log channel setting.",
-                    "`!setmodlog [#channel]` — Set channel for ban/kick/mute logs.",
+                    "`!setmodlog [#channel]` — Set channel for Ban/Kick/Mute log.",
                     "`!clearmodlog` — Clear the Moderation Log channel setting.",
                     "`!ban @user [reason]` — Ban a user.",
-                    "`!reloadblacklist` — Reload filter words from blacklist.json.",
+                    "`!reloadblacklist` — Reload filter words from JSON file.",
                     "`!setupjoin` — Create the rules panel.",
                     "`!welcome` — Create the main welcome panel.",
                     "`!subscriber` — Create the live notification panel.",
@@ -1454,11 +1459,35 @@ client.on("guildMemberRemove", async (member) => {
 });
 
 // =====================================================
-// SUBSCRIBER BUTTON TOGGLE
+// BUTTON INTERACTIONS (Rules / Subscriber)
 // =====================================================
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isButton()) return;
 
+    // Rules agreement
+    if (interaction.customId === "agree_rules") {
+        const member = interaction.member;
+
+        try {
+            if (!member.roles.cache.has(GOSU_ROLE)) {
+                await member.roles.add(GOSU_ROLE);
+            }
+            await interaction.reply({
+                content:
+                    "✅ Rules accepted! You now have access to the server.",
+                ephemeral: true,
+            });
+        } catch (err) {
+            console.error("[ERROR] Failed to assign Gosu role:", err);
+            return interaction.reply({
+                content: "❌ There was an error while assigning your role.",
+                ephemeral: true,
+            });
+        }
+        return;
+    }
+
+    // Subscriber toggle
     if (interaction.customId === "subscribe_toggle") {
         const member = interaction.member;
         const hasSubRole = member.roles.cache.has(SUB_ROLE);
@@ -1467,42 +1496,20 @@ client.on("interactionCreate", async (interaction) => {
             if (hasSubRole) {
                 await member.roles.remove(SUB_ROLE);
                 await interaction.reply({
-                    content: "🔕 **You have unsubscribed from Live Notifications.**",
+                    content:
+                        "🔕 **You have unsubscribed from Live Notifications.**",
                     ephemeral: true,
                 });
             } else {
                 await member.roles.add(SUB_ROLE);
                 await interaction.reply({
-                    content: "🔔 **You are now subscribed to Live Notifications!**",
+                    content:
+                        "🔔 **You are now subscribed to Live Notifications!**",
                     ephemeral: true,
                 });
             }
         } catch (err) {
             console.error("[ERROR] Failed to toggle subscriber role:", err);
-            return interaction.reply({
-                content: "❌ There was an error while assigning your role.",
-                ephemeral: true,
-            });
-        }
-    }
-
-    if (interaction.customId === "agree_rules") {
-        const member = interaction.member;
-        if (member.roles.cache.has(GOSU_ROLE)) {
-            return interaction.reply({
-                content: "✅ You already have access to the server.",
-                ephemeral: true,
-            });
-        }
-
-        try {
-            await member.roles.add(GOSU_ROLE);
-            await interaction.reply({
-                content: "✅ Rules accepted. Welcome to the server!",
-                ephemeral: true,
-            });
-        } catch (err) {
-            console.error("[ERROR] Failed to assign Gosu role:", err);
             return interaction.reply({
                 content: "❌ There was an error while assigning your role.",
                 ephemeral: true,
