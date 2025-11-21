@@ -289,7 +289,92 @@ client.once("ready", () => {
     console.log(`[BOT] Bot logged in as ${client.user.tag}`);
     loadConfigAndBlacklist(); // Load settings and blacklist when bot starts
 });
+// =====================================================
+// VOICE CHANNEL CREATOR (VO 채널 생성/삭제 로직)
+// =====================================================
+client.on("voiceStateUpdate", async (oldState, newState) => {
+    const guild = newState.guild || oldState.guild;
+    if (!guild) return;
 
+    // -------------------------------------
+    // 1. Join
+    // -------------------------------------
+    // User CREATE_CHANNEL_IDS Entered
+    if (newState.channelId && CREATE_CHANNEL_IDS.includes(newState.channelId)) {
+        const member = newState.member;
+        const createChannel = newState.channel;
+        const category = createChannel.parent;
+
+        if (!member || !category) return;
+
+        // Permission
+        if (!guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels) ||
+            !guild.members.me.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
+            console.error("Bot lacks 'Manage Channels' or 'Move Members' permission for VO Creator.");
+            return;
+        }
+
+        try {
+            const newChannelName = `🎧 ${member.user.username}'s VO`;
+
+            // New VO channel
+            const newChannel = await guild.channels.create({
+                name: newChannelName,
+                type: ChannelType.GuildVoice,
+                parent: category,
+                userLimit: 5,
+
+                // ✅ ADDED: Permission
+                permissionOverwrites: [
+                    {
+                        id: guild.id, // @everyone
+                        allow: [PermissionsBitField.Flags.Connect], // Basic permission
+                        deny: [PermissionsBitField.Flags.ManageChannels], // Can't edit
+                    },
+                    {
+                        id: member.id, // Creator
+                        allow: [
+                            PermissionsBitField.Flags.ManageChannels, // Channel name, number
+                            PermissionsBitField.Flags.MuteMembers,
+                            PermissionsBitField.Flags.DeafenMembers,
+                            PermissionsBitField.Flags.MoveMembers,
+                        ],
+                    },
+                ],
+            });
+            
+            // Move to the new channel
+            await member.voice.setChannel(newChannel);
+            console.log(`Created and moved ${member.user.tag} to temporary VO channel: ${newChannel.name}`);
+        } catch (error) {
+            console.error("Failed to create or move user to temporary VO channel:", error);
+        }
+    }
+
+    // -------------------------------------
+    // 2. Delete (Leave)
+    // -------------------------------------
+    // User left VO
+    if (oldState.channelId && !CREATE_CHANNEL_IDS.includes(oldState.channelId)) {
+        const oldChannel = oldState.channel;
+        if (!oldChannel) return;
+
+        // checking channel name
+        const isTemporaryChannel = oldChannel.name.includes("'s VO") || oldChannel.name.toLowerCase().endsWith('vo');
+
+        // ✨ Memeber number 0, delete immediately
+        if (isTemporaryChannel && oldChannel.members.size === 0) {
+            console.log(`Attempting to delete empty temporary VO channel: ${oldChannel.name}`);
+            try {
+                await oldChannel.delete();
+                console.log(`Successfully deleted empty temporary VO channel: ${oldChannel.name}`);
+            } catch (error) {
+                console.error(`🔴 Failed to delete empty temporary VO channel (${oldChannel.name}):`, error.message);
+                console.error("CHECK BOT PERMISSIONS: Bot needs 'Manage Channels' permission.");
+            }
+        }
+    }
+});
 // =====================================================
 // PREFIX COMMANDS & CHAT FILTER
 // =====================================================
@@ -1457,14 +1542,14 @@ client.on("interactionCreate", async (interaction) => {
 
         try {
             if (hasSubRole) {
-                // 역할 제거
+                // remove role
                 await member.roles.remove(SUB_ROLE);
                 await interaction.reply({
                     content: "🔕 **You have unsubscribed from Live Notifications.**",
                     ephemeral: true,
                 });
             } else {
-                // 역할 추가
+                // add role
                 await member.roles.add(SUB_ROLE);
                 await interaction.reply({
                     content: "🔔 **You are now subscribed to Live Notifications!**",
@@ -1485,4 +1570,5 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
