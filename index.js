@@ -15,24 +15,28 @@ const {
     ButtonBuilder,
     ChannelType,
 } = require("discord.js");
-const fs = require("fs"); // File system module
+const fs = require("fs");
+const path = require("path");
 
 // ----------------------------------------------------
-// FILE PATH CONSTANT
+// FILE PATH CONSTANTS
 // ----------------------------------------------------
-const path = require("path"); // ⬅️ add this line
-
-const DATA_DIR = "/Data"; // Railway Volume mount path
+const DATA_DIR = "."; // Root directory
 
 const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
-const CONFIG_FILE_PATH   = path.join(DATA_DIR, "config.json"); // Log channel settings file
-let BOT_CONFIG = {}; // Stores log channel IDs
+const CONFIG_FILE_PATH   = path.join(DATA_DIR, "config.json");
+let BOT_CONFIG = {};
 
-// Ensure DATA_DIR exists (for local + Railway)
-if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+// ----------------------------------------------------
+// Load banned words from blacklist.json
+// ----------------------------------------------------
+let bannedWords = [];
+if (fs.existsSync(BLACKLIST_FILE_PATH)) {
+    const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE_PATH, "utf8"));
+    bannedWords = blacklist.words.map(word => word.toLowerCase());
+} else {
+    console.warn("⚠️ blacklist.json file not found.");
 }
-
 // ----------------------------------------------------
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
@@ -215,46 +219,6 @@ const WELCOME_BANNER_URL =
     "https://cdn.discordapp.com/attachments/495719121686626323/1440988230492225646/welcome.png?ex=6920285e&is=691ed6de&hm=74ea90a10d279092b01dcccfaf0fd40fbbdf78308606f362bf2fe15e20c64b86&";
 const NOTIFICATION_BANNER_URL =
     "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c985f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
-
-// Color Roles (used by existing color buttons; no command to create new panel)
-const COLOR_ROLES = [
-    {
-        customId: "color_icey",
-        emoji: "❄️",
-        label: "~ icey azure ~",
-        roleId: process.env.ICEY_AZURE_ROLE_ID || "PUT_ICEY_AZURE_ROLE_ID_HERE",
-    },
-    {
-        customId: "color_candy",
-        emoji: "🍭",
-        label: "~ candy ~",
-        roleId: process.env.CANDY_ROLE_ID || "PUT_CANDY_ROLE_ID_HERE",
-    },
-    {
-        customId: "color_lilac",
-        emoji: "🌸",
-        label: "~ lilac ~",
-        roleId: process.env.LILAC_ROLE_ID || "PUT_LILAC_ROLE_ID_HERE",
-    },
-    {
-        customId: "color_blush",
-        emoji: "❤️",
-        label: "~ blush ~",
-        roleId: process.env.BLUSH_ROLE_ID || "PUT_BLUSH_ROLE_ID_HERE",
-    },
-    {
-        customId: "color_bubblegum",
-        emoji: "🍥",
-        label: "~ bubblegum ~",
-        roleId: process.env.BUBBLEGUM_ROLE_ID || "PUT_BUBBLEGUM_ROLE_ID_HERE",
-    },
-    {
-        customId: "color_chocolate",
-        emoji: "🍫",
-        label: "~ chocolate ~",
-        roleId: process.env.CHOCOLATE_ROLE_ID || "PUT_CHOCOLATE_ROLE_ID_HERE",
-    },
-];
 
 // --------------------
 // Client Initialization
@@ -1518,5 +1482,6 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
