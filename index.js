@@ -749,59 +749,46 @@ client.on("messageCreate", async (message) => {
     }
 
     // BLACKLIST MANAGEMENT COMMANDS
-    if (cmd === "!addword") {
-        const newWord = args.slice(1).join(" ").toLowerCase().trim();
-        if (!newWord) {
-            const reply = await message.reply("Usage: `!addword [word]`");
-            setTimeout(() => reply.delete().catch(() => {}), 1000);
-            return;
-        }
-
-        if (BLACKLISTED_WORDS.includes(newWord)) {
-            const reply = await message.reply(
-                `⚠ **${newWord}** is already in the blacklist.`
-            );
-            setTimeout(() => reply.delete().catch(() => {}), 1000);
-            return;
-        }
-
-        BLACKLISTED_WORDS.push(newWord);
-        saveBlacklist();
-        const reply = await message.reply(
-            `✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`
-        );
-        setTimeout(() => reply.delete().catch(() => {}), 1000);
-        return;
+   // ========== !addword ==========
+if (cmd === "!addword") {
+    const newWord = args.slice(1).join(" ").toLowerCase().trim();
+    if (!newWord) {
+        return message.reply("Usage: `!addword [word]`");
     }
 
-    if (cmd === "!removeword") {
-        const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
-        if (!wordToRemove) {
-            const reply = await message.reply("Usage: `!removeword [word]`");
-            setTimeout(() => reply.delete().catch(() => {}), 1000);
-            return;
-        }
-
-        const initialLength = BLACKLISTED_WORDS.length;
-        BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(
-            (word) => word !== wordToRemove
-        );
-
-        if (BLACKLISTED_WORDS.length === initialLength) {
-            const reply = await message.reply(
-                `⚠ **${wordToRemove}** was not found in the blacklist.`
-            );
-            setTimeout(() => reply.delete().catch(() => {}), 1000);
-            return;
-        }
-
-        saveBlacklist();
-        const reply = await message.reply(
-            `✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`
-        );
-        setTimeout(() => reply.delete().catch(() => {}), 1000);
-        return;
+    if (BLACKLISTED_WORDS.includes(newWord)) {
+        return message.reply(`⚠ **${newWord}** is already in the blacklist.`);
     }
+
+    BLACKLISTED_WORDS.push(newWord);
+    saveBlacklist(); // Save to file
+
+    return message.reply(
+        `✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`
+    );
+}
+// ========== !removeword ==========
+if (cmd === "!removeword") {
+    const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
+    if (!wordToRemove) {
+        return message.reply("Usage: `!removeword [word]`");
+    }
+
+    const initialLength = BLACKLISTED_WORDS.length;
+    BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(
+        (word) => word !== wordToRemove
+    );
+
+    if (BLACKLISTED_WORDS.length === initialLength) {
+        return message.reply(`⚠ **${wordToRemove}** was not found in the blacklist.`);
+    }
+
+    saveBlacklist(); // Save to file
+
+    return message.reply(
+        `✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`
+    );
+}
 
     if (cmd === "!listwords") {
         const listEmbed = new EmbedBuilder()
@@ -1522,3 +1509,4 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
