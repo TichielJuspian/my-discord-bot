@@ -13,7 +13,7 @@ const {
     ButtonStyle,
     ActionRowBuilder,
     ButtonBuilder,
-    ChannelType, // ✅ ADDED: 채널 타입 (음성 채널 생성을 위해 추가)
+    ChannelType,
 } = require("discord.js");
 const fs = require('fs'); // File system module
 
@@ -25,23 +25,24 @@ const BLACKLIST_FILE_PATH = 'blacklist.json';
 // ----------------------------------------------------
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
-const GOSU_ROLE = process.env.GOSU_ROLE_ID || "PUT_GOSU_ROLE_ID_HERE";       // Main Gosu Role
-const MOD_ROLE  = process.env.MOD_ROLE_ID  || "PUT_MOD_ROLE_ID_HERE";       // Moderator Role
-const ADMIN_ROLE = process.env.ADMIN_ROLE_ID || "PUT_ADMIN_ROLE_ID_HERE";   // Admin / Developer Role
-const SUB_ROLE  = process.env.SUB_ROLE_ID    || "PUT_SUB_ROLE_ID_HERE";     // Live Notification Subscriber Role
+const GOSU_ROLE = process.env.GOSU_ROLE_ID || "PUT_GOSU_ROLE_ID_HERE";
+const MOD_ROLE  = process.env.MOD_ROLE_ID  || "PUT_MOD_ROLE_ID_HERE";
+const ADMIN_ROLE = process.env.ADMIN_ROLE_ID || "PUT_ADMIN_ROLE_ID_HERE";
+const SUB_ROLE  = process.env.SUB_ROLE_ID    || "PUT_SUB_ROLE_ID_HERE";
 
 // ----------------------------------------------------
-// VOICE CHANNEL CREATOR CONFIG (❗ MUST BE MODIFIED ❗)
+// VOICE CHANNEL CREATOR CONFIG (✅ MODIFIED)
 // ----------------------------------------------------
-// ✅ ADDED: 이 채널에 입장 시 개인 VO 채널이 생성됩니다.
-const CREATE_CHANNEL_ID = process.env.CREATE_CHANNEL_ID || "PUT_VOICE_CREATE_CHANNEL_ID_HERE";
-
+// 두 채널 ID를 배열로 설정합니다. 이 중 하나에 입장 시 채널이 생성됩니다.
+const CREATE_CHANNEL_IDS = [
+    "720658789832851487",
+    "1441159364298936340"
+];
 // ----------------------------------------------------
 // CHAT FILTER CONFIG
 // ----------------------------------------------------
 let BLACKLISTED_WORDS = []; // Global array for blocked words
 
-// ✅ 이제 Admin만 필터 예외, Moderator는 필터에 걸림
 const FILTER_EXEMPT_ROLES = [
     ADMIN_ROLE,
 ];
@@ -141,7 +142,7 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.VoiceStates, // ✅ ADDED: VoiceStateUpdate 이벤트를 받기 위해 필요
+        GatewayIntentBits.VoiceStates,
     ],
     partials: [Partials.Channel],
 });
@@ -183,28 +184,48 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     // -------------------------------------
     // 1. 임시 채널 생성 로직 (Join)
     // -------------------------------------
-    // 사용자가 'CREATE_CHANNEL_ID' 채널에 입장했을 때
-    if (newState.channelId === CREATE_CHANNEL_ID) {
+    // 사용자가 CREATE_CHANNEL_IDS 중 하나에 입장했을 때
+    if (newState.channelId && CREATE_CHANNEL_IDS.includes(newState.channelId)) {
         const member = newState.member;
         const createChannel = newState.channel;
         const category = createChannel.parent;
+
+        if (!member || !category) return;
 
         // 봇이 채널 생성 및 이동 권한이 있는지 확인
         if (!guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels) ||
             !guild.members.me.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
             console.error("Bot lacks 'Manage Channels' or 'Move Members' permission for VO Creator.");
-            // 오류 발생을 막기 위해 여기서 리턴
             return;
         }
 
         try {
-            // 새 임시 음성 채널 생성
             const newChannelName = `🎧 ${member.user.username}'s VO`;
+
+            // 새 임시 음성 채널 생성
             const newChannel = await guild.channels.create({
                 name: newChannelName,
                 type: ChannelType.GuildVoice,
-                parent: category, // '채널 생성' 채널과 같은 카테고리
-                userLimit: 5,     // 기본 인원 제한 설정 (선택 사항)
+                parent: category,
+                userLimit: 5,
+
+                // ✅ ADDED: 생성자에게 권한을 부여합니다.
+                permissionOverwrites: [
+                    {
+                        id: guild.id, // @everyone
+                        allow: [PermissionsBitField.Flags.Connect], // 기본적으로 연결 허용
+                        deny: [PermissionsBitField.Flags.ManageChannels], // 채널 수정은 금지
+                    },
+                    {
+                        id: member.id, // 채널 생성자
+                        allow: [
+                            PermissionsBitField.Flags.ManageChannels, // 채널 이름, 인원 제한 등 수정 권한
+                            PermissionsBitField.Flags.MuteMembers,
+                            PermissionsBitField.Flags.DeafenMembers,
+                            PermissionsBitField.Flags.MoveMembers,
+                        ],
+                    },
+                ],
             });
             
             // 생성된 채널로 사용자 이동
@@ -218,17 +239,16 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     // -------------------------------------
     // 2. 임시 채널 삭제 로직 (Leave)
     // -------------------------------------
-    // 사용자가 채널을 떠났을 때 (oldState.channelId가 존재하고 newState.channelId는 다를 때)
-    if (oldState.channelId && oldState.channelId !== CREATE_CHANNEL_ID) {
+    // 사용자가 채널을 떠났을 때
+    if (oldState.channelId && !CREATE_CHANNEL_IDS.includes(oldState.channelId)) {
         const oldChannel = oldState.channel;
+        if (!oldChannel) return;
 
-        // oldChannel이 임시 채널로 간주되는지 확인 (여기서는 생성된 채널의 이름을 기준으로 판단)
-        // **주의**: 실제 배포 시에는 생성된 채널 ID를 별도로 저장하여 관리하는 것이 더 안전합니다.
-        // 여기서는 임시 채널이 아니라고 확실히 아는 'CREATE_CHANNEL_ID'가 아니고, 이름 패턴을 따르는 채널을 확인합니다.
+        // oldChannel이 임시 채널로 간주되는지 확인 (이름 패턴 또는 멤버 수 0 확인)
         const isTemporaryChannel = oldChannel.name.includes("'s VO") || oldChannel.name.toLowerCase().endsWith('vo');
 
         if (isTemporaryChannel && oldChannel.members.size === 0) {
-            // 채널이 비어 있고, 임시 채널 패턴을 따르며, '채널 생성' 채널이 아닐 경우
+            // 채널이 비어 있고, 임시 채널 패턴을 따를 경우 삭제
             try {
                 await oldChannel.delete();
                 console.log(`Successfully deleted empty temporary VO channel: ${oldChannel.name}`);
