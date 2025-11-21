@@ -254,13 +254,12 @@ client.on("messageCreate", async (message) => {
         }
         
         // #3 General Link/URL Filter
-        // NOTE: 이 필터는 광범위하여 일반적인 링크(http 포함)까지 차단합니다. 
-        // 오탐을 줄이기 위해 자주 사용하는 안전한 도메인은 예외 처리했습니다. (추가 필요 시 수정)
+        // NOTE: This check is very broad and will filter nearly all messages containing a link.
         const generalUrlMatch = normalizedMessage.match(/(https?:\/\/)?(www\.)?(\w+)\.(\w+)\/(\w)+/g)?.length > 0;
         if (!foundLinkFilterMatch && (normalizedMessage.includes("http") || generalUrlMatch)) {
-            const safeDomains = ['youtube.com', 'youtu.be', 'twitch.tv', 'google.com', 'naver.com']; // <-- 여기에 안전한 도메인을 추가하세요.
+            const safeDomains = ['youtube.com', 'youtu.be', 'twitch.tv', 'google.com', 'naver.com']; // <-- Add allowed domains here.
             
-            // 안전 도메인에 포함되지 않는 링크가 감지되었을 경우
+            // Filters link if it's NOT in the safeDomains list
             if (!safeDomains.some(domain => normalizedMessage.includes(domain))) {
                  foundLinkFilterMatch = "Unpermitted General URL";
             }
@@ -311,11 +310,9 @@ client.on("messageCreate", async (message) => {
         // 기존 BLACKLISTED_WORDS 필터 로직 (링크 필터에 걸리지 않았을 경우 실행)
         // ------------------------------------------------------------------
         // 1. 정규화(NFC)를 사용하여 분리된 초성/중성을 완성된 글자로 합칩니다.
-        // NOTE: Link Filter에서 이미 normalizedMessage를 사용했으나, 기존 로직 유지를 위해 다시 정의
         const normalizedContentExisting = message.content.normalize('NFC').toLowerCase(); 
 
         // 2. (개선) 모든 특수문자를 제거합니다. 띄어쓰기는 유지합니다.
-        // [가-힣a-z0-9]를 제외한 문자는 모두 제거합니다. (띄어쓰기는 정규식에 포함하지 않으므로 유지됨)
         const simplifiedContent = normalizedContentExisting.replace(/[^가-힣a-z0-9\s]/g, '');
 
         let foundWord = null;
@@ -327,10 +324,9 @@ client.on("messageCreate", async (message) => {
             if (simplifiedWord.length < 2) continue; // 단일 문자는 필터링하지 않음 (오탐 방지)
 
             // 4. 메시지 내용에서 *임시로* 띄어쓰기를 제거한 버전을 만들어서 금지어 (띄어쓰기 제거됨) 와 비교합니다.
-            // 이렇게 하면 '바 보' (메시지)를 '바보' (금지어)로 찾을 수 있습니다.
             const contentWithoutSpaces = simplifiedContent.replace(/\s/g, ''); 
             
-            // 5. '띄어쓰기 제거 버전'으로 검사 (오탐 방지를 위해 이 검사를 덜 엄격하게 사용)
+            // 5. '띄어쓰기 제거 버전'으로 검사
             if (contentWithoutSpaces.includes(simplifiedWord)) {
                 foundWord = word;
                 break;
@@ -339,8 +335,7 @@ client.on("messageCreate", async (message) => {
             // 6. (추가) 메시지 내용(띄어쓰기 유지, 특수문자 제거)을 공백 기준으로 나눕니다.
             const contentWords = simplifiedContent.split(/\s+/).filter(w => w.length > 0);
 
-            // 7. 금지어 (특수문자 제거)가 메시지 내용의 각 단어에 포함되어 있는지 확인 (오탐이 덜함)
-            // '바보'가 금지어일 때, 메시지 '나는 바보가 아니다' -> '바보'가 포함됨 -> 필터링
+            // 7. 금지어 (특수문자 제거)가 메시지 내용의 각 단어에 포함되어 있는지 확인
             if (contentWords.some(w => w.includes(simplifiedWord))) {
                 foundWord = word;
                 break;
@@ -367,7 +362,7 @@ client.on("messageCreate", async (message) => {
                     logChannel.send({ embeds: [logEmbed] }).catch(err => console.error("[ERROR] Error sending filter log:", err));
                 }
             }
-            // ... (메시지 삭제 및 경고 로직은 기존과 동일)
+            // ... (메시지 삭제 및 경고 로직)
             if (message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
                 if (!message.deleted) {
                     message.delete().catch(err => {
@@ -388,6 +383,7 @@ client.on("messageCreate", async (message) => {
 // 2. MODERATION COMMANDS (관리 명령어)
 // ---------------------------
 
+    // 명령어 자체가 삭제되지 않도록 message.delete() 호출은 이전에 이미 제거되었음
     if (!isCommand || !isModerator(member)) return; // 명령어가 아니거나 관리자가 아니면 여기서 종료
 
     switch (cmd) {
@@ -395,17 +391,19 @@ client.on("messageCreate", async (message) => {
             {
                 const wordToAdd = args.slice(1).join(" ").toLowerCase();
                 if (!wordToAdd) {
-                    return message.reply("❌ 사용법: `!addword [추가할 단어/문구]`");
+                    return message.reply("❌ Usage: `!addword [word/phrase to add]`");
                 }
 
                 if (BLACKLISTED_WORDS.includes(wordToAdd)) {
-                    return message.reply(`⚠ **${wordToAdd}**는 이미 금지어 목록에 있습니다.`);
+                    // 봇의 응답 메시지를 자동으로 지우지 않음
+                    return message.reply(`⚠ **${wordToAdd}** is already in the blacklist.`);
                 }
 
                 BLACKLISTED_WORDS.push(wordToAdd);
                 saveBlacklist(); // 파일에 저장
 
-                message.reply(`✅ 금지어 **${wordToAdd}**를 성공적으로 추가했습니다. 현재 총 ${BLACKLISTED_WORDS.length}개의 금지어가 있습니다.`);
+                // 봇의 응답 메시지를 자동으로 지우지 않음
+                message.reply(`✅ Successfully added **${wordToAdd}** to the blacklist. Total words: ${BLACKLISTED_WORDS.length}.`);
                 break;
             }
 
@@ -413,7 +411,7 @@ client.on("messageCreate", async (message) => {
             {
                 const wordToRemove = args.slice(1).join(" ").toLowerCase();
                 if (!wordToRemove) {
-                    return message.reply("❌ 사용법: `!removeword [제거할 단어/문구]`");
+                    return message.reply("❌ Usage: `!removeword [word/phrase to remove]`");
                 }
 
                 const initialLength = BLACKLISTED_WORDS.length;
@@ -421,9 +419,11 @@ client.on("messageCreate", async (message) => {
 
                 if (BLACKLISTED_WORDS.length < initialLength) {
                     saveBlacklist(); // 파일에 저장
-                    message.reply(`✅ 금지어 **${wordToRemove}**를 목록에서 제거했습니다. 현재 총 ${BLACKLISTED_WORDS.length}개의 금지어가 있습니다.`);
+                    // 봇의 응답 메시지를 자동으로 지우지 않음
+                    message.reply(`✅ Successfully removed **${wordToRemove}**. Total words: ${BLACKLISTED_WORDS.length}.`);
                 } else {
-                    message.reply(`⚠ **${wordToRemove}**는 금지어 목록에 없습니다.`);
+                    // 봇의 응답 메시지를 자동으로 지우지 않음
+                    message.reply(`⚠ **${wordToRemove}** was not found in the blacklist.`);
                 }
                 break;
             }
@@ -431,15 +431,15 @@ client.on("messageCreate", async (message) => {
         case "!listwords":
             {
                 if (BLACKLISTED_WORDS.length === 0) {
-                    return message.reply("✅ 현재 금지어 목록이 비어 있습니다.");
+                    return message.reply("✅ The blacklist is currently empty.");
                 }
 
                 const list = BLACKLISTED_WORDS.map((w, i) => `${i + 1}. ${w}`).join('\n');
                 const embed = new EmbedBuilder()
                     .setColor("#87CEEB")
-                    .setTitle(`🚫 현재 금지어 목록 (${BLACKLISTED_WORDS.length}개)`)
+                    .setTitle(`🚫 Current Blacklisted Words (${BLACKLISTED_WORDS.length})`)
                     .setDescription(`\`\`\`\n${list.substring(0, 4000)}\n\`\`\``) // Discord embed limit 4096
-                    .setFooter({ text: "단어는 대소문자를 구분하지 않으며, 특수문자나 띄어쓰기를 우회할 수 있습니다." });
+                    .setFooter({ text: "Filtering is case-insensitive and bypasses most special characters/spaces." });
 
                 message.reply({ embeds: [embed] });
                 break;
@@ -451,20 +451,20 @@ client.on("messageCreate", async (message) => {
                 const type = args[2]?.toLowerCase();
                 
                 if (!channelId || !type) {
-                    return message.reply("❌ 사용법: `!setlogchannel [채널ID] [action/msg/mod]`");
+                    return message.reply("❌ Usage: `!setlogchannel [ChannelID] [action/msg/mod]`");
                 }
                 
                 if (type === 'action') {
                     BOT_CONFIG.actionLogChannelId = channelId;
-                    message.reply(`✅ **Action Log Channel**이 <#${channelId}>으로 설정되었습니다.`);
+                    message.reply(`✅ **Action Log Channel** set to <#${channelId}>.`);
                 } else if (type === 'msg') {
                     BOT_CONFIG.msgLogChannelId = channelId;
-                    message.reply(`✅ **Message Filter Log Channel**이 <#${channelId}>으로 설정되었습니다.`);
+                    message.reply(`✅ **Message Filter Log Channel** set to <#${channelId}>.`);
                 } else if (type === 'mod') {
                     BOT_CONFIG.modLogChannelId = channelId;
-                    message.reply(`✅ **Moderation Log Channel**이 <#${channelId}>으로 설정되었습니다.`);
+                    message.reply(`✅ **Moderation Log Channel** set to <#${channelId}>.`);
                 } else {
-                    return message.reply("❌ 유효하지 않은 로그 타입입니다. [action/msg/mod] 중 하나를 사용하세요.");
+                    return message.reply("❌ Invalid log type. Use one of [action/msg/mod].");
                 }
                 
                 saveConfig();
@@ -475,13 +475,13 @@ client.on("messageCreate", async (message) => {
             {
                 const embed = new EmbedBuilder()
                     .setColor("#00FFFF")
-                    .setTitle("📜 현재 로그 채널 설정")
+                    .setTitle("📜 Current Log Channel Settings")
                     .addFields(
-                        { name: "Action Log (규칙/알림)", value: BOT_CONFIG.actionLogChannelId ? `<#${BOT_CONFIG.actionLogChannelId}>` : "미설정", inline: false },
-                        { name: "Message Filter Log (메시지 필터링)", value: BOT_CONFIG.msgLogChannelId ? `<#${BOT_CONFIG.msgLogChannelId}>` : "미설정", inline: false },
-                        { name: "Moderation Log (킥/밴)", value: BOT_CONFIG.modLogChannelId ? `<#${BOT_CONFIG.modLogChannelId}>` : "미설정", inline: false }
+                        { name: "Action Log (Rules/Notifications)", value: BOT_CONFIG.actionLogChannelId ? `<#${BOT_CONFIG.actionLogChannelId}>` : "Not Set", inline: false },
+                        { name: "Message Filter Log (Chat Filtering)", value: BOT_CONFIG.msgLogChannelId ? `<#${BOT_CONFIG.msgLogChannelId}>` : "Not Set", inline: false },
+                        { name: "Moderation Log (Kick/Ban)", value: BOT_CONFIG.modLogChannelId ? `<#${BOT_CONFIG.modLogChannelId}>` : "Not Set", inline: false }
                     )
-                    .setFooter({ text: "설정: !setlogchannel [ID] [action/msg/mod]" });
+                    .setFooter({ text: "Set with: !setlogchannel [ID] [action/msg/mod]" });
                 
                 message.reply({ embeds: [embed] });
                 break;
@@ -493,20 +493,20 @@ client.on("messageCreate", async (message) => {
                 const reason = args.slice(2).join(" ") || "No reason specified";
 
                 if (!targetUser) {
-                    return message.reply("❌ 사용법: `!kick [@유저멘션] [사유]`");
+                    return message.reply("❌ Usage: `!kick [@user mention] [reason]`");
                 }
                 
                 if (isModerator(targetUser)) {
-                    return message.reply("❌ 관리자/운영진은 킥할 수 없습니다.");
+                    return message.reply("❌ Cannot kick a Moderator or Admin.");
                 }
                 
                 try {
                     await targetUser.kick(reason);
-                    message.reply(`✅ ${targetUser.user.tag} 님을 킥했습니다. 사유: ${reason}`);
+                    message.reply(`✅ Kicked ${targetUser.user.tag}. Reason: ${reason}`);
                     sendModLog(message.guild, targetUser.user, 'KICK', message.author, reason);
                 } catch (error) {
                     console.error("Kick error:", error);
-                    message.reply(`❌ 킥에 실패했습니다: ${error.message}`);
+                    message.reply(`❌ Failed to kick: ${error.message}`);
                 }
                 break;
             }
@@ -517,20 +517,20 @@ client.on("messageCreate", async (message) => {
                 const reason = args.slice(2).join(" ") || "No reason specified";
 
                 if (!targetUser) {
-                    return message.reply("❌ 사용법: `!ban [@유저멘션] [사유]`");
+                    return message.reply("❌ Usage: `!ban [@user mention] [reason]`");
                 }
 
                 if (isModerator(targetUser)) {
-                    return message.reply("❌ 관리자/운영진은 밴할 수 없습니다.");
+                    return message.reply("❌ Cannot ban a Moderator or Admin.");
                 }
 
                 try {
                     await targetUser.ban({ reason: reason });
-                    message.reply(`✅ ${targetUser.user.tag} 님을 밴했습니다. 사유: ${reason}`);
+                    message.reply(`✅ Banned ${targetUser.user.tag}. Reason: ${reason}`);
                     sendModLog(message.guild, targetUser.user, 'BAN', message.author, reason);
                 } catch (error) {
                     console.error("Ban error:", error);
-                    message.reply(`❌ 밴에 실패했습니다: ${error.message}`);
+                    message.reply(`❌ Failed to ban: ${error.message}`);
                 }
                 break;
             }
@@ -539,23 +539,23 @@ client.on("messageCreate", async (message) => {
         case "!clear":
             {
                 if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                    return message.reply("❌ 저는 메시지 관리 권한(Manage Messages)이 필요합니다.");
+                    return message.reply("❌ I require the 'Manage Messages' permission to clear messages.");
                 }
                 
                 const amount = parseInt(args[1]);
 
                 if (isNaN(amount) || amount <= 0 || amount > 100) {
-                    return message.reply("❌ 사용법: `!clear [1-100 사이의 숫자]`");
+                    return message.reply("❌ Usage: `!clear [number between 1-100]`");
                 }
 
                 try {
                     // +1을 하여 명령어 메시지 자체도 삭제합니다.
                     const deleted = await message.channel.bulkDelete(amount, true);
-                    const reply = await message.channel.send(`✅ ${deleted.size}개의 메시지를 삭제했습니다.`);
+                    const reply = await message.channel.send(`✅ Deleted ${deleted.size} messages.`);
                     setTimeout(() => reply.delete().catch(() => {}), 5000); // 5초 후 자동 삭제
                 } catch (error) {
                     console.error("Purge error:", error);
-                    message.reply("❌ 메시지 삭제에 실패했습니다. (14일 이상 된 메시지는 삭제할 수 없습니다.)");
+                    message.reply("❌ Failed to delete messages. (Cannot delete messages older than 14 days.)");
                 }
                 break;
             }
@@ -563,7 +563,7 @@ client.on("messageCreate", async (message) => {
         case "!embed":
             {
                 if (!isAdmin(member)) { // 최고 관리자만 허용
-                    return message.reply("❌ 이 명령어는 Admin 역할만 사용할 수 있습니다.");
+                    return message.reply("❌ This command is restricted to the Admin role.");
                 }
 
                 const channelId = args[1];
@@ -571,7 +571,7 @@ client.on("messageCreate", async (message) => {
                 const targetChannel = message.guild.channels.cache.get(channelId);
 
                 if (!targetChannel || !type) {
-                    return message.reply("❌ 사용법: `!embed [채널ID] [rules/welcome/notification]`");
+                    return message.reply("❌ Usage: `!embed [ChannelID] [rules/welcome/notification]`");
                 }
 
                 let embed;
@@ -582,16 +582,16 @@ client.on("messageCreate", async (message) => {
                         .setColor("#0000FF")
                         .setTitle("✅ 📜 RULES & REGULATION 📜")
                         .setDescription(
-                            "**GO-SU GANG** 커뮤니티 규칙을 읽고 아래 버튼을 눌러야만 채널에 참여할 수 있습니다."
+                            "You must read the **GO-SU GANG** community rules and click the button below to gain access to the channels."
                         )
                         .setImage(RULES_BANNER_URL)
-                        .setFooter({ text: "규칙을 준수하여 모두가 즐거운 GO-SU GANG이 됩시다!" });
+                        .setFooter({ text: "Let's all enjoy GO-SU GANG by following the rules!" });
 
                     components = [
                         new ActionRowBuilder().addComponents(
                             new ButtonBuilder()
                                 .setCustomId("agree_rules")
-                                .setLabel("✅ 규칙에 동의합니다.")
+                                .setLabel("✅ I agree to the rules.")
                                 .setStyle(ButtonStyle.Success)
                                 .setEmoji("✅")
                         ),
@@ -600,42 +600,42 @@ client.on("messageCreate", async (message) => {
                     embed = new EmbedBuilder()
                         .setColor("#00FF00")
                         .setTitle("🎉 Welcome to GO-SU GANG!")
-                        .setDescription("새로운 멤버가 되신 것을 환영합니다! #rules 채널에서 규칙에 동의하고 입장해 주세요.")
+                        .setDescription("Welcome to the new member! Please agree to the rules in the #rules channel to gain entry.")
                         .setImage(WELCOME_BANNER_URL)
-                        .setFooter({ text: "GO-SU GANG에서 즐거운 시간 보내세요!" });
+                        .setFooter({ text: "Have a great time at GO-SU GANG!" });
                     
-                    components = []; // Welcome 메시지는 보통 버튼이 없음
+                    components = []; // Welcome message usually has no button
                 } else if (type === 'notification') {
                     embed = new EmbedBuilder()
                         .setColor("#FFD700")
-                        .setTitle("🔔 실시간 알림 받기")
+                        .setTitle("🔔 Get Real-time Notifications")
                         .setDescription(
-                            "고수님 라이브 알림을 받으려면 아래 버튼을 눌러 **Live Subscriber** 역할을 받아주세요. 알림 역할을 해제하려면 다시 버튼을 누르세요."
+                            "To receive live notifications from Gosu, click the button below to get the **Live Subscriber** role. Click again to remove the role."
                         )
                         .setImage(NOTIFICATION_BANNER_URL)
-                        .setFooter({ text: "알림 역할은 언제든지 추가/제거 가능합니다." });
+                        .setFooter({ text: "You can add or remove the notification role at any time." });
 
                     components = [
                         new ActionRowBuilder().addComponents(
                             new ButtonBuilder()
                                 .setCustomId("toggle_subscriber_role")
-                                .setLabel("라이브 알림 역할 받기/해제")
+                                .setLabel("Get/Remove Live Notification Role")
                                 .setStyle(ButtonStyle.Primary)
                                 .setEmoji("🔔")
                         ),
                     ];
                 } else {
-                    return message.reply("❌ 유효하지 않은 임베드 타입입니다. [rules/welcome/notification] 중 하나를 사용하세요.");
+                    return message.reply("❌ Invalid embed type. Use one of [rules/welcome/notification].");
                 }
 
                 await targetChannel.send({ embeds: [embed], components: components });
-                message.reply(`✅ **${type}** 임베드를 <#${channelId}> 채널에 전송했습니다.`);
+                message.reply(`✅ **${type}** embed successfully sent to <#${channelId}>.`);
                 break;
             }
             
         default:
             // 알 수 없는 명령어 처리
-            message.reply("❓ 알 수 없는 명령어입니다. 관리자 명령어를 확인해 주세요.");
+            message.reply("❓ Unknown command. Please check moderator commands.");
             break;
     }
 });
@@ -653,50 +653,50 @@ client.on("interactionCreate", async (interaction) => {
             const gosuRole = interaction.guild.roles.cache.get(GOSU_ROLE);
 
             if (!gosuRole) {
-                console.error("GOSU_ROLE ID가 잘못되었거나 역할이 서버에 없습니다.");
+                console.error("GOSU_ROLE ID is incorrect or role is missing.");
                 return interaction.reply({
-                    content: "⚠ 서버 설정 오류: 기본 역할을 찾을 수 없습니다.",
+                    content: "⚠ Server configuration error: Default role not found.",
                     ephemeral: true,
                 });
             }
 
-            // 이미 역할을 가지고 있는지 확인
+            // Check if role is already assigned
             if (member.roles.cache.has(GOSU_ROLE)) {
                 return interaction.reply({
-                    content: "✅ 이미 규칙에 동의하여 입장 역할이 있습니다.",
+                    content: "✅ You have already agreed to the rules and have the entry role.",
                     ephemeral: true,
                 });
             }
 
-            // 역할 부여
+            // Assign role
             await member.roles.add(gosuRole);
 
             interaction.reply({
-                content: "🎉 규칙에 동의하셨습니다. 서버에 입장되었습니다!",
+                content: "🎉 Rules agreed! You have been granted access to the server.",
                 ephemeral: true,
             });
         } else if (interaction.customId === "toggle_subscriber_role") {
             const subRole = interaction.guild.roles.cache.get(SUB_ROLE);
 
             if (!subRole) {
-                console.error("SUB_ROLE ID가 잘못되었거나 역할이 서버에 없습니다.");
+                console.error("SUB_ROLE ID is incorrect or role is missing.");
                 return interaction.reply({
-                    content: "⚠ 서버 설정 오류: 알림 역할을 찾을 수 없습니다.",
+                    content: "⚠ Server configuration error: Notification role not found.",
                     ephemeral: true,
                 });
             }
 
-            // 역할 추가/제거 토글
+            // Toggle role
             if (member.roles.cache.has(SUB_ROLE)) {
                 await member.roles.remove(subRole);
                 return interaction.reply({
-                    content: "❌ 라이브 알림 역할이 제거되었습니다. 이제 알림을 받지 않습니다.",
+                    content: "❌ Live notification role removed. You will no longer receive notifications.",
                     ephemeral: true,
                 });
             } else {
                 await member.roles.add(subRole);
                 return interaction.reply({
-                    content: "🔔 라이브 알림 역할이 부여되었습니다. 이제 알림을 받습니다.",
+                    content: "🔔 Live notification role assigned. You will now receive notifications.",
                     ephemeral: true,
                 });
             }
@@ -704,7 +704,7 @@ client.on("interactionCreate", async (interaction) => {
     } catch (err) {
         console.error("Button interaction error:", err);
         return interaction.reply({
-            content: "⚠ 버튼 처리 중 오류가 발생했습니다. 봇의 권한을 확인해 주세요.",
+            content: "⚠ An error occurred while processing the button. Please check bot permissions.",
             ephemeral: true,
         });
     }
