@@ -54,6 +54,39 @@ const FILTER_EXEMPT_ROLES = [
 ];
 
 // ----------------------------------------------------
+// COMMAND DELETION CONFIG
+// ----------------------------------------------------
+const TRANSIENT_DURATION = 3000; // 3 seconds
+// 이 명령어들의 성공 메시지만 영구적으로 유지됩니다. (요청에 따라 !help 추가)
+const PERSISTENT_COMMANDS = ['!addword', '!removeword', '!kick', '!ban', '!mute', '!unmute', '!help'];
+
+// Helper to send transient error/usage replies (항상 TRANSIENT_DURATION 후 삭제)
+async function sendTransientError(message, content) {
+    const sentMsg = await message.channel.send(content).catch(console.error);
+    if (sentMsg) {
+        setTimeout(() => sentMsg.delete().catch(() => {}), TRANSIENT_DURATION);
+    }
+    return sentMsg;
+}
+
+// Helper to send transient success replies (PERSISTENT_COMMANDS에 없으면 TRANSIENT_DURATION 후 삭제)
+async function sendCommandReply(message, contentOrEmbed, cmd) {
+    const isPersistent = PERSISTENT_COMMANDS.includes(cmd);
+    
+    let sentMsg;
+    if (typeof contentOrEmbed === 'string') {
+        sentMsg = await message.channel.send(contentOrEmbed).catch(console.error);
+    } else {
+        sentMsg = await message.channel.send({ embeds: [contentOrEmbed] }).catch(console.error);
+    }
+
+    if (sentMsg && !isPersistent) {
+        setTimeout(() => sentMsg.delete().catch(() => {}), TRANSIENT_DURATION);
+    }
+    return sentMsg;
+}
+
+// ----------------------------------------------------
 // Helper: Function to save blacklist.json
 // ----------------------------------------------------
 function saveBlacklist() {
@@ -320,19 +353,14 @@ client.on("messageCreate", async (message) => {
 
     
 // ---------------------------
-// 1. CHAT FILTER LOGIC
+// 1. CHAT FILTER LOGIC (UNCHANGED)
 // ---------------------------
     const isExempt = isCommand || FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId));
 
     if (!isExempt) {
         let foundLinkFilterMatch = null;
         const normalizedMessage = message.content.toLowerCase();
-
-        // ------------------------------------------------------------------
-        // NEW: Enhanced Link and Pattern Filter (Spam/Scam link filtering)
-        // ------------------------------------------------------------------
-
-        // #1 Discord Invite Filter (Custom: Add allowed invites here)
+        // ... (Link and OnlyFans Filter Logic - Unchanged)
         const allowedInvites = ['discord.gg/gosugeneral', 'discord.gg/xgxD5hB'];
         const containsDiscordInvite = normalizedMessage.match(/(discord\.gg)\/(\w+)/g)?.length > 0;
         const isAllowedInvite = allowedInvites.some(invite => normalizedMessage.includes(invite));
@@ -341,25 +369,21 @@ client.on("messageCreate", async (message) => {
             foundLinkFilterMatch = "Unpermitted Discord Invite";
         }
         
-        // #2 OnlyFans Filter
         else if (normalizedMessage.includes("only fans") || normalizedMessage.includes("onlyfans")) {
             foundLinkFilterMatch = "Explicit Content Keyword (OnlyFans)";
         }
         
-        // #3 General Link/URL Filter
         const generalUrlMatch = normalizedMessage.match(/(https?:\/\/)?(www\.)?(\w+)\.(\w+)\/(\w)+/g)?.length > 0;
         if (!foundLinkFilterMatch && (normalizedMessage.includes("http") || generalUrlMatch)) {
-            const safeDomains = ['youtube.com', 'youtu.be', 'twitch.tv', 'google.com', 'naver.com']; // <-- Add allowed domains here.
+            const safeDomains = ['youtube.com', 'youtu.be', 'twitch.tv', 'google.com', 'naver.com'];
             
             if (!safeDomains.some(domain => normalizedMessage.includes(domain))) {
                  foundLinkFilterMatch = "Unpermitted General URL";
             }
         }
 
-        // ------------------------------------------------------------------
-        // Handle Link Filter Match
-        // ------------------------------------------------------------------
         if (foundLinkFilterMatch) {
+            // ... (Log sending code - Unchanged)
             if (BOT_CONFIG.msgLogChannelId) {
                 const logChannel = message.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId);
                 if (logChannel) {
@@ -394,9 +418,7 @@ client.on("messageCreate", async (message) => {
             return; 
         }
         
-        // ------------------------------------------------------------------
-        // Existing BLACKLISTED_WORDS Filter Logic
-        // ------------------------------------------------------------------
+        // ... (Blacklisted Words Filter Logic - Unchanged)
         const normalizedContentExisting = message.content.normalize('NFC').toLowerCase(); 
         const simplifiedContent = normalizedContentExisting.replace(/[^가-힣a-z0-9\s]/g, '');
 
@@ -424,6 +446,7 @@ client.on("messageCreate", async (message) => {
         }
 
         if (foundWord) {
+            // ... (Log sending code - Unchanged)
             if (BOT_CONFIG.msgLogChannelId) {
                 const logChannel = message.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId);
                 if (logChannel) {
@@ -462,32 +485,129 @@ client.on("messageCreate", async (message) => {
 // 2. MODERATION COMMANDS (Moderator Commands)
 // ---------------------------
 
-    if (!isCommand || !isModerator(member)) return; 
+    if (!isCommand) return; // Only process if it's a command
+
+    // --- Command Permission Check and Deletion ---
+    const isModeratorCommand = [
+        '!addword', '!removeword', '!listwords', '!setlogchannel', 
+        '!logs', '!kick', '!ban', '!purge', '!clear', 
+        '!ping', '!help', '!mute', '!unmute', '!addrole', '!removerole'
+    ].includes(cmd);
+    
+    // Check for Mod+ permission for moderation commands
+    if (isModeratorCommand && !isModerator(member)) {
+        if (message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+            await message.delete().catch(() => {});
+        }
+        // TRANSIENT ERROR
+        return sendTransientError(message, "❌ You need **Moderator** privileges or higher to use this command.");
+    }
+
+    // Check for Admin permission for the !embed command
+    const isAdminCommand = cmd === '!embed';
+    if (isAdminCommand && !isAdmin(member)) { 
+        if (message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+            await message.delete().catch(() => {});
+        }
+        // TRANSIENT ERROR
+        return sendTransientError(message, "❌ This command is restricted to the **Admin** role.");
+    }
+    
+    // Default Command Message Deletion (Skip for !purge/!clear as bulkDelete handles it)
+    if (cmd !== '!purge' && cmd !== '!clear' && message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+        await message.delete().catch(() => {});
+    }
+
 
     switch (cmd) {
+        
+        case "!ping":
+            {
+                // message is already deleted above
+                // TRANSIENT REPLY
+                sendCommandReply(message, "Pong!", cmd); 
+                break;
+            }
+
+        case "!help":
+            {
+                // message is already deleted above
+
+                const helpEmbed = new EmbedBuilder()
+                    .setColor("#0099ff")
+                    .setTitle("🤖 Bot Command List (Mod+)")
+                    .setDescription(`Your command message is deleted immediately. Replies for management/moderation commands will **persist permanently**.\n(i.e., **!kick, !ban, !mute, !unmute, !addword, !removeword, !help**)\nOther successful replies will disappear after **${TRANSIENT_DURATION / 1000} seconds**.`)
+                    .addFields(
+                        { 
+                            name: "General Utility", 
+                            value: "`!ping` (Test bot status) [Transient], `!help` (Show this message) [Persistent]"
+                        },
+                        { 
+                            name: "Chat Filter Management", 
+                            value: "`!addword [word]` (Add word to blacklist) [Persistent]\n`!removeword [word]` (Remove word) [Persistent]\n`!listwords` (Show current blacklist) [Transient]"
+                        },
+                        {
+                            name: "Moderation",
+                            value: "`!kick [@user] [reason]` [Persistent]\n`!ban [@user] [reason]` [Persistent]\n`!purge [amount]` (Clear messages) [Transient]\n" + 
+                                   "`!mute [@user]` ⚠️ Not implemented [Persistent]\n" +
+                                   "`!unmute [@user]` ⚠️ Not implemented [Persistent]"
+                        },
+                         {
+                            name: "Role Management",
+                            value: "`!addrole [@user] [role ID]` ⚠️ Not implemented [Persistent]\n`!removerole [@user] [role ID]` ⚠️ Not implemented [Persistent]"
+                        },
+                        { 
+                            name: "Log Channel Management", 
+                            value: "`!setlogchannel [ID] [action/msg/mod]` [Transient]\n`!logs` (Show current log settings) [Transient]"
+                        },
+                        { 
+                            name: "Embed/Banner Setup (Admin Only)", 
+                            value: "`!embed [ChannelID] [rules/welcome/notification]` [Transient]"
+                        }
+                    )
+                    .setFooter({ text: "All moderation/management commands require Mod+ role." });
+
+                // PERSISTENT REPLY (Now handled correctly because '!help' is in PERSISTENT_COMMANDS)
+                sendCommandReply(message, helpEmbed, cmd); 
+                break;
+            }
+
+        case "!mute":
+        case "!unmute":
+        case "!addrole":
+        case "!removerole":
+            {
+                // message is already deleted above
+                // PERSISTENT REPLY 
+                message.channel.send(`⚠️ Command \`${cmd}\` received but **is not currently implemented**.`).catch(console.error);
+                break;
+            }
+
         case "!addword":
             {
+                // message is already deleted above
                 const wordToAdd = args.slice(1).join(" ").toLowerCase();
                 if (!wordToAdd) {
-                    return message.reply("❌ Usage: `!addword [word/phrase to add]`");
+                    return sendTransientError(message, "❌ Usage: `!addword [word/phrase to add]`"); // TRANSIENT ERROR
                 }
 
                 if (BLACKLISTED_WORDS.includes(wordToAdd)) {
-                    return message.reply(`⚠ **${wordToAdd}** is already in the blacklist.`);
+                    return sendTransientError(message, `⚠ **${wordToAdd}** is already in the blacklist.`); // TRANSIENT WARNING
                 }
 
                 BLACKLISTED_WORDS.push(wordToAdd);
                 saveBlacklist(); 
 
-                message.reply(`✅ Successfully added **${wordToAdd}** to the blacklist. Total words: ${BLACKLISTED_WORDS.length}.`);
+                message.channel.send(`✅ Successfully added **${wordToAdd}** to the blacklist. Total words: ${BLACKLISTED_WORDS.length}.`); // PERSISTENT REPLY
                 break;
             }
 
         case "!removeword":
             {
+                // message is already deleted above
                 const wordToRemove = args.slice(1).join(" ").toLowerCase();
                 if (!wordToRemove) {
-                    return message.reply("❌ Usage: `!removeword [word/phrase to remove]`");
+                    return sendTransientError(message, "❌ Usage: `!removeword [word/phrase to remove]`"); // TRANSIENT ERROR
                 }
 
                 const initialLength = BLACKLISTED_WORDS.length;
@@ -495,17 +615,19 @@ client.on("messageCreate", async (message) => {
 
                 if (BLACKLISTED_WORDS.length < initialLength) {
                     saveBlacklist(); 
-                    message.reply(`✅ Successfully removed **${wordToRemove}**. Total words: ${BLACKLISTED_WORDS.length}.`);
+                    message.channel.send(`✅ Successfully removed **${wordToRemove}**. Total words: ${BLACKLISTED_WORDS.length}.`); // PERSISTENT REPLY
                 } else {
-                    message.reply(`⚠ **${wordToRemove}** was not found in the blacklist.`);
+                    sendTransientError(message, `⚠ **${wordToRemove}** was not found in the blacklist.`); // TRANSIENT WARNING
                 }
                 break;
             }
 
         case "!listwords":
             {
+                // message is already deleted above
                 if (BLACKLISTED_WORDS.length === 0) {
-                    return message.reply("✅ The blacklist is currently empty.");
+                    // TRANSIENT REPLY
+                    return sendCommandReply(message, "✅ The blacklist is currently empty.", cmd); 
                 }
 
                 const list = BLACKLISTED_WORDS.map((w, i) => `${i + 1}. ${w}`).join('\n');
@@ -515,38 +637,44 @@ client.on("messageCreate", async (message) => {
                     .setDescription(`\`\`\`\n${list.substring(0, 4000)}\n\`\`\``) 
                     .setFooter({ text: "Filtering is case-insensitive and bypasses most special characters/spaces." });
 
-                message.reply({ embeds: [embed] });
+                // TRANSIENT REPLY
+                sendCommandReply(message, embed, cmd); 
                 break;
             }
 
         case "!setlogchannel":
             {
+                // message is already deleted above
                 const channelId = args[1];
                 const type = args[2]?.toLowerCase();
                 
                 if (!channelId || !type) {
-                    return message.reply("❌ Usage: `!setlogchannel [ChannelID] [action/msg/mod]`");
+                    return sendTransientError(message, "❌ Usage: `!setlogchannel [ChannelID] [action/msg/mod]`"); // TRANSIENT ERROR
                 }
                 
+                let replyContent;
                 if (type === 'action') {
                     BOT_CONFIG.actionLogChannelId = channelId;
-                    message.reply(`✅ **Action Log Channel** set to <#${channelId}>.`);
+                    replyContent = `✅ **Action Log Channel** set to <#${channelId}>.`; 
                 } else if (type === 'msg') {
                     BOT_CONFIG.msgLogChannelId = channelId;
-                    message.reply(`✅ **Message Filter Log Channel** set to <#${channelId}>.`);
+                    replyContent = `✅ **Message Filter Log Channel** set to <#${channelId}>.`;
                 } else if (type === 'mod') {
                     BOT_CONFIG.modLogChannelId = channelId;
-                    message.reply(`✅ **Moderation Log Channel** set to <#${channelId}>.`);
+                    replyContent = `✅ **Moderation Log Channel** set to <#${channelId}>.`;
                 } else {
-                    return message.reply("❌ Invalid log type. Use one of [action/msg/mod].");
+                    return sendTransientError(message, "❌ Invalid log type. Use one of [action/msg/mod]."); // TRANSIENT ERROR
                 }
                 
                 saveConfig();
+                // TRANSIENT REPLY
+                sendCommandReply(message, replyContent, cmd);
                 break;
             }
 
         case "!logs":
             {
+                // message is already deleted above
                 const embed = new EmbedBuilder()
                     .setColor("#00FFFF")
                     .setTitle("📜 Current Log Channel Settings")
@@ -557,54 +685,57 @@ client.on("messageCreate", async (message) => {
                     )
                     .setFooter({ text: "Set with: !setlogchannel [ID] [action/msg/mod]" });
                 
-                message.reply({ embeds: [embed] });
+                // TRANSIENT REPLY
+                sendCommandReply(message, embed, cmd);
                 break;
             }
 
         case "!kick":
             {
+                // message is already deleted above
                 const targetUser = message.mentions.members.first();
                 const reason = args.slice(2).join(" ") || "No reason specified";
 
                 if (!targetUser) {
-                    return message.reply("❌ Usage: `!kick [@user mention] [reason]`");
+                    return sendTransientError(message, "❌ Usage: `!kick [@user mention] [reason]`"); // TRANSIENT ERROR
                 }
                 
                 if (isModerator(targetUser)) {
-                    return message.reply("❌ Cannot kick a Moderator or Admin.");
+                    return sendTransientError(message, "❌ Cannot kick a Moderator or Admin."); // TRANSIENT ERROR
                 }
                 
                 try {
                     await targetUser.kick(reason);
-                    message.reply(`✅ Kicked ${targetUser.user.tag}. Reason: ${reason}`);
+                    message.channel.send(`✅ Kicked ${targetUser.user.tag}. Reason: ${reason}`); // PERSISTENT REPLY
                     sendModLog(message.guild, targetUser.user, 'KICK', message.author, reason);
                 } catch (error) {
                     console.error("Kick error:", error);
-                    message.reply(`❌ Failed to kick: ${error.message}`);
+                    sendTransientError(message, `❌ Failed to kick: ${error.message}`); // TRANSIENT ERROR
                 }
                 break;
             }
             
         case "!ban":
             {
+                // message is already deleted above
                 const targetUser = message.mentions.members.first();
                 const reason = args.slice(2).join(" ") || "No reason specified";
 
                 if (!targetUser) {
-                    return message.reply("❌ Usage: `!ban [@user mention] [reason]`");
+                    return sendTransientError(message, "❌ Usage: `!ban [@user mention] [reason]`"); // TRANSIENT ERROR
                 }
 
                 if (isModerator(targetUser)) {
-                    return message.reply("❌ Cannot ban a Moderator or Admin.");
+                    return sendTransientError(message, "❌ Cannot ban a Moderator or Admin."); // TRANSIENT ERROR
                 }
 
                 try {
                     await targetUser.ban({ reason: reason });
-                    message.reply(`✅ Banned ${targetUser.user.tag}. Reason: ${reason}`);
+                    message.channel.send(`✅ Banned ${targetUser.user.tag}. Reason: ${reason}`); // PERSISTENT REPLY
                     sendModLog(message.guild, targetUser.user, 'BAN', message.author, reason);
                 } catch (error) {
                     console.error("Ban error:", error);
-                    message.reply(`❌ Failed to ban: ${error.message}`);
+                    sendTransientError(message, `❌ Failed to ban: ${error.message}`); // TRANSIENT ERROR
                 }
                 break;
             }
@@ -612,40 +743,41 @@ client.on("messageCreate", async (message) => {
         case "!purge":
         case "!clear":
             {
+                // NOTE: message.delete() is NOT called here as the command message is deleted by bulkDelete
                 if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                    return message.reply("❌ I require the 'Manage Messages' permission to clear messages.");
+                    // TRANSIENT ERROR
+                    return sendTransientError(message, "❌ I require the 'Manage Messages' permission to clear messages."); 
                 }
                 
                 const amount = parseInt(args[1]);
 
                 if (isNaN(amount) || amount <= 0 || amount > 100) {
-                    return message.reply("❌ Usage: `!clear [number between 1-100]`");
+                    return sendTransientError(message, "❌ Usage: `!clear [number between 1-100]`"); // TRANSIENT ERROR
                 }
 
                 try {
                     // +1 to also delete the command message itself.
-                    const deleted = await message.channel.bulkDelete(amount + 1, true); // Deletes command + specified amount
+                    const deleted = await message.channel.bulkDelete(amount + 1, true); 
                     const reply = await message.channel.send(`✅ Deleted ${deleted.size -1} messages.`);
-                    setTimeout(() => reply.delete().catch(() => {}), 5000); // Auto-delete reply after 5s
+                    setTimeout(() => reply.delete().catch(() => {}), TRANSIENT_DURATION); // Auto-delete reply after 3s (TRANSIENT)
                 } catch (error) {
                     console.error("Purge error:", error);
-                    message.reply("❌ Failed to delete messages. (Cannot delete messages older than 14 days.)");
+                    sendTransientError(message, "❌ Failed to delete messages. (Cannot delete messages older than 14 days.)"); // TRANSIENT ERROR
                 }
                 break;
             }
             
         case "!embed":
             {
-                if (!isAdmin(member)) { 
-                    return message.reply("❌ This command is restricted to the Admin role.");
-                }
+                // message is already deleted above
+                // Admin permission check is already done above.
 
                 const channelId = args[1];
                 const type = args[2]?.toLowerCase();
                 const targetChannel = message.guild.channels.cache.get(channelId);
 
                 if (!targetChannel || !type) {
-                    return message.reply("❌ Usage: `!embed [ChannelID] [rules/welcome/notification]`");
+                    return sendTransientError(message, "❌ Usage: `!embed [ChannelID] [rules/welcome/notification]`"); // TRANSIENT ERROR
                 }
 
                 let embed;
@@ -699,22 +831,24 @@ client.on("messageCreate", async (message) => {
                         ),
                     ];
                 } else {
-                    return message.reply("❌ Invalid embed type. Use one of [rules/welcome/notification].");
+                    return sendTransientError(message, "❌ Invalid embed type. Use one of [rules/welcome/notification]."); // TRANSIENT ERROR
                 }
 
                 await targetChannel.send({ embeds: [embed], components: components });
-                message.reply(`✅ **${type}** embed successfully sent to <#${channelId}>.`);
+                // TRANSIENT REPLY
+                sendCommandReply(message, `✅ **${type}** embed successfully sent to <#${channelId}>.`, cmd); 
                 break;
             }
             
         default:
-            message.reply("❓ Unknown command. Please check moderator commands.");
+            // Unknown command - message is already deleted above.
+            sendTransientError(message, "❓ Unknown command. Type `!help` for the list of available commands."); // TRANSIENT ERROR
             break;
     }
 });
 
 // =====================================================
-// BUTTON INTERACTION HANDLING
+// BUTTON INTERACTION HANDLING (UNCHANGED)
 // =====================================================
 
 client.on("interactionCreate", async (interaction) => {
