@@ -45,6 +45,10 @@ const MOD_ROLE = "495727371140202506";
 const ADMIN_ROLE = "495718851288236032";
 // Live Notification Subscriber role
 const SUB_ROLE = "497654614729031681";
+// Creator Role ID (1441214177128743017)
+const CREATOR_ROLE = "1441214177128743017"; 
+// Verification/Temporary Role ID (1441311763806031893)
+const VERIFICATION_ROLE = "1441311763806031893";
 
 // ----------------------------------------------------
 // VOICE CHANNEL CREATOR CONFIG
@@ -1388,6 +1392,21 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
         (role) => !newMember.roles.cache.has(role.id)
     );
 
+    // Creator 역할 획득 시 Verification 임시 역할 제거
+    if (rolesAdded.has(CREATOR_ROLE) && newMember.roles.cache.has(VERIFICATION_ROLE)) {
+        try {
+            await newMember.roles.remove(VERIFICATION_ROLE);
+            console.log(
+                `[ROLE CLEANUP] Creator 역할 획득으로 Verification 임시 역할 (${VERIFICATION_ROLE})을 ${newMember.user.tag} 멤버에게서 제거했습니다.`
+            );
+        } catch (error) {
+            console.error(
+                `[ERROR] Verification 임시 역할 제거 실패 (${newMember.user.tag}):`,
+                error.message
+            );
+            // 참고: 봇에게 역할 관리 권한이 없거나, Creator 역할보다 임시 역할이 높은 위치에 있으면 발생할 수 있습니다.
+        }
+    }
     if (rolesAdded.size === 0 && rolesRemoved.size === 0) return;
 
     if (!BOT_CONFIG.actionLogChannelId) return;
@@ -1569,6 +1588,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
