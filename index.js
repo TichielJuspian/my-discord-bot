@@ -2,34 +2,33 @@
 // Gosu Custom Discord Bot (Final Build - All Features Merged)
 // Discord.js v14
 // =====================================================
-
 require("dotenv").config();
-const {
-    Client,
-    GatewayIntentBits,
-    Partials,
-    EmbedBuilder,
-    PermissionsBitField,
-    ButtonStyle,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ChannelType,
-} = require("discord.js");
-const path = require("path");
 const fs = require("fs");
+const path = require("path"); // ✅ 한 번만 선언
 
-const DATA_DIR = "./data";
-const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
+const {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  EmbedBuilder,
+  PermissionsBitField,
+  ButtonStyle,
+  ButtonBuilder,
+  ActionRowBuilder,
+} = require("discord.js");
 
-let bannedWords = [];
+const DATA_DIR = "./data"; // ✅ 한 번만 선언
+const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json"); // ✅ 한 번만 선언
+
+let blacklistWords = [];
 
 function loadBlacklist() {
-    if (fs.existsSync(BLACKLIST_FILE_PATH)) {
-        const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE_PATH, "utf8"));
-        bannedWords = blacklist.words.map(word => word.toLowerCase());
-    } else {
-        console.warn("⚠️ blacklist.json not found.");
-    }
+  if (fs.existsSync(BLACKLIST_FILE_PATH)) {
+    const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE_PATH, "utf8"));
+    blacklistWords = blacklist.words.map(word => word.toLowerCase());
+  } else {
+    console.warn("⚠️ blacklist.json not found.");
+  }
 }
 
 loadBlacklist();
@@ -1499,6 +1498,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
