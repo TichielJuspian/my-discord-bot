@@ -951,76 +951,74 @@ if (cmd === "!removeword") {
     }
   
 // !creator — Creator Role Auto Verification Panel
-if (cmd === "!creator") {
-    if (!isAdmin(member)) {
-        return message.reply(
-            "❌ You do not have permission to use this command."
-        );
+    if (cmd === "!creator") {
+        const member = message.member;
+        if (!isAdmin(member)) {
+            const reply = await message.reply(
+                "❌ You do not have permission to use this command."
+            );
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+
+        // 1) 윗부분에 배너 이미지 (welcome이랑 동일한 방식)
+        await message.channel.send({
+            files: [{ attachment: CREATOR_BANNER_URL, name: "creator_verification.png" }],
+        });
+
+        // 2) 아래에 설명 embed
+        const creatorEmbed = new EmbedBuilder()
+            .setColor("#FFB347")
+            .setTitle("👑 Creator Role – Automatic Verification")
+            .setDescription(
+                [
+                    "Hello, creators! This panel explains how to obtain the **Creator** role and access exclusive creator-only channels.",
+                    "",
+                    "Our Creator role is granted through **Discord’s automatic verification system**, based on your connected accounts.",
+                    "",
+                    "--------------------------------------------",
+                    "### 1️⃣ Required Conditions",
+                    "To receive the Creator role, at least **one** connected account must meet **all** requirements below:",
+                    "",
+                    "**Supported Platforms:**",
+                    "- TikTok / YouTube / Twitch / Facebook",
+                    "",
+                    "**Requirements:**",
+                    "- The account must be **connected** to your Discord profile",
+                    "- The account must be **verified** (e.g., phone verification)",
+                    "- Minimum **100 followers/subscribers**",
+                    "- Must be following **100+ users**",
+                    "- At least **10 likes or activity records**",
+                    "",
+                    "--------------------------------------------",
+                    "### 2️⃣ How to Connect Your Account to Discord",
+                    "1. Open **User Settings** (gear icon ⚙️ bottom-left)",
+                    "2. Select **Connections**",
+                    "3. Click **Add Connection**",
+                    "4. Choose TikTok / YouTube / Twitch / Facebook, then log in and link your account",
+                    "",
+                    "--------------------------------------------",
+                    "### 3️⃣ Automatic Creator Role Assignment",
+                    "- After linking and meeting the requirements, Discord automatically verifies your account.",
+                    "- Please wait a moment; syncing account data may take some time.",
+                    "- Once approved, the **Creator** role will appear and channels like **#creator-chat** will become available.",
+                    "",
+                    "--------------------------------------------",
+                    "### ⚠️ Troubleshooting",
+                    "**Didn't receive the role?**",
+                    "- Ensure your linked account meets *all* requirements",
+                    "- Refresh Discord with **Ctrl + R** (Windows) or **Cmd + R** (Mac)",
+                    "",
+                    "**Need help?**",
+                    "DM an admin if you're experiencing issues or have questions.",
+                ].join("\n")
+            )
+            .setFooter({ text: "Gosu General TV — Creator Role Guide" });
+
+        await message.channel.send({ embeds: [creatorEmbed] });
+        return;
     }
 
-    // 1) Creator Banner Image
-    await message.channel.send({
-        files: [
-            {
-                attachment: "/mnt/data/verification.png",
-                name: "verification.png"
-            }
-        ]
-    });
-
-    // 2) Creator Information Embed
-    const creatorEmbed = new EmbedBuilder()
-        .setColor("#FFB347")
-        .setTitle("👑 Creator Role – Automatic Verification")
-        .setDescription(
-            [
-                "Hello, creators! This panel explains how to obtain the **Creator** role and access exclusive creator-only channels.",
-                "",
-                "Our Creator role is granted through **Discord’s automatic verification system**, based on your connected accounts.",
-                "",
-                "--------------------------------------------",
-                "### 1️⃣ Required Conditions",
-                "To receive the Creator role, at least **one** connected account must meet **all** requirements below:",
-                "",
-                "**Supported Platforms:**",
-                "- TikTok / YouTube / Twitch / Facebook",
-                "",
-                "**Requirements:**",
-                "- The account must be **connected** to your Discord profile",
-                "- The account must be **verified** (e.g., phone verification)",
-                "- Minimum **100 followers/subscribers**",
-                "- Must be following **100+ users**",
-                "- At least **10 likes or activity records**",
-                "",
-                "--------------------------------------------",
-                "### 2️⃣ How to Connect Your Account to Discord",
-                "1. Open **User Settings** (gear icon ⚙️ bottom-left)",
-                "2. Select **Connections**",
-                "3. Click **Add Connection**",
-                "4. Choose TikTok / YouTube / Twitch / Facebook, then log in and link your account",
-                "",
-                "--------------------------------------------",
-                "### 3️⃣ Automatic Creator Role Assignment",
-                "- After linking and meeting the requirements, Discord automatically verifies your account.",
-                "- Please wait a moment; syncing account data may take some time.",
-                "- Once approved, the **Creator** role will appear and channels like **#creator-chat** will become available.",
-                "",
-                "--------------------------------------------",
-                "### ⚠️ Troubleshooting",
-                "**Didn't receive the role?**",
-                "- Ensure your linked account meets *all* requirements",
-                "- Refresh Discord with **Ctrl + R** (Windows) or **Cmd + R** (Mac)",
-                "",
-                "**Need help?**",
-                "DM an admin if you're experiencing issues or have questions.",
-            ].join("\n")
-        )
-        .setFooter({ text: "Gosu General TV — Creator Role Guide" });
-
-    await message.channel.send({ embeds: [creatorEmbed] });
-
-    return;
-}
  
     // MODERATION COMMANDS
     if (cmd === "!ban") {
@@ -1571,6 +1569,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
