@@ -25,6 +25,11 @@ const DATA_DIR = "/Data";
 const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
 const CONFIG_FILE_PATH   = path.join(DATA_DIR, "config.json");
 
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    console.log(`[INIT] Created directory ${DATA_DIR}`);
+}
+
 let BOT_CONFIG = {};       
 let BLACKLISTED_WORDS = [];  
 
@@ -1471,6 +1476,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
