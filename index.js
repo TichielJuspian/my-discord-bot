@@ -906,43 +906,35 @@ client.on("messageCreate", async (message) => {
         return;
     }
 
-    // ========== !subscriber (Live Notification Panel) ==========
-    if (cmd === "!subscriber") {
-        const subEmbed = new EmbedBuilder()
-            .setColor("#FFCC33")
-            .setTitle("📺 Gosu General TV — Live Notifications")
-            .setDescription(
-                [
-                    "If you’d like to receive alerts when **Gosu General TV** goes live or posts important announcements,",
-                    "press `Subscribe / Unsubscribe` to get or remove the **Live Notifications** role.",
-                    "",
-                    "Note: Subscribing will temporarily replace your **Gosu** role. Press the button again to return to the Gosu role.",
-                    "",
-                    "Thank you for being part of the community! 💙",
-                ].join("\n")
-            );
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("sub_subscribe")
-                .setLabel("Subscribe / Unsubscribe")
-                .setStyle(ButtonStyle.Success)
-        );
-
-        // Step 1: Send NOTIFICATION banner
-        await message.channel.send({
-            files: [
-                {
-                    attachment: NOTIFICATION_BANNER_URL,
-                    name: "notification_banner.png",
-                },
-            ],
-        });
-
-        // Step 2: Send embed + button
-        await message.channel.send({ embeds: [subEmbed], components: [row] });
-        return;
+// =====================================================
+// !subscriber — Create the Live Notification Panel
+// =====================================================
+if (cmd === "!subscriber") {
+    if (!isAdmin(member)) {
+        return message.reply("❌ You do not have permission to use this command.");
     }
+
+    const panelEmbed = new EmbedBuilder()
+        .setColor("#00BFFF")
+        .setTitle("🔔 Live Notification Subscription")
+        .setDescription(
+            "Click the button below to toggle **Live Stream/Upload Notifications**.\n\n" +
+            "• Press once → Subscribe\n" +
+            "• Press again → Unsubscribe"
+        )
+        .setImage(NOTIFICATION_BANNER_URL)
+        .setFooter({ text: "Gosu General TV – Notification System" });
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId("subscribe_toggle") // ⬅️ NEW ID
+            .setLabel("Subscribe / Unsubscribe")
+            .setStyle(ButtonStyle.Primary)
+    );
+
+    await message.channel.send({ embeds: [panelEmbed], components: [row] });
+    return message.reply("✅ **Subscriber panel has been created.**");
+}
 
     // =====================================================
     // MODERATION COMMANDS
@@ -1450,135 +1442,39 @@ client.on("guildMemberRemove", async (member) => {
 });
 
 // =====================================================
-// BUTTON INTERACTIONS (Rules + Colors + Subscribe Panel)
+// SUBSCRIBER BUTTON TOGGLE (Updated to NOT modify Gosu Role)
 // =====================================================
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isButton()) return;
 
-    const { customId, guild, member } = interaction;
+    // ----------------------------------
+    // Subscriber Toggle Button
+    // ----------------------------------
+    if (interaction.customId === "subscribe_toggle") {
 
-    // -------- Agree To Rules --------
-    if (customId === "agree_rules") {
-        const role = guild.roles.cache.get(GOSU_ROLE);
-        if (!role) {
-            return interaction.reply({
-                content:
-                    "⚠ The member role is not configured correctly. Please contact staff.",
-                ephemeral: true,
-            });
-        }
-
-        if (member.roles.cache.has(role.id)) {
-            return interaction.reply({
-                content: "You already have the member role.",
-                ephemeral: true,
-            });
-        }
+        const member = interaction.member;
+        const hasSubRole = member.roles.cache.has(SUB_ROLE);
 
         try {
-            await member.roles.add(role);
-            return interaction.reply({
-                content: `✅ You accepted the rules and received the **${role.name}** role. Welcome!`,
-                ephemeral: true,
-            });
-        } catch (err) {
-            console.error("Agree rules error:", err);
-            return interaction.reply({
-                content:
-                    "⚠ Failed to assign the role. Please contact staff.",
-                ephemeral: true,
-            });
-        }
-    }
-
-    // -------- Subscribe / Unsubscribe Toggle Button --------
-    if (customId === "sub_subscribe") {
-        const gosuRole = guild.roles.cache.get(GOSU_ROLE);
-        const subRole = guild.roles.cache.get(SUB_ROLE);
-
-        if (!gosuRole || !subRole) {
-            return interaction.reply({
-                content:
-                    "⚠ Subscriber or Member role is not configured correctly. Please contact staff.",
-                ephemeral: true,
-            });
-        }
-
-        try {
-            if (member.roles.cache.has(subRole.id)) {
-                // Currently subscribed -> unsubscribe and restore Gosu role
-                await member.roles.remove(subRole);
-                await member.roles.add(gosuRole);
-
-                return interaction.reply({
-                    content: `🔔 You have **Unsubscribed** from live notifications. Your role is now **${gosuRole.name}**.`,
+            if (hasSubRole) {
+                // 역할 제거
+                await member.roles.remove(SUB_ROLE);
+                await interaction.reply({
+                    content: "🔕 **You have unsubscribed from Live Notifications.**",
                     ephemeral: true,
                 });
             } else {
-                // Not subscribed -> subscribe and remove Gosu role
-                if (member.roles.cache.has(gosuRole.id)) {
-                    await member.roles.remove(gosuRole);
-                }
-                await member.roles.add(subRole);
-
-                return interaction.reply({
-                    content: `✅ You have **Subscribed** to live notifications. Your role is now **${subRole.name}**.`,
+                // 역할 추가
+                await member.roles.add(SUB_ROLE);
+                await interaction.reply({
+                    content: "🔔 **You are now subscribed to Live Notifications!**",
                     ephemeral: true,
                 });
             }
         } catch (err) {
-            console.error("Subscription toggle error:", err);
+            console.error("[ERROR] Failed to toggle subscriber role:", err);
             return interaction.reply({
-                content:
-                    "⚠ Failed to update your role. Please ensure the bot has the necessary permissions.",
-                ephemeral: true,
-            });
-        }
-    }
-
-    // -------- Color Role Buttons (Mutually Exclusive Logic) --------
-    const colorRoleData = COLOR_ROLES.find((c) => c.customId === customId);
-    if (colorRoleData) {
-        const targetRoleId = colorRoleData.roleId;
-        const targetRole = guild.roles.cache.get(targetRoleId);
-
-        if (!targetRole) {
-            return interaction.reply({
-                content:
-                    "⚠ Color role is not configured correctly. Please contact staff.",
-                ephemeral: true,
-            });
-        }
-
-        try {
-            const allColorRoleIds = COLOR_ROLES.map((c) => c.roleId);
-            const currentRoleIds = member.roles.cache
-                .filter((role) => allColorRoleIds.includes(role.id))
-                .map((role) => role.id);
-
-            if (member.roles.cache.has(targetRoleId)) {
-                // Already has this color role -> remove it
-                await member.roles.remove(targetRole);
-                return interaction.reply({
-                    content: `❌ Removed the **${targetRole.name}** color role.`,
-                    ephemeral: true,
-                });
-            } else {
-                // Does not have this color role -> remove others and add new one
-                if (currentRoleIds.length > 0) {
-                    await member.roles.remove(currentRoleIds);
-                }
-                await member.roles.add(targetRole);
-                return interaction.reply({
-                    content: `🎨 Assigned the **${targetRole.name}** color role!`,
-                    ephemeral: true,
-                });
-            }
-        } catch (err) {
-            console.error("Color role error:", err);
-            return interaction.reply({
-                content:
-                    "⚠ Failed to update your color role. Please ensure the bot has the necessary permissions.",
+                content: "❌ There was an error while assigning your role.",
                 ephemeral: true,
             });
         }
@@ -1589,3 +1485,4 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
