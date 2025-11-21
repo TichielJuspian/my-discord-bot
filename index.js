@@ -5,7 +5,7 @@
 require("dotenv").config();
 
 const fs = require("fs");
-const path = require("path"); 
+const path = require("path");
 
 const {
   Client,
@@ -18,9 +18,14 @@ const {
   ActionRowBuilder,
 } = require("discord.js");
 
-const DATA_DIR = "/Data"; 
+// -----------------------------
+// FILE PATH CONSTANTS
+// -----------------------------
+const DATA_DIR = "/Data";
 const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
-const CONFIG_FILE_PATH   = path.join(DATA_DIR, "config.json");   
+const CONFIG_FILE_PATH   = path.join(DATA_DIR, "config.json");
+
+let BOT_CONFIG = {};       
 let BLACKLISTED_WORDS = [];  
 
 // ----------------------------------------------------
@@ -1466,6 +1471,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
