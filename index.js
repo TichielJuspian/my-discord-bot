@@ -14,19 +14,23 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ChannelType,
-} = require("discord.js");
-const fs = require("fs");
 const path = require("path");
+const fs = require("fs");
 
-const BLACKLIST_FILE_PATH = path.join(".", "blacklist.json");
+const DATA_DIR = "./data";
+const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
+
 let bannedWords = [];
 
 function loadBlacklist() {
-  if (fs.existsSync(BLACKLIST_FILE_PATH)) {
-    const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE_PATH, "utf8"));
-    bannedWords = blacklist.words.map(word => word.toLowerCase());
-  }
+    if (fs.existsSync(BLACKLIST_FILE_PATH)) {
+        const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE_PATH, "utf8"));
+        bannedWords = blacklist.words.map(word => word.toLowerCase());
+    } else {
+        console.warn("⚠️ blacklist.json not found.");
+    }
 }
+
 loadBlacklist();
 
 // ----------------------------------------------------
@@ -1493,6 +1497,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
