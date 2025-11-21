@@ -18,6 +18,17 @@ const {
 const fs = require("fs");
 const path = require("path");
 
+const BLACKLIST_FILE_PATH = path.join(".", "blacklist.json");
+let bannedWords = [];
+
+function loadBlacklist() {
+  if (fs.existsSync(BLACKLIST_FILE_PATH)) {
+    const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE_PATH, "utf8"));
+    bannedWords = blacklist.words.map(word => word.toLowerCase());
+  }
+}
+loadBlacklist();
+
 // ----------------------------------------------------
 // FILE PATH CONSTANTS
 // ----------------------------------------------------
@@ -1482,6 +1493,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
