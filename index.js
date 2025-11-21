@@ -16,6 +16,7 @@ const {
   ButtonStyle,
   ButtonBuilder,
   ActionRowBuilder,
+  ChannelType,
 } = require("discord.js");
 
 // -----------------------------
@@ -1476,15 +1477,4 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
-
-
-
-
-
-
-
-
-
-
-
 
