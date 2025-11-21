@@ -13,7 +13,7 @@ const {
     ButtonStyle,
     ActionRowBuilder,
     ButtonBuilder,
-    ChannelType, // ⬅️ ChannelType 추가
+    ChannelType, 
 } = require("discord.js");
 const fs = require('fs'); // File system module
 
@@ -36,8 +36,12 @@ const SUB_ROLE = process.env.SUB_ROLE_ID || "PUT_SUB_ROLE_ID_HERE";        �
 // ----------------------------------------------------
 // CUSTOM VOICE CHAT CONFIG (NEW FEATURE)
 // ----------------------------------------------------
-const CREATE_VOICE_CHANNEL_ID = "720658789832851487"; // ⬅️ The channel users join to create a new voice room
-const createdChannels = new Set(); // ⬅️ Set to track IDs of bot-created channels
+// 🚨 다중 채널 ID로 변경
+const CREATE_VOICE_CHANNEL_IDS = [
+    "720658789832851487", // 기존 채널 ID
+    "1441159364298936340" // 추가 요청된 채널 ID
+]; 
+const createdChannels = new Set(); // Set to track IDs of bot-created channels
 
 // ----------------------------------------------------
 // CHAT FILTER CONFIG
@@ -171,7 +175,7 @@ const client = new Client({
         GatewayIntentBits.MessageContent, 
         GatewayIntentBits.GuildPresences, 
         GatewayIntentBits.GuildMessageReactions, 
-        GatewayIntentBits.GuildVoiceStates, // ⬅️ Voice State Changes Intent (REQUIRED for the new feature)
+        GatewayIntentBits.GuildVoiceStates, 
     ],
     partials: [
         Partials.Channel,
@@ -218,19 +222,18 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     const member = newState.member || oldState.member;
     
     // --- 1. Channel Creation Logic ---
-    if (newState.channelId === CREATE_VOICE_CHANNEL_ID) {
-        // User joined the creation channel
+    // 🚨 다중 채널 ID 확인으로 변경
+    if (CREATE_VOICE_CHANNEL_IDS.includes(newState.channelId)) {
+        // User joined one of the creation channels
         const guild = newState.guild;
         const channelName = `${member.user.username}'s Room`;
         
         try {
-            // Find the category of the creation channel to place the new channel there
-            const category = guild.channels.cache.get(CREATE_VOICE_CHANNEL_ID)?.parent;
+            // Find the category of the specific channel the user joined
+            const category = guild.channels.cache.get(newState.channelId)?.parent;
             
             if (!category) {
                 console.error("[VC] Creation channel's parent category not found or the creation channel is not set up correctly.");
-                // Optionally move user back to null/a safe channel if creation fails
-                // if (member.voice.channel) member.voice.setChannel(null).catch(console.error);
                 return; 
             }
 
@@ -266,8 +269,10 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     }
 
     // --- 2. Channel Deletion Logic ---
-    if (oldState.channelId && oldState.channelId !== CREATE_VOICE_CHANNEL_ID) {
-        // User left a channel, check if it was a bot-created channel
+    // User left a channel, and the channel they left is not one of the creation channels
+    // 🚨 다중 채널 ID 확인으로 변경
+    if (oldState.channelId && !CREATE_VOICE_CHANNEL_IDS.includes(oldState.channelId)) {
+        
         const oldChannel = oldState.channel;
         
         if (oldChannel && createdChannels.has(oldChannel.id)) {
