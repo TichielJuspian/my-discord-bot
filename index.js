@@ -45,10 +45,10 @@ const MOD_ROLE = "495727371140202506";
 const ADMIN_ROLE = "495718851288236032";
 // Live Notification Subscriber role
 const SUB_ROLE = "497654614729031681";
-// Creator Role ID (1441214177128743017)
+// 🆕 NEW: Creator Role ID (1441214177128743017)
 const CREATOR_ROLE = "1441214177128743017"; 
-// Verification/Temporary Role ID (1441311763806031893)
-const VERIFICATION_ROLE = "1441311763806031893";
+// 🆕 NEW: Verification/Temporary Role ID (1441311763806031893)
+const VERIFICATION_ROLE = "1441311763806031893"; 
 
 // ----------------------------------------------------
 // VOICE CHANNEL CREATOR CONFIG
@@ -218,7 +218,8 @@ const WELCOME_BANNER_URL =
     "https://cdn.discordapp.com/attachments/495719121686626323/1440988230492225646/welcome.png?ex=6920285e&is=691ed6de&hm=74ea90a10d279092b01dcccfaf0fd40fbbdf78308606f362bf2fe15e20c64b86&";
 const NOTIFICATION_BANNER_URL =
     "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c985f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
-const CREATOR_BANNER_URL = "file://mnt/data/verification.png";
+// 🛠️ FIX: Local path to public URL
+const CREATOR_BANNER_URL = "https://cdn.discordapp.com/attachments/495719121686626323/1441312962903015576/verification.png?ex=692156cc&is=6920054c&hm=aaf4d2ac41422e8239b35e50d6cd83d8792e40e876070178c0565c4eb14324a5&";
 
 // --------------------
 // Client Initialization
@@ -1279,6 +1280,7 @@ if (cmd === "!removeword") {
                     "`!setupjoin` — Create the rules panel.",
                     "`!welcome` — Create the main welcome panel.",
                     "`!subscriber` — Create the live notification panel.",
+                    "`!creator` — Create the Creator role verification panel.",
                 ].join("\n")
             );
 
@@ -1382,7 +1384,7 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
 });
 
 // =====================================================
-// SERVER ACTIVITY EVENTS (ACTION Log)
+// SERVER ACTIVITY EVENTS (ACTION Log & Role Cleanup)
 // =====================================================
 client.on("guildMemberUpdate", async (oldMember, newMember) => {
     const rolesAdded = newMember.roles.cache.filter(
@@ -1392,7 +1394,7 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
         (role) => !newMember.roles.cache.has(role.id)
     );
 
-    // Creator 역할 획득 시 Verification 임시 역할 제거
+    // 🆕 NEW LOGIC: Creator 역할 획득 시 Verification 임시 역할 제거
     if (rolesAdded.has(CREATOR_ROLE) && newMember.roles.cache.has(VERIFICATION_ROLE)) {
         try {
             await newMember.roles.remove(VERIFICATION_ROLE);
@@ -1407,6 +1409,8 @@ client.on("guildMemberUpdate", async (oldMember, newMember) => {
             // 참고: 봇에게 역할 관리 권한이 없거나, Creator 역할보다 임시 역할이 높은 위치에 있으면 발생할 수 있습니다.
         }
     }
+    // 🆕 NEW LOGIC END
+    
     if (rolesAdded.size === 0 && rolesRemoved.size === 0) return;
 
     if (!BOT_CONFIG.actionLogChannelId) return;
@@ -1588,9 +1592,3 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
-
-
-
-
-
-
