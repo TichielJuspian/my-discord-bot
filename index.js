@@ -3,8 +3,9 @@
 // Discord.js v14
 // =====================================================
 require("dotenv").config();
+
 const fs = require("fs");
-const path = require("path"); // ✅ 한 번만 선언
+const path = require("path"); 
 
 const {
   Client,
@@ -17,42 +18,12 @@ const {
   ActionRowBuilder,
 } = require("discord.js");
 
-const DATA_DIR = "./data"; // ✅ 한 번만 선언
-const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json"); // ✅ 한 번만 선언
-
-let blacklistWords = [];
-
-function loadBlacklist() {
-  if (fs.existsSync(BLACKLIST_FILE_PATH)) {
-    const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE_PATH, "utf8"));
-    blacklistWords = blacklist.words.map(word => word.toLowerCase());
-  } else {
-    console.warn("⚠️ blacklist.json not found.");
-  }
-}
-
-loadBlacklist();
-
-// ----------------------------------------------------
-// FILE PATH CONSTANTS
-// ----------------------------------------------------
-const path = require("path");
-
-const DATA_DIR = "."; // Root directory
+const DATA_DIR = "/Data"; 
 const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
 const CONFIG_FILE_PATH   = path.join(DATA_DIR, "config.json");
-let BOT_CONFIG = {};
+let BOT_CONFIG = {};          
+let BLACKLISTED_WORDS = [];  
 
-// ----------------------------------------------------
-// Load banned words from blacklist.json
-// ----------------------------------------------------
-let bannedWords = [];
-if (fs.existsSync(BLACKLIST_FILE_PATH)) {
-    const blacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE_PATH, "utf8"));
-    bannedWords = blacklist.words.map(word => word.toLowerCase());
-} else {
-    console.warn("⚠️ blacklist.json file not found.");
-}
 // ----------------------------------------------------
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
@@ -1498,6 +1469,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
