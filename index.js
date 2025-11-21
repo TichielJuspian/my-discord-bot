@@ -13,8 +13,7 @@ const {
     ButtonStyle,
     ActionRowBuilder,
     ButtonBuilder,
-    REST,
-    Routes,
+    ChannelType, // ✅ ADDED: 채널 타입 (음성 채널 생성을 위해 추가)
 } = require("discord.js");
 const fs = require('fs'); // File system module
 
@@ -22,130 +21,66 @@ const fs = require('fs'); // File system module
 // FILE PATH CONSTANT
 // ----------------------------------------------------
 const BLACKLIST_FILE_PATH = 'blacklist.json';
-const CONFIG_FILE_PATH = 'config.json'; // ⬅️ Log Channel Configuration File
-let BOT_CONFIG = {}; // ⬅️ Variable to store Log Channel IDs
 
 // ----------------------------------------------------
 // ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
 // ----------------------------------------------------
-// Set Admin role ID to 495718851288236032.
-const GOSU_ROLE = process.env.GOSU_ROLE_ID || "PUT_GOSU_ROLE_ID_HERE"; // Main Gosu Role (Base role granted after agreeing to rules)
-const MOD_ROLE = "495727371140202506"; // Moderator Role (Management and filter exemption role ID)
-const ADMIN_ROLE = "495718851288236032"; // ⬅️ Admin Role ID set
-const SUB_ROLE = process.env.SUB_ROLE_ID || "PUT_SUB_ROLE_ID_HERE"; // Live Notification Subscriber Role (Notification role ID)
-const MUTE_ROLE = process.env.MUTE_ROLE_ID || "PUT_MUTE_ROLE_ID_HERE"; // ⬅️ NEW: Mute Role ID (MUST BE SET)
+const GOSU_ROLE = process.env.GOSU_ROLE_ID || "PUT_GOSU_ROLE_ID_HERE";       // Main Gosu Role
+const MOD_ROLE  = process.env.MOD_ROLE_ID  || "PUT_MOD_ROLE_ID_HERE";       // Moderator Role
+const ADMIN_ROLE = process.env.ADMIN_ROLE_ID || "PUT_ADMIN_ROLE_ID_HERE";   // Admin / Developer Role
+const SUB_ROLE  = process.env.SUB_ROLE_ID    || "PUT_SUB_ROLE_ID_HERE";     // Live Notification Subscriber Role
+
+// ----------------------------------------------------
+// VOICE CHANNEL CREATOR CONFIG (❗ MUST BE MODIFIED ❗)
+// ----------------------------------------------------
+// ✅ ADDED: 이 채널에 입장 시 개인 VO 채널이 생성됩니다.
+const CREATE_CHANNEL_ID = process.env.CREATE_CHANNEL_ID || "PUT_VOICE_CREATE_CHANNEL_ID_HERE";
 
 // ----------------------------------------------------
 // CHAT FILTER CONFIG
 // ----------------------------------------------------
 let BLACKLISTED_WORDS = []; // Global array for blocked words
 
+// ✅ 이제 Admin만 필터 예외, Moderator는 필터에 걸림
 const FILTER_EXEMPT_ROLES = [
-    MOD_ROLE,
-    ADMIN_ROLE, // ⬅️ Added Admin role to exemption list
+    ADMIN_ROLE,
 ];
 
 // ----------------------------------------------------
-// Helper: Function to save blacklist.json
+// Helper: Function to save JSON file
 // ----------------------------------------------------
 function saveBlacklist() {
     try {
-        // Convert array to JSON string and overwrite the file.
         const jsonString = JSON.stringify(BLACKLISTED_WORDS, null, 2);
         fs.writeFileSync(BLACKLIST_FILE_PATH, jsonString, 'utf8');
-        console.log(`[FILE] Successfully saved ${BLACKLISTED_WORDS.length} blacklisted words to ${BLACKLIST_FILE_PATH}.`);
+        console.log(`Successfully saved ${BLACKLISTED_WORDS.length} blacklisted words to ${BLACKLIST_FILE_PATH}.`);
     } catch (err) {
-        console.error("[ERROR] Error saving blacklist.json:", err.message);
+        console.error("Error saving blacklist.json:", err.message);
     }
 }
 
 // ----------------------------------------------------
-// Helper: Function to load blacklist.json
+// Helper: Function to load JSON file
 // ----------------------------------------------------
 function loadBlacklist() {
     try {
         const data = fs.readFileSync(BLACKLIST_FILE_PATH, 'utf8');
-        // Convert read data to lowercase and store in the global array.
         BLACKLISTED_WORDS = JSON.parse(data).map(word => String(word).toLowerCase());
-        console.log(`[FILE] Loaded ${BLACKLISTED_WORDS.length} blacklisted words from ${BLACKLIST_FILE_PATH}.`);
+        console.log(`Loaded ${BLACKLISTED_WORDS.length} blacklisted words from ${BLACKLIST_FILE_PATH}.`);
     } catch (err) {
         if (err.code === 'ENOENT') {
-            console.error(`[WARN] ${BLACKLIST_FILE_PATH} file not found. Creating a new one.`);
-            BLACKLISTED_WORDS = []; // Start with an empty array if file is missing
-            saveBlacklist(); // Create an empty file to prevent errors
+            console.error(`Error: ${BLACKLIST_FILE_PATH} file not found. Creating a new one.`);
+            BLACKLISTED_WORDS = [];
+            saveBlacklist();
         } else {
-            console.error("[ERROR] Error loading blacklist.json:", err.message);
+            console.error("Error loading blacklist.json:", err.message);
             BLACKLISTED_WORDS = [];
         }
     }
 }
 
-// ----------------------------------------------------
-// Helper: Function to save config.json (Log Channel Settings)
-// ----------------------------------------------------
-function saveConfig() {
-    try {
-        fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify(BOT_CONFIG, null, 2), 'utf8');
-        console.log(`[FILE] Successfully saved BOT_CONFIG to ${CONFIG_FILE_PATH}.`);
-    } catch (err) {
-        console.error("[ERROR] Error saving config.json:", err.message);
-    }
-}
-
-// ----------------------------------------------------
-// Helper: Function to load ALL configs (Log Channels, Blacklist)
-// ----------------------------------------------------
-function loadConfigAndBlacklist() {
-    // 1. Load Log Channel Config
-    try {
-        const data = fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
-        BOT_CONFIG = JSON.parse(data);
-        console.log(`[FILE] Loaded BOT_CONFIG from ${CONFIG_FILE_PATH}.`);
-    } catch (err) {
-        if (err.code === 'ENOENT') {
-            console.error(`[WARN] ${CONFIG_FILE_PATH} file not found. Creating a new one.`);
-        } else {
-            console.error("[ERROR] Error loading config.json:", err.message);
-        }
-    }
-    
-    // Initialize log channel ID fields (null if not present)
-    if (!BOT_CONFIG.actionLogChannelId) BOT_CONFIG.actionLogChannelId = null;
-    if (!BOT_CONFIG.msgLogChannelId) BOT_CONFIG.msgLogChannelId = null;
-    if (!BOT_CONFIG.modLogChannelId) BOT_CONFIG.modLogChannelId = null;
-    saveConfig(); // Save changes and ensure file creation
-    
-    // 2. Load Blacklist (calling existing loadBlacklist() function)
-    loadBlacklist(); 
-}
-
-// ----------------------------------------------------
-// Helper: Function to send Moderation Log
-// ----------------------------------------------------
-async function sendModLog(guild, user, action, moderator, reason, duration) {
-    if (!BOT_CONFIG.modLogChannelId) return;
-
-    const logChannel = guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
-    if (!logChannel) return;
-
-    const logEmbed = new EmbedBuilder()
-        .setColor(action === 'BAN' ? '#B22222' : action === 'KICK' ? '#FF4500' : '#4169E1')
-        .setTitle(`🔨 User ${action}`)
-        .addFields(
-            { name: "Target", value: `${user.tag} (${user.id})`, inline: false },
-            { name: "Moderator", value: `${moderator.tag} (${moderator.id})`, inline: true },
-            { name: "Reason", value: reason || 'Not specified', inline: true }
-        )
-        .setTimestamp()
-        .setFooter({ text: `Action: ${action}` });
-
-    if (duration) {
-        logEmbed.addFields({ name: "Duration", value: `${duration} minutes`, inline: true });
-    }
-
-    logChannel.send({ embeds: [logEmbed] }).catch(err => console.error("[ERROR] Error sending mod log:", err));
-}
-
+// Load blacklisted words when the bot starts
+loadBlacklist();
 
 // ----------------------------------------------------
 // WELCOME / RULES / NOTIFICATION BANNERS (Image URLs)
@@ -157,6 +92,45 @@ const WELCOME_BANNER_URL =
 const NOTIFICATION_BANNER_URL =
     "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png?ex=6920285a&is=691ed6da&hm=b0c0596b41a5c985f1ad1efd543b623c2f64f1871eb8060fc91d7acce111699a&";
 
+// Color Roles (Role IDs must be modified)
+const COLOR_ROLES = [
+    {
+        customId: "color_icey",
+        emoji: "❄️",
+        label: "~ icey azure ~",
+        roleId: process.env.ICEY_AZURE_ROLE_ID || "PUT_ICEY_AZURE_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_candy",
+        emoji: "🍭",
+        label: "~ candy ~",
+        roleId: process.env.CANDY_ROLE_ID || "PUT_CANDY_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_lilac",
+        emoji: "🌸",
+        label: "~ lilac ~",
+        roleId: process.env.LILAC_ROLE_ID || "PUT_LILAC_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_blush",
+        emoji: "❤️",
+        label: "~ blush ~",
+        roleId: process.env.BLUSH_ROLE_ID || "PUT_BLUSH_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_bubblegum",
+        emoji: "🍥",
+        label: "~ bubblegum ~",
+        roleId: process.env.BUBBLEGUM_ROLE_ID || "PUT_BUBBLEGUM_ROLE_ID_HERE",
+    },
+    {
+        customId: "color_chocolate",
+        emoji: "🍫",
+        label: "~ chocolate ~",
+        roleId: process.env.CHOCOLATE_ROLE_ID || "PUT_CHOCOLATE_ROLE_ID_HERE",
+    },
+];
 
 // --------------------
 // Client Initialization
@@ -166,19 +140,10 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent, // Required to read message content
-        GatewayIntentBits.GuildPresences, // (Optional) Helps the bot cache members better
-        GatewayIntentBits.GuildMessageReactions, // ⬅️ Added (for message delete/edit logs)
-        GatewayIntentBits.GuildVoiceStates, // ⬅️ Added (for voice channel state change logs)
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.VoiceStates, // ✅ ADDED: VoiceStateUpdate 이벤트를 받기 위해 필요
     ],
-    // Added Partials to prevent Intent errors and for member management
-    partials: [
-        Partials.Channel,
-        Partials.Message,
-        Partials.Reaction,
-        Partials.User,
-        Partials.GuildMember,
-    ],
+    partials: [Partials.Channel],
 });
 
 // --------------------
@@ -205,171 +170,120 @@ function isAdmin(member) {
 // Bot Ready Event
 // --------------------
 client.once("ready", () => {
-    console.log(`[BOT] Bot logged in as ${client.user.tag}`);
-    loadConfigAndBlacklist(); // ⬅️ Load config and blacklist upon bot start
+    console.log(`Bot logged in as ${client.user.tag}`);
 });
 
 // =====================================================
+// VOICE CHANNEL CREATOR (VO 채널 생성/삭제 로직)
+// =====================================================
+client.on("voiceStateUpdate", async (oldState, newState) => {
+    const guild = newState.guild || oldState.guild;
+    if (!guild) return;
+
+    // -------------------------------------
+    // 1. 임시 채널 생성 로직 (Join)
+    // -------------------------------------
+    // 사용자가 'CREATE_CHANNEL_ID' 채널에 입장했을 때
+    if (newState.channelId === CREATE_CHANNEL_ID) {
+        const member = newState.member;
+        const createChannel = newState.channel;
+        const category = createChannel.parent;
+
+        // 봇이 채널 생성 및 이동 권한이 있는지 확인
+        if (!guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels) ||
+            !guild.members.me.permissions.has(PermissionsBitField.Flags.MoveMembers)) {
+            console.error("Bot lacks 'Manage Channels' or 'Move Members' permission for VO Creator.");
+            // 오류 발생을 막기 위해 여기서 리턴
+            return;
+        }
+
+        try {
+            // 새 임시 음성 채널 생성
+            const newChannelName = `🎧 ${member.user.username}'s VO`;
+            const newChannel = await guild.channels.create({
+                name: newChannelName,
+                type: ChannelType.GuildVoice,
+                parent: category, // '채널 생성' 채널과 같은 카테고리
+                userLimit: 5,     // 기본 인원 제한 설정 (선택 사항)
+            });
+            
+            // 생성된 채널로 사용자 이동
+            await member.voice.setChannel(newChannel);
+            console.log(`Created and moved ${member.user.tag} to temporary VO channel: ${newChannel.name}`);
+        } catch (error) {
+            console.error("Failed to create or move user to temporary VO channel:", error);
+        }
+    }
+
+    // -------------------------------------
+    // 2. 임시 채널 삭제 로직 (Leave)
+    // -------------------------------------
+    // 사용자가 채널을 떠났을 때 (oldState.channelId가 존재하고 newState.channelId는 다를 때)
+    if (oldState.channelId && oldState.channelId !== CREATE_CHANNEL_ID) {
+        const oldChannel = oldState.channel;
+
+        // oldChannel이 임시 채널로 간주되는지 확인 (여기서는 생성된 채널의 이름을 기준으로 판단)
+        // **주의**: 실제 배포 시에는 생성된 채널 ID를 별도로 저장하여 관리하는 것이 더 안전합니다.
+        // 여기서는 임시 채널이 아니라고 확실히 아는 'CREATE_CHANNEL_ID'가 아니고, 이름 패턴을 따르는 채널을 확인합니다.
+        const isTemporaryChannel = oldChannel.name.includes("'s VO") || oldChannel.name.toLowerCase().endsWith('vo');
+
+        if (isTemporaryChannel && oldChannel.members.size === 0) {
+            // 채널이 비어 있고, 임시 채널 패턴을 따르며, '채널 생성' 채널이 아닐 경우
+            try {
+                await oldChannel.delete();
+                console.log(`Successfully deleted empty temporary VO channel: ${oldChannel.name}`);
+            } catch (error) {
+                console.error("Failed to delete empty temporary VO channel:", error);
+            }
+        }
+    }
+});
+// =====================================================
 // PREFIX COMMANDS & CHAT FILTER
 // =====================================================
-
 client.on("messageCreate", async (message) => {
     if (!message.guild || message.author.bot) return;
 
-// ---------------------------
-// 0. COMMAND PARSING
-// ---------------------------
+    // ---------------------------
+    // 0. COMMAND PARSING
+    // ---------------------------
     const args = message.content.trim().split(/ +/g);
     const cmd = args[0]?.toLowerCase();
-    const isCommand = cmd && cmd.startsWith("!"); // Command if it starts with !
-    const member = message.member; // member variable declared here
+    const isCommand = cmd && cmd.startsWith("!");
 
-    
-// ---------------------------
-// 1. CHAT FILTER LOGIC
-// ---------------------------
-    // Skip filtering for users using commands or members with filter exempt roles.
-    const isExempt = isCommand || FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId));
+    // ---------------------------
+    // 1. CHAT FILTER LOGIC
+    // ---------------------------
+    const member = message.member;
+
+    const isExempt =
+        FILTER_EXEMPT_ROLES.some(roleId => member.roles.cache.has(roleId)) || isCommand;
 
     if (!isExempt) {
-        let foundLinkFilterMatch = null;
-        const normalizedMessage = message.content.toLowerCase();
+        // 1. 한글 정규화 + 소문자
+        const normalizedContent = message.content.normalize('NFC').toLowerCase();
 
-        // ------------------------------------------------------------------
-        // NEW: Enhanced Link and Pattern Filter (Scam/Spam Link Filtering)
-        // ------------------------------------------------------------------
-
-        // #1 Discord Invite Filter (Check if it's not a whitelisted invite)
-        // Please put your official invite links here. (Custom)
-        const allowedInvites = ['discord.gg/gosugeneral', 'discord.gg/xgxD5hB'];
-        const containsDiscordInvite = normalizedMessage.match(/(discord\.gg)\/(\w+)/g)?.length > 0;
-        const isAllowedInvite = allowedInvites.some(invite => normalizedMessage.includes(invite));
-
-        if (containsDiscordInvite && !isAllowedInvite) {
-            foundLinkFilterMatch = "Unpermitted Discord Invite";
-        }
-        
-        // #2 OnlyFans Filter (Specific Adult Content Keyword Filter)
-        else if (normalizedMessage.includes("only fans") || normalizedMessage.includes("onlyfans")) {
-            foundLinkFilterMatch = "Explicit Content Keyword (OnlyFans)";
-        }
-        
-        // #3 General Link/URL Filter
-        // NOTE: This filter is broad and blocks even common links (including http). 
-        // To reduce false positives, frequently used safe domains are exempted. (Modify if needed)
-        const generalUrlMatch = normalizedMessage.match(/(https?:\/\/)?(www\.)?(\w+)\.(\w+)\/(\w)+/g)?.length > 0;
-        if (!foundLinkFilterMatch && (normalizedMessage.includes("http") || generalUrlMatch)) {
-            const safeDomains = ['youtube.com', 'youtu.be', 'twitch.tv', 'google.com', 'naver.com']; // <-- Add your safe domains here.
-            
-            // If a link not included in the safe domains is detected
-            if (!safeDomains.some(domain => normalizedMessage.includes(domain))) {
-                 foundLinkFilterMatch = "Unpermitted General URL";
-            }
-        }
-
-        // ------------------------------------------------------------------
-        // Enhanced Link Filter Check: Delete Message and Log
-        // ------------------------------------------------------------------
-        if (foundLinkFilterMatch) {
-            // Record MSG LOG
-            if (BOT_CONFIG.msgLogChannelId) {
-                const logChannel = message.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId);
-                if (logChannel) {
-                    const logEmbed = new EmbedBuilder()
-                        .setColor("#FF00FF") 
-                        .setTitle("🚨 Enhanced Filter Detected (Deleted)")
-                        .addFields(
-                            { name: "User", value: `${message.author.tag} (${message.author.id})`, inline: false },
-                            { name: "Channel", value: `<#${message.channel.id}>`, inline: true },
-                            { name: "Reason", value: foundLinkFilterMatch, inline: true }, // Add filtering reason
-                            { name: "Content", value: message.content.substring(0, 1024), inline: false }
-                        )
-                        .setTimestamp()
-                        .setFooter({ text: `Message Filtered` });
-
-                    logChannel.send({ embeds: [logEmbed] }).catch(err => console.error("[ERROR] Error sending enhanced filter log:", err));
-                }
-            }
-            
-            // Delete message
-            if (message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                if (!message.deleted) {
-                    message.delete().catch(err => {
-                        console.error(`Failed to delete message: ${message.id}`, err);
-                    });
-                }
-            } else {
-                console.error("Bot lacks 'Manage Messages' permission to delete filtered messages.");
-            }
-
-            // Send warning message
-            const warningMessage = await message.channel.send(`**${member}** Your message was removed due to containing an unpermitted link or pattern: **${foundLinkFilterMatch}**.`);
-            setTimeout(() => warningMessage.delete().catch(() => {}), 7000);
-            return; // Stop further processing and exit
-        }
-        
-        // ------------------------------------------------------------------
-        // Existing BLACKLISTED_WORDS filter logic (runs if link filter didn't catch)
-        // ------------------------------------------------------------------
-        // 1. Use normalization (NFC) to combine separated Jamo (initial/medial consonants/vowels) into complete characters.
-        // NOTE: normalizedMessage was already used in Link Filter, redefining here to maintain existing logic
-        const normalizedContentExisting = message.content.normalize('NFC').toLowerCase(); 
-
-        // 2. (Improved) Remove all special characters. Keep spaces.
-        // Remove all characters except [Korean Hangul, a-z, 0-9]. (Spaces are kept as they are not in the regex)
-        const simplifiedContent = normalizedContentExisting.replace(/[^가-힣a-z0-9\s]/g, '');
+        // 2. 한글/영어/숫자/공백만 남김 (띄어쓰기 유지)
+        const simplifiedContent = normalizedContent.replace(/[^가-힣a-z0-9\s]/g, '');
 
         let foundWord = null;
 
         for (const word of BLACKLISTED_WORDS) {
-            // 3. Remove all special characters, including spaces, from the blacklisted word itself.
-            const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, ''); // Remove spaces from the blacklisted word
+            const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, '');
 
-            if (simplifiedWord.length < 2) continue; // Do not filter single characters (to prevent false positives)
+            // 이모지/특수문자만 있는 금지어는 ""가 되므로 스킵
+            if (!simplifiedWord) continue;
 
-            // 4. Create a version of the message content with spaces *temporarily* removed and compare it with the blacklisted word (spaces removed).
-            // This allows finding 's p a c e d w o r d' (message) with 'spacedword' (blacklist).
-            const contentWithoutSpaces = simplifiedContent.replace(/\s/g, ''); 
-            
-            // 5. Check using the 'space removed version' (use this check less strictly to prevent false positives)
+            const contentWithoutSpaces = simplifiedContent.replace(/\s/g, '');
+
             if (contentWithoutSpaces.includes(simplifiedWord)) {
                 foundWord = word;
                 break;
             }
-
-            // 6. (Added) Split the message content (spaces kept, special chars removed) based on spaces.
-            const contentWords = simplifiedContent.split(/\s+/).filter(w => w.length > 0);
-
-            // 7. Check if the blacklisted word (special chars removed) is contained within each word of the message content (less prone to false positives).
-            // Example: If 'idiot' is blacklisted, and message is 'I am not an idiot' -> 'idiot' is contained -> filtered.
-            if (contentWords.some(w => w.includes(simplifiedWord))) {
-                foundWord = word;
-                break;
-            }
-
         }
 
         if (foundWord) {
-            // Record MSG LOG
-            if (BOT_CONFIG.msgLogChannelId) {
-                const logChannel = message.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId);
-                if (logChannel) {
-                    const logEmbed = new EmbedBuilder()
-                        .setColor("#FF00FF") 
-                        .setTitle("🚨 Forbidden Word Detected (Deleted)")
-                        .addFields(
-                            { name: "User", value: `${message.author.tag} (${message.author.id})`, inline: false },
-                            { name: "Channel", value: `<#${message.channel.id}>`, inline: true },
-                            { name: "Content", value: message.content.substring(0, 1024), inline: false }
-                        )
-                        .setTimestamp()
-                        .setFooter({ text: `Message Filtered` });
-
-                    logChannel.send({ embeds: [logEmbed] }).catch(err => console.error("[ERROR] Error sending filter log:", err));
-                }
-            }
-            // Message deletion and warning logic remains the same
-            if (message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+            if (message.guild.members.me?.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
                 if (!message.deleted) {
                     message.delete().catch(err => {
                         console.error(`Failed to delete message: ${message.id}`, err);
@@ -379,505 +293,636 @@ client.on("messageCreate", async (message) => {
                 console.error("Bot lacks 'Manage Messages' permission to delete filtered messages.");
             }
 
-            const warningMessage = await message.channel.send(`**${member}** Watch your language! Your message contained a blacklisted word and has been removed.`);
+            const warningMessage = await message.channel.send(
+                `**${member}** Watch your language! Your message contained a blacklisted word and has been removed.`
+            );
             setTimeout(() => warningMessage.delete().catch(() => {}), 7000);
             return;
         }
     }
 
-// ---------------------------
-// 2. COMMAND HANDLING
-// ---------------------------
+    // ---------------------------
+    // 2. COMMAND LOGIC
+    // ---------------------------
+    if (!isCommand) return; // 명령어 아니면 여기서 끝
 
-    if (!isCommand) return; // Only process if it's a command
+    // 원본 명령 메시지는 1초 뒤 삭제
+    setTimeout(() => {
+        if (!message.deleted) {
+            message.delete().catch(() => {});
+        }
+    }, 1000);
 
-    // --- General Commands (Everyone) ---
+    // ---------------------------
+    // Permission Checks
+    // ---------------------------
+    const adminOnly = ["!setupjoin", "!color", "!welcome", "!subscriber"];
+    if (adminOnly.includes(cmd)) {
+        if (!isAdmin(message.member)) {
+            const reply = await message.reply("⛔ Only **Admins/Developers** can use this command.");
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+    }
+
+    const modOnly = [
+        "!ban", "!kick", "!mute", "!unmute", "!prune",
+        "!addrole", "!removerole",
+        "!addword", "!removeword", "!listwords", "!reloadblacklist"
+    ];
+    if (modOnly.includes(cmd)) {
+        if (!isModerator(message.member)) {
+            const reply = await message.reply("⛔ Only **Moderators** can use this command.");
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+    }
+
+    // ========== !PING ==========
     if (cmd === "!ping") {
-        const latency = Date.now() - message.createdTimestamp;
-        return message.reply(`Pong! 📶 Latency: ${latency}ms | API Latency: ${Math.round(client.ws.ping)}ms`);
+        const reply = await message.reply("Pong!");
+        setTimeout(() => reply.delete().catch(() => {}), 1000);
+        return;
     }
 
+    // =====================================================
+    // BLACKLIST MANAGEMENT COMMANDS (Moderator+)
+    // =====================================================
+    if (cmd === "!addword") {
+        const newWord = args.slice(1).join(" ").toLowerCase().trim();
+        if (!newWord) {
+            const reply = await message.reply("Usage: `!addword [word]`");
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+
+        if (BLACKLISTED_WORDS.includes(newWord)) {
+            const reply = await message.reply(`⚠ **${newWord}** is already in the blacklist.`);
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+
+        BLACKLISTED_WORDS.push(newWord);
+        saveBlacklist();
+        const reply = await message.reply(`✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`);
+        setTimeout(() => reply.delete().catch(() => {}), 1000);
+        return;
+    }
+
+    if (cmd === "!removeword") {
+        const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
+        if (!wordToRemove) {
+            const reply = await message.reply("Usage: `!removeword [word]`");
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+
+        const initialLength = BLACKLISTED_WORDS.length;
+        BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(word => word !== wordToRemove);
+
+        if (BLACKLISTED_WORDS.length === initialLength) {
+            const reply = await message.reply(`⚠ **${wordToRemove}** was not found in the blacklist.`);
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+
+        saveBlacklist();
+        const reply = await message.reply(`✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`);
+        setTimeout(() => reply.delete().catch(() => {}), 1000);
+        return;
+    }
+
+    if (cmd === "!listwords") {
+        const listEmbed = new EmbedBuilder()
+            .setColor("#FF0000")
+            .setTitle(`🚫 Current Blacklisted Words (${BLACKLISTED_WORDS.length} total)`)
+            .setDescription(
+                BLACKLISTED_WORDS.length > 0
+                    ? BLACKLISTED_WORDS.slice(0, 50).join(", ") + (BLACKLISTED_WORDS.length > 50 ? "..." : "")
+                    : "No words currently blacklisted."
+            )
+            .setFooter({ text: "Showing the first 50 words." });
+
+        return message.reply({ embeds: [listEmbed] });
+    }
+
+    if (cmd === "!reloadblacklist") {
+        loadBlacklist();
+        const reply = await message.reply(`✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from blacklist.json.`);
+        setTimeout(() => reply.delete().catch(() => {}), 1000);
+        return;
+    }
+
+    // =====================================================
+    // PANEL SETUP COMMANDS (Admin Only)
+    // =====================================================
+    if (cmd === "!setupjoin") {
+        const joinEmbed = new EmbedBuilder()
+            .setColor("#1e90ff")
+            .setTitle("✨ Welcome to the Gosu General TV Community!")
+            .setDescription(
+                [
+                    "Here you can join events, get updates, talk with the community, and enjoy the content together.",
+                    "",
+                    "--------------------------------------------------------",
+                    "### 📜 Server Rules",
+                    "✨ **1 – Be Respectful**",
+                    "Treat everyone kindly. No harassment, bullying, or toxicity.",
+                    "",
+                    "✨ **2 – No Spam**",
+                    "Avoid repeated messages, emoji spam, or unnecessary mentions.",
+                    "",
+                    "✨ **3 – No NSFW or Harmful Content**",
+                    "No adult content, gore, or anything unsafe.",
+                    "",
+                    "✨ **4 – No Advertising**",
+                    "No links, promos, or self-promotion without staff approval.",
+                    "",
+                    "✨ **5 – Keep it Clean**",
+                    "No hate speech, slurs, or extreme drama.",
+                    "",
+                    "✨ **6 – Follow Staff Instructions**",
+                    "If staff gives instructions, please follow them.",
+                    "--------------------------------------------------------",
+                    "Press **Agree To Rules** below to enter and enjoy the server! 🎊",
+                ].join("\n")
+            );
+
+        const buttons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("agree_rules")
+                .setLabel("Agree To Rules")
+                .setStyle(ButtonStyle.Success)
+        );
+
+        await message.channel.send({
+            files: [{ attachment: RULES_BANNER_URL, name: 'must_read.png' }]
+        });
+
+        await message.channel.send({ embeds: [joinEmbed], components: [buttons] });
+        return;
+    }
+
+    if (cmd === "!welcome") {
+        const welcomeEmbed = new EmbedBuilder()
+            .setColor("#1e90ff")
+            .setTitle("✨ Welcome to the Gosu General TV Discord Server!")
+            .setDescription(
+                [
+                    "Greetings, adventurer!",
+                    "",
+                    "Welcome to the **Gosu General TV** community server.",
+                    "Here you can hang out with the community, share plays, ask questions,",
+                    "receive announcements, and join events together.",
+                    "",
+                    "---",
+                    "### 📌 What you can find here",
+                    "• Live stream notifications & announcements",
+                    "• Game discussions and guides",
+                    "• Clips, highlights, and community content",
+                    "• Chill chat with other Gosu viewers",
+                    "",
+                    "---",
+                    "Enjoy your stay and have fun! 💙",
+                ].join("\n")
+            )
+            .addFields(
+                {
+                    name: "Official Links",
+                    value: "📺 [YouTube](https://youtube.com/@Teamgosu)\n🟣 [Twitch](https://www.twitch.tv/gosugeneraltv)",
+                    inline: true,
+                },
+                {
+                    name: "Discord Invite Link",
+                    value: "🔗 [Invite Link](https://discord.gg/gosugeneral)",
+                    inline: true,
+                }
+            );
+
+        const buttons = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setLabel("YouTube Channel")
+                .setStyle(ButtonStyle.Link)
+                .setURL("https://youtube.com/@Teamgosu"),
+            new ButtonBuilder()
+                .setLabel("Twitch Channel")
+                .setStyle(ButtonStyle.Link)
+                .setURL("https://www.twitch.tv/gosugeneraltv"),
+            new ButtonBuilder()
+                .setLabel("Invite Link")
+                .setStyle(ButtonStyle.Link)
+                .setURL("https://discord.gg/gosugeneral")
+        );
+
+        await message.channel.send({
+            files: [{ attachment: WELCOME_BANNER_URL, name: 'welcome.png' }]
+        });
+
+        await message.channel.send({ embeds: [welcomeEmbed], components: [buttons] });
+        return;
+    }
+
+    if (cmd === "!color") {
+        const colorEmbed = new EmbedBuilder()
+            .setColor("#FFAACD")
+            .setTitle("Color 3 Roles")
+            .setDescription(
+                [
+                    "Choose one of the **Color 3** roles below.",
+                    "You can only have **one** of these colors at a time.",
+                    "Click a button to select or remove a color.",
+                ].join("\n")
+            );
+
+        const rows = [];
+        for (let i = 0; i < COLOR_ROLES.length; i += 3) {
+            const slice = COLOR_ROLES.slice(i, i + 3);
+            const row = new ActionRowBuilder();
+            slice.forEach((c) => {
+                row.addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(c.customId)
+                        .setEmoji(c.emoji)
+                        .setStyle(ButtonStyle.Secondary)
+                );
+            });
+            rows.push(row);
+        }
+
+        await message.channel.send({ embeds: [colorEmbed], components: rows });
+        return;
+    }
+
+    if (cmd === "!subscriber") {
+        const subEmbed = new EmbedBuilder()
+            .setColor("#FFCC33")
+            .setTitle("📺 Gosu General TV — Live Notifications")
+            .setDescription(
+                [
+                    "If you’d like to receive alerts when **Gosu General TV** goes live or posts important announcements,",
+                    "press `Subscribe / Unsubscribe` to get or remove the **Live Notifications** role.",
+                    "",
+                    "Note: Subscribing will temporarily replace your **Gosu** role. Press the button again to return to the Gosu role.",
+                    "",
+                    "Thank you for being part of the community! 💙",
+                ].join("\n")
+            );
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("sub_subscribe")
+                .setLabel("Subscribe / Unsubscribe")
+                .setStyle(ButtonStyle.Success)
+        );
+
+        await message.channel.send({
+            files: [{ attachment: NOTIFICATION_BANNER_URL, name: 'notification_banner.png' }]
+        });
+
+        await message.channel.send({ embeds: [subEmbed], components: [row] });
+        return;
+    }
+
+    // =====================================================
+    // MODERATION COMMANDS (Moderator+)
+    // =====================================================
+    if (cmd === "!ban") {
+        const user = message.mentions.members?.first();
+        if (!user) {
+            const reply = await message.reply("Usage: `!ban @user [reason]`");
+            return;
+        }
+
+        const reason = args.slice(2).join(" ") || "No reason provided";
+        try {
+            await user.ban({ reason });
+            await message.reply(`🔨 Banned **${user.user.tag}**. Reason: ${reason}`);
+            return;
+        } catch (err) {
+            console.error("Ban error:", err);
+            await message.reply("⚠ Failed to ban that user.");
+            return;
+        }
+    }
+
+    if (cmd === "!kick") {
+        const user = message.mentions.members?.first();
+        if (!user) {
+            const reply = await message.reply("Usage: `!kick @user [reason]`");
+            return;
+        }
+
+        const reason = args.slice(2).join(" ") || "No reason provided";
+        try {
+            await user.kick(reason);
+            await message.reply(`👢 Kicked **${user.user.tag}**. Reason: ${reason}`);
+            return;
+        } catch (err) {
+            console.error("Kick error:", err);
+            await message.reply("⚠ Failed to kick that user.");
+            return;
+        }
+    }
+
+    if (cmd === "!mute") {
+        const user = message.mentions.members?.first();
+        const minutes = parseInt(args[2]) || 10;
+        if (!user) {
+            const reply = await message.reply("Usage: `!mute @user [minutes]`");
+            return;
+        }
+
+        try {
+            await user.timeout(minutes * 60 * 1000, `Muted by ${message.author.tag}`);
+            await message.reply(`🔇 Muted **${user.user.tag}** for ${minutes} minutes.`);
+            return;
+        } catch (err) {
+            console.error("Mute error:", err);
+            await message.reply("⚠ Failed to mute that user.");
+            return;
+        }
+    }
+
+    if (cmd === "!unmute") {
+        const user = message.mentions.members?.first();
+        if (!user) {
+            const reply = await message.reply("Usage: `!unmute @user`");
+            return;
+        }
+
+        try {
+            await user.timeout(null, `Unmuted by ${message.author.tag}`);
+            await message.reply(`🔊 Unmuted **${user.user.tag}**.`);
+            return;
+        } catch (err) {
+            console.error("Unmute error:", err);
+            await message.reply("⚠ Failed to unmute that user.");
+            return;
+        }
+    }
+
+    if (cmd === "!prune") {
+        const amount = parseInt(args[1]);
+        if (!amount || amount < 1 || amount > 100) {
+            const reply = await message.reply("Usage: `!prune 1-100`");
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+
+        try {
+            await message.channel.bulkDelete(amount, true);
+            const m = await message.channel.send(`🧹 Deleted **${amount}** messages.`);
+            setTimeout(() => m.delete().catch(() => {}), 1000);
+        } catch (err) {
+            console.error("Prune error:", err);
+            const reply = await message.reply("⚠ Could not delete messages (maybe older than 14 days).");
+            setTimeout(() => reply.delete().catch(() => {}), 1000);
+            return;
+        }
+    }
+
+    if (cmd === "!addrole") {
+        const target = message.mentions.members?.first();
+        if (!target) {
+            await message.reply("Usage: `!addrole @user RoleName`");
+            return;
+        }
+
+        const roleName = args.slice(2).join(" ");
+        if (!roleName) {
+            await message.reply("Please provide a role name.");
+            return;
+        }
+
+        const role = message.guild.roles.cache.find(
+            (r) => r.name.toLowerCase() === roleName.toLowerCase()
+        );
+        if (!role) {
+            await message.reply(`⚠ Could not find a role named **${roleName}**.`);
+            return;
+        }
+
+        try {
+            await target.roles.add(role);
+            await message.reply(`✅ Added role **${role.name}** to **${target.user.tag}**.`);
+            return;
+        } catch (err) {
+            console.error("Add role error:", err);
+            await message.reply("⚠ Failed to add that role.");
+            return;
+        }
+    }
+
+    if (cmd === "!removerole") {
+        const target = message.mentions.members?.first();
+        if (!target) {
+            await message.reply("Usage: `!removerole @user RoleName`");
+            return;
+        }
+
+        const roleName = args.slice(2).join(" ");
+        if (!roleName) {
+            await message.reply("Please provide a role name.");
+            return;
+        }
+
+        const role = message.guild.roles.cache.find(
+            (r) => r.name.toLowerCase() === roleName.toLowerCase()
+        );
+        if (!role) {
+            await message.reply(`⚠ Could not find a role named **${roleName}**.`);
+            return;
+        }
+
+        if (!target.roles.cache.has(role.id)) {
+            await message.reply(
+                `⚠ **${target.user.tag}** does not currently have the **${role.name}** role.`
+            );
+            return;
+        }
+
+        try {
+            await target.roles.remove(role);
+            await message.reply(`❎ Removed role **${role.name}** from **${target.user.tag}**.`);
+            return;
+        } catch (err) {
+            console.error("Remove role error:", err);
+            await message.reply("⚠ Failed to remove that role.");
+            return;
+        }
+    }
+
+    // =====================================================
+    // INVITE + HELP
+    // =====================================================
     if (cmd === "!invite") {
-        // NOTE: Replace with your actual invite link
-        const inviteLink = "https://discord.gg/your-server-invite";
-        return message.reply(`Join our server! You can invite others using this link: ${inviteLink}`);
+        const reply = await message.reply("📨 **Server Invite:** https://discord.gg/gosugeneral");
+        setTimeout(() => reply.delete().catch(() => {}), 1000);
+        return;
     }
 
+    if (cmd === "!help" || cmd === "/?") {
+        const help = new EmbedBuilder()
+            .setColor("#00FFFF")
+            .setTitle("Gosu Bot — Commands")
+            .setDescription(
+                [
+                    "**General**",
+                    "`!ping` — Check if the bot is online. (Reply deletes after 1s)",
+                    "`!invite` — Show the server invite link. (Reply deletes after 1s)",
+                    "",
+                    "**Moderation / Filter Management (Moderator+)**",
+                    "`!ban @user [reason]` — Ban a user. (Reply stays)",
+                    "`!kick @user [reason]` — Kick a user. (Reply stays)",
+                    "`!mute @user [minutes]` — Timeout a user. (Reply stays)",
+                    "`!unmute @user` — Remove timeout. (Reply stays)",
+                    "`!addrole @user RoleName` — Add a role. (Reply stays)",
+                    "`!removerole @user RoleName` — Remove a role. (Reply stays)",
+                    "`!prune [1-100]` — Delete recent messages. (Reply deletes after 1s)",
+                    "`!addword [word]` — Add a word to the filter list. (Reply deletes after 1s)",
+                    "`!removeword [word]` — Remove a word from the filter list. (Reply deletes after 1s)",
+                    "`!listwords` — Show the current blacklisted words. (Reply stays)",
+                    "`!reloadblacklist` — Reload the filter words from the JSON file. (Reply deletes after 1s)",
+                    "",
+                    "**Admin / Developer**",
+                    "`!setupjoin` — Create the rules panel. (Reply deletes after 1s)",
+                    "`!welcome` — Create the main welcome panel. (Reply deletes after 1s)",
+                    "`!subscriber` — Create the live notification panel. (Reply deletes after 1s)",
+                    "`!color` — Create the Color 3 role panel. (Reply deletes after 1s)",
+                ].join("\n")
+            );
 
-    // --- Permissions Check for MOD/ADMIN ---
-    // If the command is not general, check if the user is at least a Moderator
-    if (!isModerator(member)) {
-        // Handle unknown command if not MOD/ADMIN
-        return message.reply("❌ You do not have permission to use this command.");
-    }
-
-    // --- Moderator & Admin Commands Start Here ---
-    
-    switch (cmd) {
-        // --- Moderator Commands ---
-
-        case "!addword":
-            {
-                const wordToAdd = args.slice(1).join(" ").toLowerCase();
-                if (!wordToAdd) {
-                    return message.reply("❌ Usage: `!addword [word/phrase to add]`");
-                }
-
-                if (BLACKLISTED_WORDS.includes(wordToAdd)) {
-                    return message.reply(`⚠ **${wordToAdd}** is already in the blacklist.`);
-                }
-
-                BLACKLISTED_WORDS.push(wordToAdd);
-                saveBlacklist(); // Save to file
-
-                message.reply(`✅ Successfully added blacklisted word **${wordToAdd}**. Total words: ${BLACKLISTED_WORDS.length}.`);
-                break;
-            }
-
-        case "!removeword":
-            {
-                const wordToRemove = args.slice(1).join(" ").toLowerCase();
-                if (!wordToRemove) {
-                    return message.reply("❌ Usage: `!removeword [word/phrase to remove]`");
-                }
-
-                const initialLength = BLACKLISTED_WORDS.length;
-                BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(w => w !== wordToRemove);
-
-                if (BLACKLISTED_WORDS.length < initialLength) {
-                    saveBlacklist(); // Save to file
-                    message.reply(`✅ Successfully removed blacklisted word **${wordToRemove}**. Total words: ${BLACKLISTED_WORDS.length}.`);
-                } else {
-                    message.reply(`⚠ **${wordToRemove}** is not in the blacklist.`);
-                }
-                break;
-            }
-
-        case "!listwords":
-            {
-                if (BLACKLISTED_WORDS.length === 0) {
-                    return message.reply("✅ The blacklist is currently empty.");
-                }
-
-                const list = BLACKLISTED_WORDS.map((w, i) => `${i + 1}. ${w}`).join('\n');
-                const embed = new EmbedBuilder()
-                    .setColor("#87CEEB")
-                    .setTitle(`🚫 Current Blacklisted Words (${BLACKLISTED_WORDS.length})`)
-                    .setDescription(`\`\`\`\n${list.substring(0, 4000)}\n\`\`\``) // Discord embed limit 4096
-                    .setFooter({ text: "Words are case-insensitive and can bypass special characters or spacing." });
-
-                message.reply({ embeds: [embed] });
-                break;
-            }
-
-        case "!kick":
-            {
-                const targetUser = message.mentions.members.first();
-                const reason = args.slice(2).join(" ") || "No reason specified";
-
-                if (!targetUser) {
-                    return message.reply("❌ Usage: `!kick [@usermention] [reason]`");
-                }
-                
-                if (isModerator(targetUser)) {
-                    return message.reply("❌ Cannot kick Administrators/Moderators.");
-                }
-                
-                try {
-                    await targetUser.kick(reason);
-                    message.reply(`✅ Kicked ${targetUser.user.tag}. Reason: ${reason}`);
-                    sendModLog(message.guild, targetUser.user, 'KICK', message.author, reason);
-                } catch (error) {
-                    console.error("Kick error:", error);
-                    message.reply(`❌ Kick failed: ${error.message}`);
-                }
-                break;
-            }
-            
-        case "!prune": // The official new name
-        case "!purge":
-        case "!clear":
-            {
-                if (!message.guild.members.me.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-                    return message.reply("❌ I need 'Manage Messages' permission.");
-                }
-                
-                const amount = parseInt(args[1]);
-
-                if (isNaN(amount) || amount <= 0 || amount > 100) {
-                    return message.reply("❌ Usage: `!prune [number between 1-100]`");
-                }
-
-                try {
-                    // +1 to delete the command message itself.
-                    const deleted = await message.channel.bulkDelete(amount, true);
-                    const reply = await message.channel.send(`✅ Deleted ${deleted.size} messages.`);
-                    setTimeout(() => reply.delete().catch(() => {}), 5000); // Auto-delete after 5 seconds
-                } catch (error) {
-                    console.error("Purge error:", error);
-                    message.reply("❌ Failed to delete messages. (Messages older than 14 days cannot be deleted.)");
-                }
-                break;
-            }
-
-        case "!mute":
-            {
-                const targetUser = message.mentions.members.first();
-                const reason = args.slice(2).join(" ") || "No reason specified";
-
-                if (!targetUser) {
-                     return message.reply("❌ Usage: `!mute [@usermention] [reason]`");
-                }
-                if (MUTE_ROLE === "PUT_MUTE_ROLE_ID_HERE") {
-                    return message.reply("❌ Mute role is not configured in the code constants. Please set MUTE_ROLE_ID.");
-                }
-                if (isModerator(targetUser)) return message.reply("❌ Cannot mute Administrators/Moderators.");
-                
-                const muteRole = message.guild.roles.cache.get(MUTE_ROLE);
-                if (!muteRole) return message.reply("❌ Mute role not found on server. Please check ID.");
-
-                try {
-                    await targetUser.roles.add(muteRole, reason);
-                    message.reply(`✅ Muted ${targetUser.user.tag}. Reason: ${reason}`);
-                    sendModLog(message.guild, targetUser.user, 'MUTE', message.author, reason);
-                } catch (error) {
-                    console.error("Mute error:", error);
-                    message.reply(`❌ Mute failed: ${error.message}`);
-                }
-                break;
-            }
-            
-        case "!unmute":
-            {
-                const targetUser = message.mentions.members.first();
-                if (!targetUser) {
-                     return message.reply("❌ Usage: `!unmute [@usermention]`");
-                }
-                if (MUTE_ROLE === "PUT_MUTE_ROLE_ID_HERE") {
-                    return message.reply("❌ Mute role is not configured in the code constants. Please set MUTE_ROLE_ID.");
-                }
-                
-                const muteRole = message.guild.roles.cache.get(MUTE_ROLE);
-                if (!muteRole) return message.reply("❌ Mute role not found on server. Please check ID.");
-
-                try {
-                    await targetUser.roles.remove(muteRole);
-                    message.reply(`✅ Unmuted ${targetUser.user.tag}.`);
-                    sendModLog(message.guild, targetUser.user, 'UNMUTE', message.author, "Unmuted by Moderator");
-                } catch (error) {
-                    console.error("Unmute error:", error);
-                    message.reply(`❌ Unmute failed: ${error.message}`);
-                }
-                break;
-            }
-
-        case "!addrole":
-            {
-                const targetUser = message.mentions.members.first();
-                // Tries to get the role by mention, then by ID from the third argument
-                const roleToAdd = message.mentions.roles.first() || message.guild.roles.cache.get(args[2]);
-                
-                if (!targetUser || !roleToAdd) {
-                    return message.reply("❌ Usage: `!addrole [@usermention] [@rolemention/roleID]`");
-                }
-                
-                try {
-                    await targetUser.roles.add(roleToAdd);
-                    message.reply(`✅ Added role **${roleToAdd.name}** to ${targetUser.user.tag}.`);
-                } catch (error) {
-                    console.error("Add role error:", error);
-                    message.reply(`❌ Failed to add role: ${error.message}`);
-                }
-                break;
-            }
-        
-        case "!removerole":
-            {
-                const targetUser = message.mentions.members.first();
-                // Tries to get the role by mention, then by ID from the third argument
-                const roleToRemove = message.mentions.roles.first() || message.guild.roles.cache.get(args[2]);
-                
-                if (!targetUser || !roleToRemove) {
-                    return message.reply("❌ Usage: `!removerole [@usermention] [@rolemention/roleID]`");
-                }
-                
-                try {
-                    await targetUser.roles.remove(roleToRemove);
-                    message.reply(`✅ Removed role **${roleToRemove.name}** from ${targetUser.user.tag}.`);
-                } catch (error) {
-                    console.error("Remove role error:", error);
-                    message.reply(`❌ Failed to remove role: ${error.message}`);
-                }
-                break;
-            }
-
-        // --- Admin Only Commands ---
-
-        case "!ban":
-            if (!isAdmin(member)) { // Extra check for Admin only
-                return message.reply("❌ This command can only be used by the Admin role.");
-            }
-            {
-                const targetUser = message.mentions.members.first();
-                const reason = args.slice(2).join(" ") || "No reason specified";
-
-                if (!targetUser) {
-                    return message.reply("❌ Usage: `!ban [@usermention] [reason]`");
-                }
-
-                if (isAdmin(targetUser)) {
-                    return message.reply("❌ Cannot ban Administrators/Moderators.");
-                }
-
-                try {
-                    await targetUser.ban({ reason: reason });
-                    message.reply(`✅ Banned ${targetUser.user.tag}. Reason: ${reason}`);
-                    sendModLog(message.guild, targetUser.user, 'BAN', message.author, reason);
-                } catch (error) {
-                    console.error("Ban error:", error);
-                    message.reply(`❌ Ban failed: ${error.message}`);
-                }
-                break;
-            }
-            
-        case "!reloadblacklist":
-            if (!isAdmin(member)) return message.reply("❌ This command can only be used by the Admin role.");
-            {
-                loadBlacklist();
-                message.reply(`✅ Blacklist reloaded successfully! Total words: ${BLACKLISTED_WORDS.length}.`);
-                break;
-            }
-        
-        case "!logs":
-            if (!isAdmin(member)) return message.reply("❌ This command can only be used by the Admin role.");
-            {
-                const embed = new EmbedBuilder()
-                    .setColor("#00FFFF")
-                    .setTitle("📜 Current Log Channel Settings")
-                    .addFields(
-                        { name: "Action Log (Rules/Notifications)", value: BOT_CONFIG.actionLogChannelId ? `<#${BOT_CONFIG.actionLogChannelId}>` : "Not Set", inline: false },
-                        { name: "Message Filter Log (Message Filtering)", value: BOT_CONFIG.msgLogChannelId ? `<#${BOT_CONFIG.msgLogChannelId}>` : "Not Set", inline: false },
-                        { name: "Moderation Log (Kick/Ban)", value: BOT_CONFIG.modLogChannelId ? `<#${BOT_CONFIG.modLogChannelId}>` : "Not Set", inline: false }
-                    )
-                    .setFooter({ text: "Set: !setactionlog [ID] | Clear: !clearactionlog" });
-                
-                message.reply({ embeds: [embed] });
-                break;
-            }
-
-        // Refactored !setlogchannel commands
-        case "!setactionlog": 
-        case "!setmsglog": 
-        case "!setmodlog": 
-            if (!isAdmin(member)) return message.reply("❌ This command can only be used by the Admin role.");
-            {
-                const channelId = args[1];
-                let type;
-                let logName;
-
-                if (cmd === "!setactionlog") {
-                    type = 'action';
-                    logName = "Action Log Channel";
-                } else if (cmd === "!setmsglog") {
-                    type = 'msg';
-                    logName = "Message Filter Log Channel";
-                } else if (cmd === "!setmodlog") {
-                    type = 'mod';
-                    logName = "Moderation Log Channel";
-                }
-
-                if (!channelId) {
-                    return message.reply(`❌ Usage: \`${cmd} [ChannelID]\``);
-                }
-
-                BOT_CONFIG[`${type}LogChannelId`] = channelId;
-                saveConfig();
-                message.reply(`✅ **${logName}** set to <#${channelId}>.`);
-                break;
-            }
-
-        // NEW Admin commands: Clear Logs
-        case "!clearactionlog":
-        case "!clearmsglog":
-        case "!clearmodlog":
-            if (!isAdmin(member)) return message.reply("❌ This command can only be used by the Admin role.");
-            {
-                let logName;
-                let type;
-
-                if (cmd === "!clearactionlog") {
-                    type = 'action';
-                    logName = "Action Log Channel";
-                } else if (cmd === "!clearmsglog") {
-                    type = 'msg';
-                    logName = "Message Filter Log Channel";
-                } else if (cmd === "!clearmodlog") {
-                    type = 'mod';
-                    logName = "Moderation Log Channel";
-                }
-
-                BOT_CONFIG[`${type}LogChannelId`] = null;
-                saveConfig();
-                message.reply(`✅ **${logName}** has been cleared/unconfigured.`);
-                break;
-            }
-
-        // Refactored !embed commands
-        case "!setupjoin": // Rules embed
-        case "!welcome":   // Welcome embed
-        case "!subscriber":// Notification embed
-            if (!isAdmin(member)) { 
-                return message.reply("❌ This command can only be used by the Admin role.");
-            }
-
-            {
-                const channelId = args[1];
-                let type; // Used to determine which embed to send
-                if (cmd === "!setupjoin") type = 'rules';
-                else if (cmd === "!welcome") type = 'welcome';
-                else if (cmd === "!subscriber") type = 'notification';
-
-                const targetChannel = message.guild.channels.cache.get(channelId);
-
-                if (!targetChannel) {
-                    return message.reply(`❌ Usage: \`${cmd} [ChannelID]\`. Channel not found.`);
-                }
-
-                let embed;
-                let components = [];
-
-                if (type === 'rules') {
-                    embed = new EmbedBuilder()
-                        .setColor("#0000FF")
-                        .setTitle("✅ 📜 RULES & REGULATION 📜")
-                        .setDescription(
-                            "You must read the **GO-SU GANG** community rules and click the button below to gain access to the channels."
-                        )
-                        .setImage(RULES_BANNER_URL)
-                        .setFooter({ text: "Let's follow the rules to make GO-SU GANG enjoyable for everyone!" });
-
-                    components = [
-                        new ActionRowBuilder().addComponents(
-                            new ButtonBuilder()
-                                .setCustomId("agree_rules")
-                                .setLabel("✅ I agree to the rules.")
-                                .setStyle(ButtonStyle.Success)
-                                .setEmoji("✅")
-                        ),
-                    ];
-                } else if (type === 'welcome') {
-                    embed = new EmbedBuilder()
-                        .setColor("#00FF00")
-                        .setTitle("🎉 Welcome to GO-SU GANG!")
-                        .setDescription("Welcome new member! Please agree to the rules in the #rules channel to gain entry.")
-                        .setImage(WELCOME_BANNER_URL)
-                        .setFooter({ text: "Have a great time in GO-SU GANG!" });
-                    
-                    components = []; // Welcome message usually has no button
-                } else if (type === 'notification') {
-                    embed = new EmbedBuilder()
-                        .setColor("#FFD700")
-                        .setTitle("🔔 Get Real-Time Notifications")
-                        .setDescription(
-                            "Click the button below to get the **Live Subscriber** role for live notifications. Click again to remove the role."
-                        )
-                        .setImage(NOTIFICATION_BANNER_URL)
-                        .setFooter({ text: "The notification role can be added/removed anytime." });
-
-                    components = [
-                        new ActionRowBuilder().addComponents(
-                            new ButtonBuilder()
-                                .setCustomId("toggle_subscriber_role")
-                                .setLabel("Get/Remove Live Notification Role")
-                                .setStyle(ButtonStyle.Primary)
-                                .setEmoji("🔔")
-                        ),
-                    ];
-                }
-                
-                await targetChannel.send({ embeds: [embed], components: components });
-                message.reply(`✅ Sent **${type}** embed to <#${channelId}> channel.`);
-                break;
-            }
-            
-        default:
-            // Handle unknown command
-            message.reply("❓ Unknown command. Please check moderator commands.");
-            break;
+        return message.reply({ embeds: [help] });
     }
 });
 
 // =====================================================
-// BUTTON INTERACTION HANDLING
+// BUTTON INTERACTIONS (Rules + Colors + Subscribe Panel)
 // =====================================================
-
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isButton()) return;
-    const member = interaction.member;
 
-    try {
-        if (interaction.customId === "agree_rules") {
-            const gosuRole = interaction.guild.roles.cache.get(GOSU_ROLE);
+    const { customId, guild, member } = interaction;
 
-            if (!gosuRole) {
-                console.error("GOSU_ROLE ID is incorrect or role is not in the guild.");
-                return interaction.reply({
-                    content: "⚠ Server configuration error: Cannot find the base role.",
-                    ephemeral: true,
-                });
-            }
-
-            // Check if member already has the role
-            if (member.roles.cache.has(GOSU_ROLE)) {
-                return interaction.reply({
-                    content: "✅ You already have the entry role as you've agreed to the rules.",
-                    ephemeral: true,
-                });
-            }
-
-            // Grant role
-            await member.roles.add(gosuRole);
-
-            interaction.reply({
-                content: "🎉 Rules agreed. You have been granted server access!",
+    if (customId === "agree_rules") {
+        const role = guild.roles.cache.get(GOSU_ROLE);
+        if (!role) {
+            return interaction.reply({
+                content: "⚠ Member role is not configured correctly. Please contact staff.",
                 ephemeral: true,
             });
-        } else if (interaction.customId === "toggle_subscriber_role") {
-            const subRole = interaction.guild.roles.cache.get(SUB_ROLE);
+        }
 
-            if (!subRole) {
-                console.error("SUB_ROLE ID is incorrect or role is not in the guild.");
-                return interaction.reply({
-                    content: "⚠ Server configuration error: Cannot find the notification role.",
-                    ephemeral: true,
-                });
-            }
+        if (member.roles.cache.has(role.id)) {
+            return interaction.reply({
+                content: "You already have access. Enjoy the server!",
+                ephemeral: true,
+            });
+        }
 
-            // Toggle role addition/removal
+        try {
+            await member.roles.add(role);
+            return interaction.reply({
+                content: `✅ You accepted the rules and received the **${role.name}** role. Welcome!`,
+                ephemeral: true,
+            });
+        } catch (err) {
+            console.error("Agree rules error:", err);
+            return interaction.reply({
+                content: "⚠ Failed to assign the role. Please contact staff.",
+                ephemeral: true,
+            });
+        }
+    }
+
+    if (customId === "sub_subscribe") {
+        const subRole = guild.roles.cache.get(SUB_ROLE);
+        const gosuRole = guild.roles.cache.get(GOSU_ROLE);
+
+        if (!subRole || !gosuRole) {
+            return interaction.reply({
+                content: "⚠ Subscription or Gosu role is not configured correctly. Please contact staff.",
+                ephemeral: true,
+            });
+        }
+
+        try {
             if (member.roles.cache.has(SUB_ROLE)) {
                 await member.roles.remove(subRole);
+                await member.roles.add(gosuRole);
                 return interaction.reply({
-                    content: "❌ Live notification role removed. You will no longer receive notifications.",
+                    content: `🔕 Live notifications **unsubscribed**. Your role has been reset to **${gosuRole.name}**.`,
                     ephemeral: true,
                 });
             } else {
+                if (member.roles.cache.has(GOSU_ROLE)) {
+                    await member.roles.remove(gosuRole);
+                }
                 await member.roles.add(subRole);
+
                 return interaction.reply({
-                    content: "🔔 Live notification role granted. You will now receive notifications.",
+                    content: `✅ You are now **subscribed** to Live Notifications. Your **${gosuRole.name}** role has been replaced.`,
                     ephemeral: true,
                 });
             }
+        } catch (err) {
+            console.error("Subscribe toggle error:", err);
+            return interaction.reply({
+                content: "⚠ Failed to update your roles. Please contact staff.",
+                ephemeral: true,
+            });
         }
-    } catch (err) {
-        console.error("Button interaction error:", err);
-        return interaction.reply({
-            content: "⚠ An error occurred while processing the button. Please check the bot's permissions.",
-            ephemeral: true,
-        });
+    }
+
+    const colorConfig = COLOR_ROLES.find((c) => c.customId === customId);
+    if (colorConfig) {
+        const role = guild.roles.cache.get(colorConfig.roleId);
+        if (!role) {
+            return interaction.reply({
+                content: "⚠ The color role for this button is not configured. Please contact staff.",
+                ephemeral: true,
+            });
+        }
+
+        if (!guild.members.me.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+            return interaction.reply({
+                content: "⚠ I do not have permission to **Manage Roles**.",
+                ephemeral: true,
+            });
+        }
+
+        try {
+            const colorRoleIds = COLOR_ROLES.map((c) => c.roleId);
+            const toRemove = member.roles.cache.filter((r) => colorRoleIds.includes(r.id));
+
+            if (member.roles.cache.has(role.id)) {
+                await member.roles.remove(role);
+                return interaction.reply({
+                    content: `Removed color role **${role.name}**.`,
+                    ephemeral: true,
+                });
+            }
+
+            if (toRemove.size > 0) {
+                await member.roles.remove(toRemove);
+            }
+
+            await member.roles.add(role);
+            return interaction.reply({
+                content: `You now have the color role **${role.name}**.`,
+                ephemeral: true,
+            });
+        } catch (err) {
+            console.error("Color role error:", err);
+            return interaction.reply({
+                content: "⚠ Failed to update your color role. Please contact staff.",
+                ephemeral: true,
+            });
+        }
     }
 });
 
-// =====================================================
-// BOT LOGIN
-// =====================================================
-client.login(process.env.Bot_Token);
+// --------------------
+// Log in
+// --------------------
+client.login(process.env.BOT_TOKEN);
