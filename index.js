@@ -14,6 +14,7 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ChannelType,
+} = require("discord.js");
 const path = require("path");
 const fs = require("fs");
 
@@ -36,8 +37,9 @@ loadBlacklist();
 // ----------------------------------------------------
 // FILE PATH CONSTANTS
 // ----------------------------------------------------
-const DATA_DIR = "."; // Root directory
+const path = require("path");
 
+const DATA_DIR = "."; // Root directory
 const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
 const CONFIG_FILE_PATH   = path.join(DATA_DIR, "config.json");
 let BOT_CONFIG = {};
@@ -1497,6 +1499,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
