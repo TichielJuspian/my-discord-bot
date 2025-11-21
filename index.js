@@ -45,9 +45,9 @@ const MOD_ROLE = "495727371140202506";
 const ADMIN_ROLE = "495718851288236032";
 // Live Notification Subscriber role
 const SUB_ROLE = "497654614729031681";
-// 🆕 NEW: Creator Role ID (1441214177128743017)
+// Creator Role ID (1441214177128743017)
 const CREATOR_ROLE = "1441214177128743017"; 
-// 🆕 NEW: Verification/Temporary Role ID (1441311763806031893)
+// Verification/Temporary Role ID (1441311763806031893)
 const VERIFICATION_ROLE = "1441311763806031893"; 
 
 // ----------------------------------------------------
@@ -1006,7 +1006,7 @@ if (cmd === "!removeword") {
                     "### 3️⃣ Automatic Creator Role Assignment",
                     "- After linking and meeting the requirements, Discord automatically verifies your account.",
                     "- Please wait a moment; syncing account data may take some time.",
-                    "- Once approved, the **Creator** role will appear and channels like **#creator-chat** will become available.",
+                    "- Once approved, the **Creator** role will appear and you can start to post your content in #Watch-my-#### channels.",
                     "",
                     "--------------------------------------------",
                     "### ⚠️ Troubleshooting",
@@ -1592,3 +1592,4 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
