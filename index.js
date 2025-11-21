@@ -47,8 +47,6 @@ const CREATE_CHANNEL_IDS = [
 // ----------------------------------------------------
 // CHAT FILTER CONFIG
 // ----------------------------------------------------
-let BLACKLISTED_WORDS = []; // Global array for blocked words
-
 const FILTER_EXEMPT_ROLES = [
     MOD_ROLE,
     ADMIN_ROLE, // Admins are also exempt from filters
@@ -1468,6 +1466,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
