@@ -1,8 +1,12 @@
+```js
 // =====================================================
 // Gosu Custom Discord Bot (Final Build - All Features Merged)
 // Discord.js v14 + MongoDB Leveling + MongoDB Config/Blacklist
 // =====================================================
 require("dotenv").config();
+
+const fs = require("fs");
+const path = require("path");
 
 const {
   Client,
@@ -32,43 +36,32 @@ let BOT_CONFIG = {
 let BLACKLISTED_WORDS = [];
 
 // ----------------------------------------------------
-// ROLE IDs (❗ MUST BE MODIFIED for your Server IDs ❗)
+// ROLE IDs
 // ----------------------------------------------------
-// Main Gosu role (granted after agreeing to rules)
 const GOSU_ROLE = "496717793388134410";
-// Moderator role (filter exemption, moderation commands)
 const MOD_ROLE = "495727371140202506";
-// Admin role
 const ADMIN_ROLE = "495718851288236032";
-// Live Notification Subscriber role
 const SUB_ROLE = "497654614729031681";
 
 // ----------------------------------------------------
 // VOICE CHANNEL CREATOR CONFIG
 // ----------------------------------------------------
-// Voice channels that trigger auto personal VO channel
 const CREATE_CHANNEL_IDS = ["720658789832851487", "1441159364298936340"];
 
 // ----------------------------------------------------
 // CHAT FILTER CONFIG
 // ----------------------------------------------------
-const FILTER_EXEMPT_ROLES = [
-  MOD_ROLE,
-  ADMIN_ROLE, // Admins are also exempt from filters
-];
+const FILTER_EXEMPT_ROLES = [MOD_ROLE, ADMIN_ROLE];
 
 // ----------------------------------------------------
 // MONGODB & LEVELING CONFIG
 // ----------------------------------------------------
-
-// XP settings for the leveling system
 const XP_CONFIG = {
   minXP: 5,
   maxXP: 15,
-  cooldownMs: 30000, // 30 seconds between XP gains per user
+  cooldownMs: 30000,
 };
 
-// Level to role mappings
 const LEVEL_ROLES = [
   { level: 5, roleId: "497843968151781378" },
   { level: 10, roleId: "497491254838427674" },
@@ -82,23 +75,19 @@ const LEVEL_ROLES = [
   { level: 150, roleId: "1441518689290817646" },
 ];
 
-// MongoDB client and collections
 const mongoClient = new MongoClient(process.env.MONGODB_URI);
 let xpCollection = null;
 let configCollection = null;
 let blacklistCollection = null;
 
-// Map used for per-user XP cooldowns
 const xpCooldowns = new Map();
 
 // ----------------------------------------------------
-// MongoDB: Connect
+// Mongo 연결
 // ----------------------------------------------------
 async function connectMongo() {
   if (!process.env.MONGODB_URI) {
-    console.warn(
-      "[MONGO] MONGODB_URI is not set. MongoDB features are disabled."
-    );
+    console.warn("[MONGO] MONGODB_URI is not set. MongoDB features are disabled.");
     return;
   }
 
@@ -108,7 +97,7 @@ async function connectMongo() {
     const db = mongoClient.db(dbName);
     xpCollection = db.collection("user_xp");
     configCollection = db.collection("bot_config");
-    blacklistCollection = db.collection("blacklist_words");
+    blacklistCollection = db.collection("blacklist");
 
     console.log(`[MONGO] Connected to MongoDB database '${dbName}'.`);
   } catch (err) {
@@ -117,13 +106,11 @@ async function connectMongo() {
 }
 
 // ----------------------------------------------------
-// MongoDB: Load / Save BOT_CONFIG
+// MongoDB: BOT_CONFIG load/save
 // ----------------------------------------------------
 async function loadConfigFromMongo() {
   if (!configCollection) {
-    console.warn(
-      "[CONFIG] configCollection not ready; using default BOT_CONFIG."
-    );
+    console.warn("[CONFIG] configCollection not ready; using default BOT_CONFIG.");
     return;
   }
   try {
@@ -160,9 +147,7 @@ async function loadConfigFromMongo() {
 
 async function saveConfigToMongo() {
   if (!configCollection) {
-    console.warn(
-      "[CONFIG] configCollection not ready; cannot save BOT_CONFIG."
-    );
+    console.warn("[CONFIG] configCollection not ready; cannot save BOT_CONFIG.");
     return;
   }
   try {
@@ -185,29 +170,70 @@ async function saveConfigToMongo() {
 }
 
 // ----------------------------------------------------
-// MongoDB Blacklist (per-word documents)
+// MongoDB: BLACKLIST load/seeding
 // ----------------------------------------------------
-async function loadBlacklistFromDB() {
+async function loadBlacklistFromMongo() {
   if (!blacklistCollection) {
-    console.warn("[BLACKLIST] blacklistCollection not ready; using empty list.");
+    console.warn("[BLACKLIST] blacklistCollection not ready; using empty blacklist.");
     BLACKLISTED_WORDS = [];
     return;
   }
 
   try {
-    const docs = await blacklistCollection.find({}).toArray();
-    BLACKLISTED_WORDS = docs
-      .map((doc) => String(doc.word).toLowerCase().trim())
-      .filter((w) => w.length > 0);
-    console.log(
-      `[BLACKLIST] Loaded ${BLACKLISTED_WORDS.length} blacklisted words from MongoDB.`
+    const doc = await blacklistCollection.findOne({ _id: "global" });
+
+    if (doc && Array.isArray(doc.words)) {
+      BLACKLISTED_WORDS = doc.words.map((w) => String(w).toLowerCase().trim());
+      console.log(`[BLACKLIST] Loaded ${BLACKLISTED_WORDS.length} words from MongoDB.`);
+      return;
+    }
+
+    const BLACKLIST_FILE_PATH = path.join(__dirname, "Data", "blacklist.json");
+
+    if (fs.existsSync(BLACKLIST_FILE_PATH)) {
+      console.log(`[BLACKLIST] Mongo empty -> importing from ${BLACKLIST_FILE_PATH}`);
+
+      const raw = fs.readFileSync(BLACKLIST_FILE_PATH, "utf8");
+      let arr = [];
+
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) arr = parsed;
+      } catch (err) {
+        console.error("[BLACKLIST] Failed to parse blacklist.json:", err);
+      }
+
+      BLACKLISTED_WORDS = arr.map((w) => String(w).toLowerCase().trim());
+
+      await blacklistCollection.updateOne(
+        { _id: "global" },
+        { $set: { words: BLACKLISTED_WORDS } },
+        { upsert: true }
+      );
+
+      console.log(
+        `[BLACKLIST] Seeded ${BLACKLISTED_WORDS.length} words from file into MongoDB`
+      );
+      return;
+    }
+
+    await blacklistCollection.updateOne(
+      { _id: "global" },
+      { $setOnInsert: { words: [] } },
+      { upsert: true }
     );
+
+    BLACKLISTED_WORDS = [];
+    console.log("[BLACKLIST] No data. Initialized empty MongoDB blacklist.");
   } catch (err) {
-    console.error("[BLACKLIST] Failed to load blacklist from MongoDB:", err);
+    console.error("[BLACKLIST] Error loading blacklist:", err);
     BLACKLISTED_WORDS = [];
   }
 }
 
+// ----------------------------------------------------
+// MongoDB Blacklist Helpers (permanent save)
+// ----------------------------------------------------
 async function addBlacklistWord(word) {
   if (!blacklistCollection) return;
   const clean = String(word).toLowerCase().trim();
@@ -215,12 +241,12 @@ async function addBlacklistWord(word) {
 
   try {
     await blacklistCollection.updateOne(
-      { word: clean },
-      { $set: { word: clean } },
+      { _id: "global" },
+      { $addToSet: { words: clean } },
       { upsert: true }
     );
   } catch (err) {
-    console.error("[BLACKLIST] Failed to add blacklist word:", err);
+    console.error("[MONGO] Failed to add blacklist word:", err);
   }
 }
 
@@ -230,23 +256,24 @@ async function removeBlacklistWord(word) {
   if (!clean) return;
 
   try {
-    await blacklistCollection.deleteOne({ word: clean });
+    await blacklistCollection.updateOne(
+      { _id: "global" },
+      { $pull: { words: clean } }
+    );
   } catch (err) {
-    console.error("[BLACKLIST] Failed to remove blacklist word:", err);
+    console.error("[MONGO] Failed to remove blacklist word:", err);
   }
 }
 
 // ----------------------------------------------------
-// Helper: XP required for the given level
+// XP 계산
 // ----------------------------------------------------
 function getRequiredXpForLevel(level) {
-  // Quadratic growth that scales well beyond level 150
   return 100 * level * level + 100;
 }
 
-// Main leveling handler
 async function handleXpGain(message) {
-  if (!xpCollection) return; // MongoDB not ready
+  if (!xpCollection) return;
   const member = message.member;
   const user = message.author;
 
@@ -284,7 +311,6 @@ async function handleXpGain(message) {
     let newLevel = currentLevel;
     let requiredXp = getRequiredXpForLevel(newLevel + 1);
 
-    // Recalculate level based on total XP
     while (data.xp >= requiredXp && newLevel < 1000) {
       newLevel++;
       requiredXp = getRequiredXpForLevel(newLevel + 1);
@@ -294,7 +320,6 @@ async function handleXpGain(message) {
 
     await xpCollection.updateOne(filter, { $set: { level: newLevel } });
 
-    // Assign level roles on threshold crossing
     for (const entry of LEVEL_ROLES) {
       if (
         currentLevel < entry.level &&
@@ -329,7 +354,7 @@ async function handleXpGain(message) {
 }
 
 // ----------------------------------------------------
-// Helper: Function to send Moderation Log
+// Helper: Moderation Log
 // ----------------------------------------------------
 async function sendModLog(guild, user, action, moderator, reason, duration) {
   if (!BOT_CONFIG.modLogChannelId) return;
@@ -372,7 +397,7 @@ async function sendModLog(guild, user, action, moderator, reason, duration) {
 }
 
 // ----------------------------------------------------
-// WELCOME / RULES / NOTIFICATION / CREATOR BANNERS
+// BANNERS
 // ----------------------------------------------------
 const RULES_BANNER_URL =
   "https://cdn.discordapp.com/attachments/495719121686626323/1440992642761752656/must_read.png?ex=69202c7a&is=691edafa&hm=0dd8a2b0a189b4bec6947c05877c17b0b9408dd8f99cb7eee8de4336122f67d4&";
@@ -384,7 +409,7 @@ const CREATOR_BANNER_URL =
   "https://media.discordapp.net/attachments/495719121686626323/1441312962903015576/verification.png?format=webp&quality=lossless&width=818&height=180";
 
 // --------------------
-// Client Initialization
+// Client
 // --------------------
 const client = new Client({
   intents: [
@@ -408,7 +433,7 @@ const client = new Client({
 client.commands = new Collection();
 
 // --------------------
-// Helper: Role Checking
+// Role helpers
 // --------------------
 function isModerator(member) {
   if (!member) return false;
@@ -428,13 +453,13 @@ function isAdmin(member) {
 }
 
 // --------------------
-// Bot Ready Event
+// Ready
 // --------------------
 client.once("ready", async () => {
   console.log(`[BOT] Bot logged in as ${client.user.tag}`);
   await connectMongo();
   await loadConfigFromMongo();
-  await loadBlacklistFromDB();
+  await loadBlacklistFromMongo();
 });
 
 // =====================================================
@@ -444,7 +469,6 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   const guild = newState.guild || oldState.guild;
   if (!guild) return;
 
-  // 1. Join – create personal VO channel
   if (newState.channelId && CREATE_CHANNEL_IDS.includes(newState.channelId)) {
     const member = newState.member;
     const createChannel = newState.channel;
@@ -476,12 +500,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
         userLimit: 5,
         permissionOverwrites: [
           {
-            id: guild.id, // @everyone
+            id: guild.id,
             allow: [PermissionsBitField.Flags.Connect],
             deny: [PermissionsBitField.Flags.ManageChannels],
           },
           {
-            id: member.id, // creator
+            id: member.id,
             allow: [
               PermissionsBitField.Flags.ManageChannels,
               PermissionsBitField.Flags.MuteMembers,
@@ -504,7 +528,6 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     }
   }
 
-  // 2. Delete – when temporary VO is empty
   if (oldState.channelId && !CREATE_CHANNEL_IDS.includes(oldState.channelId)) {
     const oldChannel = oldState.channel;
     if (!oldChannel) return;
@@ -541,13 +564,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
-  // 0. COMMAND PARSING
   const args = message.content.trim().split(/ +/g);
   const cmd = args[0]?.toLowerCase();
   const isCommand = cmd && cmd.startsWith("!");
   const member = message.member;
 
-  // 1. CHAT FILTER LOGIC
+  // ---------------- CHAT FILTER ----------------
   const isExempt =
     isCommand ||
     FILTER_EXEMPT_ROLES.some((roleId) => member.roles.cache.has(roleId));
@@ -556,7 +578,6 @@ client.on("messageCreate", async (message) => {
     let foundLinkFilterMatch = null;
     const normalizedMessage = message.content.toLowerCase();
 
-    // #1 Discord invite filter
     const allowedInvites = ["discord.gg/gosugeneral", "discord.gg/xgxD5hB"];
     const inviteMatches = normalizedMessage.match(/(discord\.gg)\/(\w+)/g);
     const containsDiscordInvite = inviteMatches?.length > 0;
@@ -566,15 +587,13 @@ client.on("messageCreate", async (message) => {
 
     if (containsDiscordInvite && !isAllowedInvite) {
       foundLinkFilterMatch = "Unpermitted Discord Invite";
-    }
-    // #2 OnlyFans filter
-    else if (
+    } else if (
       normalizedMessage.includes("only fans") ||
       normalizedMessage.includes("onlyfans")
     ) {
       foundLinkFilterMatch = "Explicit Content Keyword (OnlyFans)";
     }
-    // #3 General URL filter
+
     const generalUrlMatches = normalizedMessage.match(
       /(https?:\/\/)?(www\.)?(\w+)\.(\w+)\/(\w)+/g
     );
@@ -590,9 +609,7 @@ client.on("messageCreate", async (message) => {
         "naver.com",
       ];
 
-      if (
-        !safeDomains.some((domain) => normalizedMessage.includes(domain))
-      ) {
+      if (!safeDomains.some((domain) => normalizedMessage.includes(domain))) {
         foundLinkFilterMatch = "Unpermitted General URL";
       }
     }
@@ -665,12 +682,10 @@ client.on("messageCreate", async (message) => {
       return;
     }
 
-    // BLACKLISTED_WORDS filter (improved)
     const normalizedContentExisting = message.content
       .normalize("NFC")
       .toLowerCase();
 
-    // For Korean matching, remove special chars but keep spaces for word splitting
     const simplifiedContent = normalizedContentExisting.replace(
       /[^가-힣a-z0-9\s]/g,
       ""
@@ -685,13 +700,11 @@ client.on("messageCreate", async (message) => {
       const hasHangul = /[가-힣]/.test(word);
 
       if (hasHangul) {
-        // ----- Korean (or mixed) blacklist logic: strong matching (space-removed etc.) -----
         const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, "");
         if (simplifiedWord.length < 2) continue;
 
         const contentWithoutSpaces = simplifiedContent.replace(/\s/g, "");
 
-        // ex) "시 발" / "시발" / "시  발" 등 우회 방지
         if (contentWithoutSpaces.includes(simplifiedWord)) {
           foundWord = word;
           break;
@@ -706,7 +719,6 @@ client.on("messageCreate", async (message) => {
           break;
         }
       } else {
-        // ----- English / numeric blacklist logic: word-boundary match only -----
         const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         if (!escaped) continue;
 
@@ -720,14 +732,6 @@ client.on("messageCreate", async (message) => {
     }
 
     if (foundWord) {
-      console.log(
-        "[FILTER] Matched blacklist word:",
-        foundWord,
-        "in message:",
-        message.content
-      );
-
-      // Prefer filterLogChannelId, fallback msgLogChannelId
       const logChannelId =
         BOT_CONFIG.filterLogChannelId || BOT_CONFIG.msgLogChannelId;
 
@@ -794,12 +798,10 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  // 1.5 LEVELING SYSTEM (give XP after filters)
   if (!message.author.bot) {
     await handleXpGain(message);
   }
 
-  // 2. COMMAND LOGIC
   if (!isCommand) return;
 
   const NON_DELETING_COMMANDS = [
@@ -818,7 +820,6 @@ client.on("messageCreate", async (message) => {
     }, 1000);
   }
 
-  // Permission checks
   const adminOnly = [
     "!clearmsglog",
     "!setmodlog",
@@ -846,7 +847,7 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  // 👉 General Commands (Rank / Leaderboard / Level)
+  // ---------------- RANK / LEVEL / LB ----------------
   if (cmd === "!rank") {
     if (!xpCollection) {
       return message.reply(
@@ -1034,8 +1035,8 @@ client.on("messageCreate", async (message) => {
 
     let description = "";
     topUsers.forEach((user, index) => {
-      const member = guild.members.cache.get(user.userId);
-      const username = member ? member.user.username : `<@${user.userId}>`;
+      const memberTop = guild.members.cache.get(user.userId);
+      const username = memberTop ? memberTop.user.username : `<@${user.userId}>`;
       const medal =
         index === 0
           ? "🥇"
@@ -1111,7 +1112,7 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  // LOG SETTING & CLEARING COMMANDS (Admin Only)
+  // ---------------- LOG CHANNEL SETUP ----------------
   const logCommands = {
     "!setactionlog": { key: "actionLogChannelId", type: "ACTION" },
     "!clearactionlog": { key: "actionLogChannelId", type: "ACTION" },
@@ -1133,7 +1134,7 @@ client.on("messageCreate", async (message) => {
           : message.mentions.channels.first() ||
             message.guild.channels.cache.get(args[1]);
 
-      if (!channel || channel.type !== 0) {
+      if (!channel || channel.type !== ChannelType.GuildText) {
         const reply = await message.reply(
           `Usage: \`${cmd}\` (in log channel) or \`${cmd} #channel\``
         );
@@ -1167,14 +1168,11 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // !ping (test)
   if (cmd === "!ping") {
     return message.reply("Pong!");
   }
 
-  // =====================================================
-  // CHANNEL FREEZE / UNFREEZE (LOCKDOWN)
-  // =====================================================
+  // ---------------- FREEZE / UNFREEZE ----------------
   if (cmd === "!freeze") {
     const targetChannel =
       message.mentions.channels.first() || message.channel;
@@ -1213,7 +1211,33 @@ client.on("messageCreate", async (message) => {
         setTimeout(() => reply.delete().catch(() => {}), 5000);
       }
 
-      setTimeout(() => notice.delete().catch(() => {}), 30_000);
+      setTimeout(() => notice.delete().catch(() => {}), 30000);
+
+      if (BOT_CONFIG.modLogChannelId) {
+        const logChannel = message.guild.channels.cache.get(
+          BOT_CONFIG.modLogChannelId
+        );
+        if (logChannel) {
+          const logEmbed = new EmbedBuilder()
+            .setColor("#00BFFF")
+            .setTitle("❄️ Channel Frozen")
+            .addFields(
+              {
+                name: "Channel",
+                value: `<#${targetChannel.id}>`,
+                inline: true,
+              },
+              {
+                name: "Moderator",
+                value: `${message.author.tag} (${message.author.id})`,
+                inline: true,
+              }
+            )
+            .setTimestamp()
+            .setFooter({ text: "Freeze Command" });
+          logChannel.send({ embeds: [logEmbed] }).catch(() => {});
+        }
+      }
     } catch (err) {
       console.error("[FREEZE] Failed to freeze channel:", err);
       const reply = await message.reply(
@@ -1263,7 +1287,33 @@ client.on("messageCreate", async (message) => {
         setTimeout(() => reply.delete().catch(() => {}), 5000);
       }
 
-      setTimeout(() => notice.delete().catch(() => {}), 30_000);
+      setTimeout(() => notice.delete().catch(() => {}), 30000);
+
+      if (BOT_CONFIG.modLogChannelId) {
+        const logChannel = message.guild.channels.cache.get(
+          BOT_CONFIG.modLogChannelId
+        );
+        if (logChannel) {
+          const logEmbed = new EmbedBuilder()
+            .setColor("#32CD32")
+            .setTitle("♨️ Channel Unfrozen")
+            .addFields(
+              {
+                name: "Channel",
+                value: `<#${targetChannel.id}>`,
+                inline: true,
+              },
+              {
+                name: "Moderator",
+                value: `${message.author.tag} (${message.author.id})`,
+                inline: true,
+              }
+            )
+            .setTimestamp()
+            .setFooter({ text: "Unfreeze Command" });
+          logChannel.send({ embeds: [logEmbed] }).catch(() => {});
+        }
+      }
     } catch (err) {
       console.error("[UNFREEZE] Failed to unfreeze channel:", err);
       const reply = await message.reply(
@@ -1275,11 +1325,7 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // =====================================================
-  // BLACKLIST MANAGEMENT COMMANDS
-  // =====================================================
-
-  // ========== !addword ==========
+  // ---------------- BLACKLIST COMMANDS ----------------
   if (cmd === "!addword") {
     const newWord = args.slice(1).join(" ").toLowerCase().trim();
     if (!newWord) {
@@ -1298,7 +1344,6 @@ client.on("messageCreate", async (message) => {
     );
   }
 
-  // ========== !removeword ==========
   if (cmd === "!removeword") {
     const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
     if (!wordToRemove) {
@@ -1341,7 +1386,7 @@ client.on("messageCreate", async (message) => {
   }
 
   if (cmd === "!reloadblacklist") {
-    await loadBlacklistFromDB();
+    await loadBlacklistFromMongo();
     const reply = await message.reply(
       `✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from MongoDB.`
     );
@@ -1349,7 +1394,7 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // PANEL SETUP COMMANDS (Admin Only)
+  // ---------------- PANELS & SYNC ----------------
   if (cmd === "!setupjoin") {
     const joinEmbed = new EmbedBuilder()
       .setColor("#1e90ff")
@@ -1516,10 +1561,9 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // !subscriber — Create the Live Notification Panel
   if (cmd === "!subscriber") {
-    const member = message.member;
-    if (!isAdmin(member)) {
+    const memberAdmin = message.member;
+    if (!isAdmin(memberAdmin)) {
       return message.reply(
         "❌ You do not have permission to use this command."
       );
@@ -1565,7 +1609,6 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // !creator — Creator Role Auto Verification Panel
   if (cmd === "!creator") {
     if (!isAdmin(member)) {
       return message.reply(
@@ -1630,7 +1673,7 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // MODERATION COMMANDS
+  // ---------------- MOD COMMANDS ----------------
   if (cmd === "!ban") {
     const user = message.mentions.members?.first();
     if (!user) {
@@ -1826,7 +1869,6 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  // INVITE + HELP
   if (cmd === "!invite") {
     return message.reply(
       "📨 **Server Invite:** https://discord.gg/gosugeneral"
@@ -1850,8 +1892,8 @@ client.on("messageCreate", async (message) => {
           "`!kick @user [reason]` — Kick a user.",
           "`!mute @user [minutes] [reason]` — Timeout a user.",
           "`!unmute @user` — Remove timeout.",
-          "`!freeze [#channel]` — Temporarily lock a channel so nobody can send messages.",
-          "`!unfreeze [#channel]` — Unlock a frozen channel and allow chatting again.",
+          "`!freeze [#channel]` — Lock a channel so nobody can send messages.",
+          "`!unfreeze [#channel]` — Unlock a frozen channel.",
           "`!addrole @user RoleName` — Add a role.",
           "`!removerole @user RoleName` — Remove a role.",
           "`!prune [1-100]` — Delete recent messages.",
@@ -2085,9 +2127,9 @@ client.on("guildMemberRemove", async (member) => {
       },
       {
         name: "Joined At",
-        value: `<t:${Math.floor(
-          member.joinedTimestamp / 1000
-        )}:f>`,
+        value: member.joinedTimestamp
+          ? `<t:${Math.floor(member.joinedTimestamp / 1000)}:f>`
+          : "Unknown",
         inline: false,
       }
     )
@@ -2107,7 +2149,6 @@ client.on("guildMemberRemove", async (member) => {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  // Rules agreement
   if (interaction.customId === "agree_rules") {
     const member = interaction.member;
 
@@ -2129,7 +2170,6 @@ client.on("interactionCreate", async (interaction) => {
     return;
   }
 
-  // Subscriber toggle
   if (interaction.customId === "subscribe_toggle") {
     const member = interaction.member;
     const hasSubRole = member.roles.cache.has(SUB_ROLE);
