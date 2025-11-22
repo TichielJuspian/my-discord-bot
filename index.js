@@ -1,11 +1,8 @@
 // =====================================================
 // Gosu Custom Discord Bot (Final Build - All Features Merged)
-// Discord.js v14 + MongoDB Leveling
+// Discord.js v14 + MongoDB Leveling + MongoDB Config/Blacklist
 // =====================================================
 require("dotenv").config();
-
-const fs = require("fs");
-const path = require("path");
 
 const {
   Client,
@@ -23,18 +20,15 @@ const {
 const { MongoClient } = require("mongodb");
 
 // -----------------------------
-// FILE PATH CONSTANTS
+// IN-MEMORY CONFIG (Loaded from MongoDB)
 // -----------------------------
-const DATA_DIR = "./Data";
-const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
-const CONFIG_FILE_PATH = path.join(DATA_DIR, "config.json");
+let BOT_CONFIG = {
+  actionLogChannelId: null,
+  msgLogChannelId: null,
+  modLogChannelId: null,
+  filterLogChannelId: null,
+};
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  console.log(`[INIT] Created directory ${DATA_DIR}`);
-}
-
-let BOT_CONFIG = {};
 let BLACKLISTED_WORDS = [];
 
 // ----------------------------------------------------
@@ -88,9 +82,11 @@ const LEVEL_ROLES = [
   { level: 150, roleId: "1441518689290817646" },
 ];
 
-// MongoDB client and XP collection
+// MongoDB client and collections
 const mongoClient = new MongoClient(process.env.MONGODB_URI);
 let xpCollection = null;
+let configCollection = null;
+let blacklistCollection = null;
 
 // Map used for per-user XP cooldowns
 const xpCooldowns = new Map();
@@ -99,7 +95,7 @@ const xpCooldowns = new Map();
 async function connectMongo() {
   if (!process.env.MONGODB_URI) {
     console.warn(
-      "[MONGO] MONGODB_URI is not set. Leveling system is disabled."
+      "[MONGO] MONGODB_URI is not set. MongoDB features are disabled."
     );
     return;
   }
@@ -109,13 +105,143 @@ async function connectMongo() {
     const dbName = process.env.MONGODB_DB_NAME || "gosuBot";
     const db = mongoClient.db(dbName);
     xpCollection = db.collection("user_xp");
+    configCollection = db.collection("bot_config");
+    blacklistCollection = db.collection("blacklist");
+
     console.log(`[MONGO] Connected to MongoDB database '${dbName}'.`);
   } catch (err) {
     console.error("[MONGO] Failed to connect to MongoDB:", err);
   }
 }
 
+// ----------------------------------------------------
+// MongoDB: Load / Save BOT_CONFIG
+// ----------------------------------------------------
+async function loadConfigFromMongo() {
+  if (!configCollection) {
+    console.warn("[CONFIG] configCollection not ready; using default BOT_CONFIG.");
+    return;
+  }
+  try {
+    const doc = await configCollection.findOne({ _id: "global" });
+    if (doc) {
+      const {
+        actionLogChannelId = null,
+        msgLogChannelId = null,
+        modLogChannelId = null,
+        filterLogChannelId = null,
+      } = doc;
+
+      BOT_CONFIG = {
+        actionLogChannelId,
+        msgLogChannelId,
+        modLogChannelId,
+        filterLogChannelId,
+      };
+
+      console.log("[CONFIG] Loaded BOT_CONFIG from MongoDB.");
+    } else {
+      await configCollection.insertOne({
+        _id: "global",
+        ...BOT_CONFIG,
+      });
+      console.log(
+        "[CONFIG] No existing BOT_CONFIG found in MongoDB. Created default document."
+      );
+    }
+  } catch (err) {
+    console.error("[CONFIG] Error loading BOT_CONFIG from MongoDB:", err);
+  }
+}
+
+async function saveConfigToMongo() {
+  if (!configCollection) {
+    console.warn("[CONFIG] configCollection not ready; cannot save BOT_CONFIG.");
+    return;
+  }
+  try {
+    await configCollection.updateOne(
+      { _id: "global" },
+      {
+        $set: {
+          actionLogChannelId: BOT_CONFIG.actionLogChannelId,
+          msgLogChannelId: BOT_CONFIG.msgLogChannelId,
+          modLogChannelId: BOT_CONFIG.modLogChannelId,
+          filterLogChannelId: BOT_CONFIG.filterLogChannelId,
+        },
+      },
+      { upsert: true }
+    );
+    console.log("[CONFIG] Saved BOT_CONFIG to MongoDB.");
+  } catch (err) {
+    console.error("[CONFIG] Error saving BOT_CONFIG to MongoDB:", err);
+  }
+}
+
+// ----------------------------------------------------
+// MongoDB: Load / Save BLACKLISTED_WORDS
+// ----------------------------------------------------
+async function loadBlacklistFromMongo() {
+  if (!blacklistCollection) {
+    console.warn(
+      "[BLACKLIST] blacklistCollection not ready; using empty blacklist."
+    );
+    BLACKLISTED_WORDS = [];
+    return;
+  }
+
+  try {
+    const doc = await blacklistCollection.findOne({ _id: "global" });
+    if (doc && Array.isArray(doc.words)) {
+      BLACKLISTED_WORDS = doc.words.map((word) =>
+        String(word).toLowerCase().trim()
+      );
+      console.log(
+        `[BLACKLIST] Loaded ${BLACKLISTED_WORDS.length} words from MongoDB.`
+      );
+    } else {
+      // Create empty document if not exists
+      await blacklistCollection.updateOne(
+        { _id: "global" },
+        { $setOnInsert: { words: [] } },
+        { upsert: true }
+      );
+      BLACKLISTED_WORDS = [];
+      console.log(
+        "[BLACKLIST] No existing blacklist document found. Created empty one in MongoDB."
+      );
+    }
+  } catch (err) {
+    console.error("[BLACKLIST] Error loading blacklist from MongoDB:", err);
+    BLACKLISTED_WORDS = [];
+  }
+}
+
+async function saveBlacklistToMongo() {
+  if (!blacklistCollection) {
+    console.warn(
+      "[BLACKLIST] blacklistCollection not ready; cannot save blacklist."
+    );
+    return;
+  }
+
+  try {
+    await blacklistCollection.updateOne(
+      { _id: "global" },
+      { $set: { words: BLACKLISTED_WORDS } },
+      { upsert: true }
+    );
+    console.log(
+      `[BLACKLIST] Saved ${BLACKLISTED_WORDS.length} words to MongoDB.`
+    );
+  } catch (err) {
+    console.error("[BLACKLIST] Error saving blacklist to MongoDB:", err);
+  }
+}
+
+// ----------------------------------------------------
 // Helper: XP required for the given level
+// ----------------------------------------------------
 function getRequiredXpForLevel(level) {
   // Quadratic growth that scales well beyond level 150
   return 100 * level * level + 100;
@@ -203,95 +329,6 @@ async function handleXpGain(message) {
   } catch (err) {
     console.error("[LEVEL] Error while processing XP:", err);
   }
-}
-
-// ----------------------------------------------------
-// Helper: Function to save blacklist.json
-// ----------------------------------------------------
-function saveBlacklist() {
-  try {
-    const jsonString = JSON.stringify(BLACKLISTED_WORDS, null, 2);
-    fs.writeFileSync(BLACKLIST_FILE_PATH, jsonString, "utf8");
-    console.log(
-      `[FILE] Successfully saved ${BLACKLISTED_WORDS.length} blacklisted words to ${BLACKLIST_FILE_PATH}.`
-    );
-  } catch (err) {
-    console.error("[ERROR] Error saving blacklist.json:", err.message);
-  }
-}
-
-// ----------------------------------------------------
-// Helper: Function to load blacklist.json
-// ----------------------------------------------------
-function loadBlacklist() {
-  try {
-    const data = fs.readFileSync(BLACKLIST_FILE_PATH, "utf8");
-    BLACKLISTED_WORDS = JSON.parse(data).map((word) =>
-      String(word).toLowerCase()
-    );
-    console.log(
-      `[FILE] Loaded ${BLACKLISTED_WORDS.length} blacklisted words from ${BLACKLIST_FILE_PATH}.`
-    );
-  } catch (err) {
-    if (err.code === "ENOENT") {
-      console.error(
-        `[WARN] ${BLACKLIST_FILE_PATH} file not found. Creating a new one.`
-      );
-      BLACKLISTED_WORDS = [];
-      saveBlacklist();
-    } else {
-      console.error("[ERROR] Error loading blacklist.json:", err.message);
-      BLACKLISTED_WORDS = [];
-    }
-  }
-}
-
-// ----------------------------------------------------
-// Helper: Function to save config.json (Log Channel Settings)
-// ----------------------------------------------------
-function saveConfig() {
-  try {
-    fs.writeFileSync(
-      CONFIG_FILE_PATH,
-      JSON.stringify(BOT_CONFIG, null, 2),
-      "utf8"
-    );
-    console.log(
-      `[FILE] Successfully saved BOT_CONFIG to ${CONFIG_FILE_PATH}.`
-    );
-  } catch (err) {
-    console.error("[ERROR] Error saving config.json:", err.message);
-  }
-}
-
-// ----------------------------------------------------
-// Helper: Function to load ALL configs (Log Channels, Blacklist)
-// ----------------------------------------------------
-function loadConfigAndBlacklist() {
-  // 1. Load Log Channel Config
-  try {
-    const data = fs.readFileSync(CONFIG_FILE_PATH, "utf8");
-    BOT_CONFIG = JSON.parse(data);
-    console.log(`[FILE] Loaded BOT_CONFIG from ${CONFIG_FILE_PATH}.`);
-  } catch (err) {
-    if (err.code === "ENOENT") {
-      console.error(
-        `[WARN] ${CONFIG_FILE_PATH} file not found. Creating a new one.`
-      );
-    } else {
-      console.error("[ERROR] Error loading config.json:", err.message);
-    }
-  }
-
-  // Initialize log channel ID fields (set to null if missing)
-  if (!BOT_CONFIG.actionLogChannelId) BOT_CONFIG.actionLogChannelId = null;
-  if (!BOT_CONFIG.msgLogChannelId) BOT_CONFIG.msgLogChannelId = null;
-  if (!BOT_CONFIG.modLogChannelId) BOT_CONFIG.modLogChannelId = null;
-  if (!BOT_CONFIG.filterLogChannelId) BOT_CONFIG.filterLogChannelId = null;
-  saveConfig();
-
-  // 2. Load blacklist
-  loadBlacklist();
 }
 
 // ----------------------------------------------------
@@ -398,8 +435,9 @@ function isAdmin(member) {
 // --------------------
 client.once("ready", async () => {
   console.log(`[BOT] Bot logged in as ${client.user.tag}`);
-  loadConfigAndBlacklist();
   await connectMongo();
+  await loadConfigFromMongo();
+  await loadBlacklistFromMongo();
 });
 
 // =====================================================
@@ -676,7 +714,7 @@ client.on("messageCreate", async (message) => {
         const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         if (!escaped) continue;
 
-        // \bword\b → only match whole words, not inside "cook", "facebook", etc.
+        // \bword\b → only match whole words
         const regex = new RegExp(`\\b${escaped}\\b`, "i");
 
         if (regex.test(normalizedContentExisting)) {
@@ -695,7 +733,7 @@ client.on("messageCreate", async (message) => {
         message.content
       );
 
-      // first filterLogChannelId, nor msgLogChannelId fallback
+      // Prefer filterLogChannelId, fallback msgLogChannelId
       const logChannelId =
         BOT_CONFIG.filterLogChannelId || BOT_CONFIG.msgLogChannelId;
 
@@ -767,24 +805,25 @@ client.on("messageCreate", async (message) => {
     await handleXpGain(message);
   }
 
-// 2. COMMAND LOGIC
-if (!isCommand) return;
+  // 2. COMMAND LOGIC
+  if (!isCommand) return;
 
-const NON_DELETING_COMMANDS = [
-  "!ping",
-  "!invite",
-  "!rank",
-  "!level",
-  "!leaderboard",
-];
+  const NON_DELETING_COMMANDS = [
+    "!ping",
+    "!invite",
+    "!rank",
+    "!level",
+    "!leaderboard",
+  ];
 
-if (!NON_DELETING_COMMANDS.includes(cmd)) {
-  setTimeout(() => {
-    if (!message.deleted) {
-      message.delete().catch(() => {});
-    }
-  }, 1000);
-}
+  if (!NON_DELETING_COMMANDS.includes(cmd)) {
+    setTimeout(() => {
+      if (!message.deleted) {
+        message.delete().catch(() => {});
+      }
+    }, 1000);
+  }
+
   // Permission checks
   const adminOnly = [
     "!clearmsglog",
@@ -795,8 +834,8 @@ if (!NON_DELETING_COMMANDS.includes(cmd)) {
     "!clearactionlog",
     "!setmsglog",
     "!setactionlog",
-    "!setfilterlog", 
-    "!clearfilterlog", 
+    "!setfilterlog",
+    "!clearfilterlog",
     "!setupjoin",
     "!welcome",
     "!subscriber",
@@ -812,240 +851,260 @@ if (!NON_DELETING_COMMANDS.includes(cmd)) {
       return;
     }
   }
-// 👉 General Commands (Rank / Leaderboard / Level)
-if (cmd === "!rank") {
-  if (!xpCollection) {
-    return message.reply("⚠ Level system is not ready. Try again in a moment.");
-  }
 
-  const guild = message.guild;
-
-  // !rank  or  !rank @user 
-  const targetMember =
-    message.mentions.members.first() || message.member;
-
-  if (!targetMember) {
-    return message.reply("⚠ Could not find that user.");
-  }
-
-  const userId = targetMember.id;
-  const guildId = guild.id;
-
-  const data = await xpCollection.findOne({ guildId, userId });
-  if (!data) {
-    return message.reply(
-      targetMember.id === message.author.id
-        ? "You don't have any XP yet. Start chatting to earn some!"
-        : `${targetMember.user.username} doesn't have any XP yet.`
-    );
-  }
-
-  const currentLevel = data.level || 0;
-
-  // Level calculation
-  const currentLevelXp = currentLevel > 0 ? getRequiredXpForLevel(currentLevel) : 0;
-  const nextLevelXp = getRequiredXpForLevel(currentLevel + 1);
-
-  const xpIntoLevel = data.xp - currentLevelXp;
-  const xpNeededThisLevel = Math.max(nextLevelXp - currentLevelXp, 1);
-
-  let progress = xpIntoLevel / xpNeededThisLevel;
-  progress = Math.max(0, Math.min(1, progress)); // 0~1로 클램프
-
-  //  Progress Bar (20칸)
-  const totalBars = 20;
-  const filledBars = Math.round(progress * totalBars);
-  const emptyBars = totalBars - filledBars;
-  const bar =
-    "█".repeat(filledBars > 0 ? filledBars : 0) +
-    "░".repeat(emptyBars > 0 ? emptyBars : 0);
-
-  // Rank in server
-  const rank = (await xpCollection.countDocuments({
-    guildId,
-    xp: { $gt: data.xp },
-  })) + 1;
-
-  const totalUsers = await xpCollection.countDocuments({ guildId });
-
-  // Next rewards
-  const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
-  let nextUnlockText = "";
-  if (nextReward) {
-    const nextRole = guild.roles.cache.get(nextReward.roleId);
-    if (nextRole) {
-      nextUnlockText = `At **Level ${nextReward.level}** you will earn role: **${nextRole.name}**`;
-    } else {
-      nextUnlockText = `Next reward at **Level ${nextReward.level}**`;
+  // 👉 General Commands (Rank / Leaderboard / Level)
+  if (cmd === "!rank") {
+    if (!xpCollection) {
+      return message.reply(
+        "⚠ Level system is not ready. Try again in a moment."
+      );
     }
-  } else {
-    nextUnlockText = "You have unlocked all available level roles!";
-  }
 
-  // colors (레벨에 따라 색 다르게)
-  let color = "#00D1FF"; // basic
-  if (currentLevel >= 100) color = "#FF1493";
-  else if (currentLevel >= 70) color = "#FFD700";
-  else if (currentLevel >= 40) color = "#9B59B6";
-  else if (currentLevel >= 20) color = "#1ABC9C";
+    const guild = message.guild;
 
-  const rankEmbed = new EmbedBuilder()
-    .setColor(color)
-    .setTitle(`📊 ${targetMember.user.username}'s Rank`)
-    .setThumbnail(targetMember.user.displayAvatarURL({ size: 256 }))
-    .addFields(
-      { name: "🧬 Level", value: `${currentLevel}`, inline: true },
-      { name: "⭐ XP", value: `${data.xp} / ${nextLevelXp}`, inline: true },
-      { name: "🏆 Rank", value: `#${rank} of ${totalUsers}`, inline: true },
-      {
-        name: "📈 Progress to Next Level",
-        value: `\`${bar}\`\n${xpIntoLevel} / ${xpNeededThisLevel} XP`,
-        inline: false,
-      },
-      { name: "🎁 Next Reward", value: nextUnlockText, inline: false }
-    )
-    .setFooter({
-      text: "Gosu General TV — Rank System",
-      iconURL: message.author.displayAvatarURL({ size: 128 }),
-    })
-    .setTimestamp();
+    // !rank  or  !rank @user
+    const targetMember =
+      message.mentions.members.first() || message.member;
 
-  await message.channel.send({ embeds: [rankEmbed] });
-  return;
-}
-
-if (cmd === "!level") {
-  const embed = new EmbedBuilder()
-    .setColor("#32CD32")
-    .setTitle("🎯 Level Rewards")
-    .setDescription("Earn XP by chatting and unlock roles as you level up!");
-
-  // Level → Role list
-  for (const entry of LEVEL_ROLES) {
-    const role = message.guild.roles.cache.get(entry.roleId);
-    if (role) {
-      embed.addFields({
-        name: `Level ${entry.level}`,
-        value: role.name,
-        inline: true,
-      });
+    if (!targetMember) {
+      return message.reply("⚠ Could not find that user.");
     }
-  }
 
-  // Rewards
-  const userId = message.author.id;
-  const guildId = message.guild.id;
-  const data = await xpCollection.findOne({ guildId, userId });
+    const userId = targetMember.id;
+    const guildId = guild.id;
 
-  if (data) {
+    const data = await xpCollection.findOne({ guildId, userId });
+    if (!data) {
+      return message.reply(
+        targetMember.id === message.author.id
+          ? "You don't have any XP yet. Start chatting to earn some!"
+          : `${targetMember.user.username} doesn't have any XP yet.`
+      );
+    }
+
     const currentLevel = data.level || 0;
-    const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
 
-    if (nextReward) {
-      const nextRole = message.guild.roles.cache.get(nextReward.roleId);
-      if (nextRole) {
-        embed.addFields({
-          name: "Next Unlock",
-          value: `At **Level ${nextReward.level}** you will earn role: **${nextRole.name}**`,
-          inline: false,
-        });
-      }
-    } else {
-      embed.addFields({
-        name: "Max Rewards",
-        value: "You have unlocked all available level roles!",
-        inline: false,
-      });
-    }
-  }
+    // Level calculation
+    const currentLevelXp =
+      currentLevel > 0 ? getRequiredXpForLevel(currentLevel) : 0;
+    const nextLevelXp = getRequiredXpForLevel(currentLevel + 1);
 
-  embed.setFooter({ text: "Gosu General TV — Level System" }).setTimestamp();
+    const xpIntoLevel = data.xp - currentLevelXp;
+    const xpNeededThisLevel = Math.max(nextLevelXp - currentLevelXp, 1);
 
-  await message.channel.send({ embeds: [embed] });
-  return;
-}
-  
-if (cmd === "!leaderboard") {
-  if (!xpCollection) {
-    return message.reply("⚠ Level system is not ready. Try again in a moment.");
-  }
+    let progress = xpIntoLevel / xpNeededThisLevel;
+    progress = Math.max(0, Math.min(1, progress)); // clamp 0~1
 
-  const guild = message.guild;
-  const guildId = guild.id;
-  const userId = message.author.id;
+    //  Progress Bar (20칸)
+    const totalBars = 20;
+    const filledBars = Math.round(progress * totalBars);
+    const emptyBars = totalBars - filledBars;
+    const bar =
+      "█".repeat(filledBars > 0 ? filledBars : 0) +
+      "░".repeat(emptyBars > 0 ? emptyBars : 0);
 
-  // Top 10
-  let topUsers;
-  try {
-    topUsers = await xpCollection
-      .find({ guildId })
-      .sort({ xp: -1 })
-      .limit(10)
-      .toArray();
-  } catch (err) {
-    console.error("[LEADERBOARD] DB error:", err);
-    return message.reply("⚠ Failed to load leaderboard. Please try again later.");
-  }
-
-  if (!topUsers || topUsers.length === 0) {
-    return message.reply("No leaderboard data yet.");
-  }
-
-  let description = "";
-  topUsers.forEach((user, index) => {
-    const member = guild.members.cache.get(user.userId);
-    const username = member ? member.user.username : `<@${user.userId}>`;
-    const medal =
-      index === 0 ? "🥇" :
-      index === 1 ? "🥈" :
-      index === 2 ? "🥉" : `#${index + 1}`;
-
-    description += `${medal} **${username}** — Level ${user.level} (${user.xp} XP)\n`;
-  });
-
-  // 내 정보
-  const selfData = await xpCollection.findOne({ guildId, userId });
-  let selfRankText = "";
-
-  if (selfData) {
+    // Rank in server
     const rank =
       (await xpCollection.countDocuments({
         guildId,
-        xp: { $gt: selfData.xp },
+        xp: { $gt: data.xp },
       })) + 1;
 
-    if (!topUsers.some((u) => u.userId === userId)) {
-      selfRankText = `\n👤 You are currently **#${rank}** — Level ${selfData.level} (${selfData.xp} XP)`;
+    const totalUsers = await xpCollection.countDocuments({ guildId });
+
+    // Next rewards
+    const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
+    let nextUnlockText = "";
+    if (nextReward) {
+      const nextRole = guild.roles.cache.get(nextReward.roleId);
+      if (nextRole) {
+        nextUnlockText = `At **Level ${nextReward.level}** you will earn role: **${nextRole.name}**`;
+      } else {
+        nextUnlockText = `Next reward at **Level ${nextReward.level}**`;
+      }
     } else {
-      selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
+      nextUnlockText = "You have unlocked all available level roles!";
     }
-  } else {
-    selfRankText = "\n👤 You don't have any XP yet. Start chatting!";
+
+    // colors (레벨에 따라 색 다르게)
+    let color = "#00D1FF"; // basic
+    if (currentLevel >= 100) color = "#FF1493";
+    else if (currentLevel >= 70) color = "#FFD700";
+    else if (currentLevel >= 40) color = "#9B59B6";
+    else if (currentLevel >= 20) color = "#1ABC9C";
+
+    const rankEmbed = new EmbedBuilder()
+      .setColor(color)
+      .setTitle(`📊 ${targetMember.user.username}'s Rank`)
+      .setThumbnail(targetMember.user.displayAvatarURL({ size: 256 }))
+      .addFields(
+        { name: "🧬 Level", value: `${currentLevel}`, inline: true },
+        { name: "⭐ XP", value: `${data.xp} / ${nextLevelXp}`, inline: true },
+        {
+          name: "🏆 Rank",
+          value: `#${rank} of ${totalUsers}`,
+          inline: true,
+        },
+        {
+          name: "📈 Progress to Next Level",
+          value: `\`${bar}\`\n${xpIntoLevel} / ${xpNeededThisLevel} XP`,
+          inline: false,
+        },
+        { name: "🎁 Next Reward", value: nextUnlockText, inline: false }
+      )
+      .setFooter({
+        text: "Gosu General TV — Rank System",
+        iconURL: message.author.displayAvatarURL({ size: 128 }),
+      })
+      .setTimestamp();
+
+    await message.channel.send({ embeds: [rankEmbed] });
+    return;
   }
 
-  // 1등 프로필
-  const topUser = topUsers[0];
-  const topMember = guild.members.cache.get(topUser.userId);
-  const topAvatar = topMember
-    ? topMember.user.displayAvatarURL({ size: 256 })
-    : guild.iconURL({ size: 256 });
+  if (cmd === "!level") {
+    const embed = new EmbedBuilder()
+      .setColor("#32CD32")
+      .setTitle("🎯 Level Rewards")
+      .setDescription("Earn XP by chatting and unlock roles as you level up!");
 
-  const lbEmbed = new EmbedBuilder()
-    .setColor("#FFD700")
-    .setTitle("🏆 Server Leaderboard (Top 10)")
-    .setDescription(description + selfRankText)
-    .setThumbnail(topAvatar)
-    .setFooter({
-      text: "Gosu General TV — Leaderboard",
-      iconURL: message.author.displayAvatarURL({ size: 128 }),
-    })
-    .setTimestamp();
+    // Level → Role list
+    for (const entry of LEVEL_ROLES) {
+      const role = message.guild.roles.cache.get(entry.roleId);
+      if (role) {
+        embed.addFields({
+          name: `Level ${entry.level}`,
+          value: role.name,
+          inline: true,
+        });
+      }
+    }
 
-  await message.channel.send({ embeds: [lbEmbed] });
-  return;
-}
+    // Rewards
+    const userId = message.author.id;
+    const guildId = message.guild.id;
+    const data = await xpCollection.findOne({ guildId, userId });
 
-  
+    if (data) {
+      const currentLevel = data.level || 0;
+      const nextReward = LEVEL_ROLES.find(
+        (entry) => entry.level > currentLevel
+      );
+
+      if (nextReward) {
+        const nextRole = message.guild.roles.cache.get(nextReward.roleId);
+        if (nextRole) {
+          embed.addFields({
+            name: "Next Unlock",
+            value: `At **Level ${nextReward.level}** you will earn role: **${nextRole.name}**`,
+            inline: false,
+          });
+        }
+      } else {
+        embed.addFields({
+          name: "Max Rewards",
+          value: "You have unlocked all available level roles!",
+          inline: false,
+        });
+      }
+    }
+
+    embed
+      .setFooter({ text: "Gosu General TV — Level System" })
+      .setTimestamp();
+
+    await message.channel.send({ embeds: [embed] });
+    return;
+  }
+
+  if (cmd === "!leaderboard") {
+    if (!xpCollection) {
+      return message.reply(
+        "⚠ Level system is not ready. Try again in a moment."
+      );
+    }
+
+    const guild = message.guild;
+    const guildId = guild.id;
+    const userId = message.author.id;
+
+    // Top 10
+    let topUsers;
+    try {
+      topUsers = await xpCollection
+        .find({ guildId })
+        .sort({ xp: -1 })
+        .limit(10)
+        .toArray();
+    } catch (err) {
+      console.error("[LEADERBOARD] DB error:", err);
+      return message.reply(
+        "⚠ Failed to load leaderboard. Please try again later."
+      );
+    }
+
+    if (!topUsers || topUsers.length === 0) {
+      return message.reply("No leaderboard data yet.");
+    }
+
+    let description = "";
+    topUsers.forEach((user, index) => {
+      const member = guild.members.cache.get(user.userId);
+      const username = member ? member.user.username : `<@${user.userId}>`;
+      const medal =
+        index === 0
+          ? "🥇"
+          : index === 1
+          ? "🥈"
+          : index === 2
+          ? "🥉"
+          : `#${index + 1}`;
+
+      description += `${medal} **${username}** — Level ${user.level} (${user.xp} XP)\n`;
+    });
+
+    // 내 정보
+    const selfData = await xpCollection.findOne({ guildId, userId });
+    let selfRankText = "";
+
+    if (selfData) {
+      const rank =
+        (await xpCollection.countDocuments({
+          guildId,
+          xp: { $gt: selfData.xp },
+        })) + 1;
+
+      if (!topUsers.some((u) => u.userId === userId)) {
+        selfRankText = `\n👤 You are currently **#${rank}** — Level ${selfData.level} (${selfData.xp} XP)`;
+      } else {
+        selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
+      }
+    } else {
+      selfRankText = "\n👤 You don't have any XP yet. Start chatting!";
+    }
+
+    // 1등 프로필
+    const topUser = topUsers[0];
+    const topMember = guild.members.cache.get(topUser.userId);
+    const topAvatar = topMember
+      ? topMember.user.displayAvatarURL({ size: 256 })
+      : guild.iconURL({ size: 256 });
+
+    const lbEmbed = new EmbedBuilder()
+      .setColor("#FFD700")
+      .setTitle("🏆 Server Leaderboard (Top 10)")
+      .setDescription(description + selfRankText)
+      .setThumbnail(topAvatar)
+      .setFooter({
+        text: "Gosu General TV — Leaderboard",
+        iconURL: message.author.displayAvatarURL({ size: 128 }),
+      })
+      .setTimestamp();
+
+    await message.channel.send({ embeds: [lbEmbed] });
+    return;
+  }
+
   const modOnly = [
     "!kick",
     "!mute",
@@ -1077,8 +1136,8 @@ if (cmd === "!leaderboard") {
     "!clearmsglog": { key: "msgLogChannelId", type: "MESSAGE" },
     "!setmodlog": { key: "modLogChannelId", type: "MODERATION" },
     "!clearmodlog": { key: "modLogChannelId", type: "MODERATION" },
-    "!setfilterlog":   { key: "filterLogChannelId",  type: "FILTER" },
-    "!clearfilterlog": { key: "filterLogChannelId",  type: "FILTER" },
+    "!setfilterlog": { key: "filterLogChannelId", type: "FILTER" },
+    "!clearfilterlog": { key: "filterLogChannelId", type: "FILTER" },
   };
 
   if (logCommands[cmd]) {
@@ -1100,7 +1159,8 @@ if (cmd === "!leaderboard") {
       }
 
       BOT_CONFIG[key] = channel.id;
-      saveConfig();
+      await saveConfigToMongo();
+
       const reply = await message.reply(
         `✅ **${type} Log** channel set to **${channel.name}**.`
       );
@@ -1114,7 +1174,8 @@ if (cmd === "!leaderboard") {
         return;
       }
       BOT_CONFIG[key] = null;
-      saveConfig();
+      await saveConfigToMongo();
+
       const reply = await message.reply(
         `✅ **${type} Log** setting cleared.`
       );
@@ -1127,7 +1188,7 @@ if (cmd === "!leaderboard") {
   if (cmd === "!ping") {
     return message.reply("Pong!");
   }
-  
+
   // =====================================================
   // CHANNEL FREEZE / UNFREEZE (LOCKDOWN)
   // =====================================================
@@ -1148,9 +1209,7 @@ if (cmd === "!leaderboard") {
 
     // Check bot permissions
     const me = message.guild.members.me;
-    if (
-      !me.permissions.has(PermissionsBitField.Flags.ManageChannels)
-    ) {
+    if (!me.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
       const reply = await message.reply(
         "⚠ I need the **Manage Channels** permission to freeze this channel."
       );
@@ -1160,13 +1219,10 @@ if (cmd === "!leaderboard") {
 
     try {
       // Block sending messages for @everyone
-      await targetChannel.permissionOverwrites.edit(
-        message.guild.id,
-        {
-          SendMessages: false,
-          SendMessagesInThreads: false, // also block threads
-        }
-      );
+      await targetChannel.permissionOverwrites.edit(message.guild.id, {
+        SendMessages: false,
+        SendMessagesInThreads: false, // also block threads
+      });
 
       const notice = await targetChannel.send(
         `🔒 This channel has been **frozen** by ${message.member}. Messages are temporarily disabled.`
@@ -1210,9 +1266,7 @@ if (cmd === "!leaderboard") {
 
     // Check bot permissions
     const me = message.guild.members.me;
-    if (
-      !me.permissions.has(PermissionsBitField.Flags.ManageChannels)
-    ) {
+    if (!me.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
       const reply = await message.reply(
         "⚠ I need the **Manage Channels** permission to unfreeze this channel."
       );
@@ -1222,13 +1276,10 @@ if (cmd === "!leaderboard") {
 
     try {
       // Reset @everyone permissions for sending messages (back to default)
-      await targetChannel.permissionOverwrites.edit(
-        message.guild.id,
-        {
-          SendMessages: null,
-          SendMessagesInThreads: null,
-        }
-      );
+      await targetChannel.permissionOverwrites.edit(message.guild.id, {
+        SendMessages: null,
+        SendMessagesInThreads: null,
+      });
 
       const notice = await targetChannel.send(
         `✅ This channel has been **unfrozen** by ${message.member}. You can chat again.`
@@ -1266,7 +1317,7 @@ if (cmd === "!leaderboard") {
     }
 
     BLACKLISTED_WORDS.push(newWord);
-    saveBlacklist(); // Save to file
+    await saveBlacklistToMongo(); // Save to DB
 
     return message.reply(
       `✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`
@@ -1290,7 +1341,7 @@ if (cmd === "!leaderboard") {
       );
     }
 
-    saveBlacklist(); // Save to file
+    await saveBlacklistToMongo(); // Save to DB
 
     return message.reply(
       `✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`
@@ -1315,9 +1366,9 @@ if (cmd === "!leaderboard") {
   }
 
   if (cmd === "!reloadblacklist") {
-    loadBlacklist();
+    await loadBlacklistFromMongo();
     const reply = await message.reply(
-      `✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from blacklist.json.`
+      `✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from MongoDB.`
     );
     setTimeout(() => reply.delete().catch(() => {}), 1000);
     return;
@@ -1373,59 +1424,59 @@ if (cmd === "!leaderboard") {
     });
     return;
   }
-  
-if (cmd === "!syncrolexp") {
-  if (!isAdmin(message.member)) {
-    return message.reply("⛔ Only Admins can use this command.");
-  }
 
-  if (!xpCollection) {
-    return message.reply("⚠ MongoDB is not connected. Try again later.");
-  }
+  if (cmd === "!syncrolexp") {
+    if (!isAdmin(message.member)) {
+      return message.reply("⛔ Only Admins can use this command.");
+    }
 
-  const guild = message.guild;
-  const guildId = guild.id;
+    if (!xpCollection) {
+      return message.reply("⚠ MongoDB is not connected. Try again later.");
+    }
 
-  const userLevelMap = new Map();
+    const guild = message.guild;
+    const guildId = guild.id;
 
-  for (const entry of LEVEL_ROLES) {
-    const role = guild.roles.cache.get(entry.roleId);
-    if (!role) continue;
+    const userLevelMap = new Map();
 
-    for (const [memberId, member] of role.members) {
-      const prev = userLevelMap.get(memberId) || 0;
-      if (entry.level > prev) {
-        userLevelMap.set(memberId, entry.level);
+    for (const entry of LEVEL_ROLES) {
+      const role = guild.roles.cache.get(entry.roleId);
+      if (!role) continue;
+
+      for (const [memberId] of role.members) {
+        const prev = userLevelMap.get(memberId) || 0;
+        if (entry.level > prev) {
+          userLevelMap.set(memberId, entry.level);
+        }
       }
     }
-  }
 
-  if (userLevelMap.size === 0) {
-    return message.reply("⚠ No members with level roles were found.");
-  }
+    if (userLevelMap.size === 0) {
+      return message.reply("⚠ No members with level roles were found.");
+    }
 
-  let updatedCount = 0;
+    let updatedCount = 0;
 
-  for (const [userId, level] of userLevelMap.entries()) {
-    const xp = getRequiredXpForLevel(level);
+    for (const [userId, level] of userLevelMap.entries()) {
+      const xp = getRequiredXpForLevel(level);
 
-    await xpCollection.updateOne(
-      { guildId, userId },
-      {
-        $setOnInsert: { guildId, userId },
-        $set: { level, xp },
-      },
-      { upsert: true }
+      await xpCollection.updateOne(
+        { guildId, userId },
+        {
+          $setOnInsert: { guildId, userId },
+          $set: { level, xp },
+        },
+        { upsert: true }
+      );
+
+      updatedCount++;
+    }
+
+    await message.reply(
+      `✅ Synced XP/Levels for **${updatedCount}** members based on their level roles.`
     );
-
-    updatedCount++;
+    return;
   }
-
-  await message.reply(
-    `✅ Synced XP/Levels for **${updatedCount}** members based on their level roles.`
-  );
-  return;
-}
 
   if (cmd === "!welcome") {
     const welcomeEmbed = new EmbedBuilder()
@@ -1612,7 +1663,7 @@ if (cmd === "!syncrolexp") {
   if (cmd === "!ban") {
     const user = message.mentions.members?.first();
     if (!user) {
-      const reply = await message.reply("Usage: `!ban @user [reason]`");
+      await message.reply("Usage: `!ban @user [reason]`");
       return;
     }
 
@@ -1632,7 +1683,7 @@ if (cmd === "!syncrolexp") {
   if (cmd === "!kick") {
     const user = message.mentions.members?.first();
     if (!user) {
-      const reply = await message.reply("Usage: `!kick @user [reason]`");
+      await message.reply("Usage: `!kick @user [reason]`");
       return;
     }
 
@@ -1655,9 +1706,7 @@ if (cmd === "!syncrolexp") {
     const user = message.mentions.members?.first();
     const minutes = parseInt(args[2]) || 10;
     if (!user) {
-      const reply = await message.reply(
-        "Usage: `!mute @user [minutes] [reason]`"
-      );
+      await message.reply("Usage: `!mute @user [minutes] [reason]`");
       return;
     }
 
@@ -1687,7 +1736,7 @@ if (cmd === "!syncrolexp") {
   if (cmd === "!unmute") {
     const user = message.mentions.members?.first();
     if (!user) {
-      const reply = await message.reply("Usage: `!unmute @user`");
+      await message.reply("Usage: `!unmute @user`");
       return;
     }
 
@@ -1736,13 +1785,13 @@ if (cmd === "!syncrolexp") {
   if (cmd === "!addrole") {
     const target = message.mentions.members?.first();
     if (!target) {
-      const reply = await message.reply("Usage: `!addrole @user RoleName`");
+      await message.reply("Usage: `!addrole @user RoleName`");
       return;
     }
 
     const roleName = args.slice(2).join(" ");
     if (!roleName) {
-      const reply = await message.reply("Usage: `!addrole @user RoleName`");
+      await message.reply("Usage: `!addrole @user RoleName`");
       return;
     }
 
@@ -1750,7 +1799,7 @@ if (cmd === "!syncrolexp") {
       (r) => r.name.toLowerCase() === roleName.toLowerCase()
     );
     if (!role) {
-      const reply = await message.reply("⚠ Could not find that role.");
+      await message.reply("⚠ Could not find that role.");
       return;
     }
 
@@ -1770,17 +1819,13 @@ if (cmd === "!syncrolexp") {
   if (cmd === "!removerole") {
     const target = message.mentions.members?.first();
     if (!target) {
-      const reply = await message.reply(
-        "Usage: `!removerole @user RoleName`"
-      );
+      await message.reply("Usage: `!removerole @user RoleName`");
       return;
     }
 
     const roleName = args.slice(2).join(" ");
     if (!roleName) {
-      const reply = await message.reply(
-        "Usage: `!removerole @user RoleName`"
-      );
+      await message.reply("Usage: `!removerole @user RoleName`");
       return;
     }
 
@@ -1788,14 +1833,12 @@ if (cmd === "!syncrolexp") {
       (r) => r.name.toLowerCase() === roleName.toLowerCase()
     );
     if (!role) {
-      const reply = await message.reply("⚠ Could not find that role.");
+      await message.reply("⚠ Could not find that role.");
       return;
     }
 
     if (!target.roles.cache.has(role.id)) {
-      const reply = await message.reply(
-        "⚠ That user does not have that role."
-      );
+      await message.reply("⚠ That user does not have that role.");
       return;
     }
 
@@ -1827,10 +1870,10 @@ if (cmd === "!syncrolexp") {
         [
           "**General**",
           "`!ping` — Check if the bot is online.",
-          "`!invite` — Show the server invite link.",     
+          "`!invite` — Show the server invite link.",
           "`!rank` — View your current level, XP, and rank.",
           "`!leaderboard` — See the top 10 users by XP.",
-          "`!level` — View level rewards and role unlocks.",          
+          "`!level` — View level rewards and role unlocks.",
           "",
           "**Moderator Commands**",
           "`!kick @user [reason]` — Kick a user.",
@@ -1852,8 +1895,10 @@ if (cmd === "!syncrolexp") {
           "`!clearmsglog` — Clear the Message Log channel setting.",
           "`!setmodlog [#channel]` — Set channel for Ban/Kick/Mute log.",
           "`!clearmodlog` — Clear the Moderation Log channel setting.",
+          "`!setfilterlog [#channel]` — Set channel for Filtered Message log.",
+          "`!clearfilterlog` — Clear the Filter Log channel setting.",
           "`!ban @user [reason]` — Ban a user.",
-          "`!reloadblacklist` — Reload filter words from JSON file.",
+          "`!reloadblacklist` — Reload filter words from MongoDB.",
           "`!setupjoin` — Create the rules panel.",
           "`!welcome` — Create the main welcome panel.",
           "`!subscriber` — Create the live notification panel.",
@@ -2147,9 +2192,3 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
-
-
-
-
-
-
