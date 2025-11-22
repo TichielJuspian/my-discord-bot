@@ -761,6 +761,87 @@ client.on("messageCreate", async (message) => {
       return;
     }
   }
+// 👉 General Command
+if (cmd === "!rank") {
+  const userId = message.author.id;
+  const guildId = message.guild.id;
+
+  const data = await xpCollection.findOne({ guildId, userId });
+  if (!data) {
+    return message.reply("You don't have any XP yet. Start chatting to earn some!");
+  }
+
+  const requiredXp = getRequiredXpForLevel(data.level + 1);
+
+  // 👉 Rank
+  const rank = await xpCollection.countDocuments({
+    guildId,
+    xp: { $gt: data.xp }
+  }) + 1;
+
+  const totalUsers = await xpCollection.countDocuments({ guildId });
+
+  const embed = new EmbedBuilder()
+    .setColor("#1E90FF")
+    .setTitle(`📊 ${message.author.username}'s Rank`)
+    .setDescription(
+      `**Level:** ${data.level}\n` +
+      `**XP:** ${data.xp} / ${requiredXp}\n` +
+      `**Rank:** #${rank} out of ${totalUsers}`
+    )
+    .setFooter({ text: "Gosu General TV — Rank" })
+    .setTimestamp();
+
+  await message.channel.send({ embeds: [embed] });
+}
+
+if (cmd === "!leaderboard") {
+  const guildId = message.guild.id;
+  const userId = message.author.id;
+
+  const topUsers = await xpCollection
+    .find({ guildId })
+    .sort({ xp: -1 })
+    .limit(10)
+    .toArray();
+
+  if (topUsers.length === 0) {
+    return message.reply("No leaderboard data yet.");
+  }
+
+  let description = "";
+  topUsers.forEach((user, index) => {
+    const member = message.guild.members.cache.get(user.userId);
+    const username = member ? member.user.username : `<@${user.userId}>`;
+    description += `**${index + 1}. ${username}** — Level ${user.level} (${user.xp} XP)\n`;
+  });
+
+  // 👉 Checking EXP
+  const selfData = await xpCollection.findOne({ guildId, userId });
+  let selfRankText = "";
+
+if (selfData) {
+  const rank = await xpCollection.countDocuments({
+    guildId,
+    xp: { $gt: selfData.xp }
+  }) + 1;
+
+  if (!topUsers.some((u) => u.userId === userId)) {
+    selfRankText = `\n👤 You are currently **#${rank}** — Level ${selfData.level} (${selfData.xp} XP)`;
+  } else {
+    selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
+  }
+}
+
+  const embed = new EmbedBuilder()
+    .setColor("#FFD700")
+    .setTitle("🏆 Server Leaderboard (Top 10)")
+    .setDescription(description + selfRankText)
+    .setFooter({ text: "Gosu General TV — Leaderboard" })
+    .setTimestamp();
+
+  await message.channel.send({ embeds: [embed] });
+}
 
   const modOnly = [
     "!kick",
@@ -1676,4 +1757,5 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
