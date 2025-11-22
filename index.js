@@ -287,6 +287,7 @@ function loadConfigAndBlacklist() {
   if (!BOT_CONFIG.actionLogChannelId) BOT_CONFIG.actionLogChannelId = null;
   if (!BOT_CONFIG.msgLogChannelId) BOT_CONFIG.msgLogChannelId = null;
   if (!BOT_CONFIG.modLogChannelId) BOT_CONFIG.modLogChannelId = null;
+  if (!BOT_CONFIG.filterLogChannelId) BOT_CONFIG.filterLogChannelId = null;
   saveConfig();
 
   // 2. Load blacklist
@@ -629,10 +630,12 @@ client.on("messageCreate", async (message) => {
       return;
     }
 
-    // BLACKLISTED_WORDS filter
+    // BLACKLISTED_WORDS filter (improved)
     const normalizedContentExisting = message.content
       .normalize("NFC")
       .toLowerCase();
+
+    // For Korean matching, remove special chars but keep spaces for word splitting
     const simplifiedContent = normalizedContentExisting.replace(
       /[^가-힣a-z0-9\s]/g,
       ""
@@ -640,32 +643,64 @@ client.on("messageCreate", async (message) => {
 
     let foundWord = null;
 
-    for (const word of BLACKLISTED_WORDS) {
-      const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, "");
-      if (simplifiedWord.length < 2) continue;
+    for (const raw of BLACKLISTED_WORDS) {
+      const word = String(raw).toLowerCase().trim();
+      if (!word) continue;
 
-      const contentWithoutSpaces = simplifiedContent.replace(/\s/g, "");
+      const hasHangul = /[가-힣]/.test(word);
 
-      if (contentWithoutSpaces.includes(simplifiedWord)) {
-        foundWord = word;
-        break;
-      }
+      if (hasHangul) {
+        // ----- Korean (or mixed) blacklist logic: strong matching (space-removed etc.) -----
+        const simplifiedWord = word.replace(/[^가-힣a-z0-9]/g, "");
+        if (simplifiedWord.length < 2) continue;
 
-      const contentWords = simplifiedContent
-        .split(/\s+/)
-        .filter((w) => w.length > 0);
+        const contentWithoutSpaces = simplifiedContent.replace(/\s/g, "");
 
-      if (contentWords.some((w) => w.includes(simplifiedWord))) {
-        foundWord = word;
-        break;
+        // ex) "시 발" / "시발" / "시  발" 등 우회 방지
+        if (contentWithoutSpaces.includes(simplifiedWord)) {
+          foundWord = word;
+          break;
+        }
+
+        const contentWords = simplifiedContent
+          .split(/\s+/)
+          .filter((w) => w.length > 0);
+
+        if (contentWords.some((w) => w.includes(simplifiedWord))) {
+          foundWord = word;
+          break;
+        }
+      } else {
+        // ----- English / numeric blacklist logic: word-boundary match only -----
+        // Escape regex special characters
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        if (!escaped) continue;
+
+        // \bword\b → only match whole words, not inside "cook", "facebook", etc.
+        const regex = new RegExp(`\\b${escaped}\\b`, "i");
+
+        if (regex.test(normalizedContentExisting)) {
+          foundWord = word;
+          break;
+        }
       }
     }
 
     if (foundWord) {
-      if (BOT_CONFIG.msgLogChannelId) {
-        const logChannel = message.guild.channels.cache.get(
-          BOT_CONFIG.msgLogChannelId
-        );
+      // Console debug
+      console.log(
+        "[FILTER] Matched blacklist word:",
+        foundWord,
+        "in message:",
+        message.content
+      );
+
+      // first filterLogChannelId, nor msgLogChannelId fallback
+      const logChannelId =
+        BOT_CONFIG.filterLogChannelId || BOT_CONFIG.msgLogChannelId;
+
+      if (logChannelId) {
+        const logChannel = message.guild.channels.cache.get(logChannelId);
         if (logChannel) {
           const logEmbed = new EmbedBuilder()
             .setColor("#FF00FF")
@@ -679,6 +714,11 @@ client.on("messageCreate", async (message) => {
               {
                 name: "Channel",
                 value: `<#${message.channel.id}>`,
+                inline: true,
+              },
+              {
+                name: "Matched Word",
+                value: `\`${foundWord}\``,
                 inline: true,
               },
               {
@@ -697,6 +737,29 @@ client.on("messageCreate", async (message) => {
             );
         }
       }
+
+      if (
+        message.guild.members.me.permissions.has(
+          PermissionsBitField.Flags.ManageMessages
+        )
+      ) {
+        if (!message.deleted) {
+          message.delete().catch((err) => {
+            console.error(`Failed to delete message: ${message.id}`, err);
+          });
+        }
+      } else {
+        console.error(
+          "Bot lacks 'Manage Messages' permission to delete filtered messages."
+        );
+      }
+
+      const warningMessage = await message.channel.send(
+        `**${member}** Your message contained a blacklisted word and has been removed.`
+      );
+      setTimeout(() => warningMessage.delete().catch(() => {}), 7000);
+      return;
+    }
 
       if (
         message.guild.members.me.permissions.has(
@@ -1014,6 +1077,8 @@ if (cmd === "!leaderboard") {
     "!addword",
     "!removeword",
     "!listwords",
+    "!freeze",
+    "!unfreeze",
   ];
   if (modOnly.includes(cmd)) {
     if (!isModerator(message.member)) {
@@ -1033,6 +1098,8 @@ if (cmd === "!leaderboard") {
     "!clearmsglog": { key: "msgLogChannelId", type: "MESSAGE" },
     "!setmodlog": { key: "modLogChannelId", type: "MODERATION" },
     "!clearmodlog": { key: "modLogChannelId", type: "MODERATION" },
+    "!setfilterlog":   { key: "filterLogChannelId",  type: "FILTER" },
+    "!clearfilterlog": { key: "filterLogChannelId",  type: "FILTER" },
   };
 
   if (logCommands[cmd]) {
@@ -1077,9 +1144,134 @@ if (cmd === "!leaderboard") {
     return;
   }
 
-  // !ping
+  // !ping (test)
   if (cmd === "!ping") {
     return message.reply("Pong!");
+  }
+  
+  // =====================================================
+  // CHANNEL FREEZE / UNFREEZE (LOCKDOWN)
+  // =====================================================
+  if (cmd === "!freeze") {
+    // !freeze         -> freeze the current channel
+    // !freeze #channel -> freeze a specific channel
+
+    const targetChannel =
+      message.mentions.channels.first() || message.channel;
+
+    if (!targetChannel || targetChannel.type !== ChannelType.GuildText) {
+      const reply = await message.reply(
+        "Usage: `!freeze` (current channel) or `!freeze #channel`"
+      );
+      setTimeout(() => reply.delete().catch(() => {}), 3000);
+      return;
+    }
+
+    // Check bot permissions
+    const me = message.guild.members.me;
+    if (
+      !me.permissions.has(PermissionsBitField.Flags.ManageChannels)
+    ) {
+      const reply = await message.reply(
+        "⚠ I need the **Manage Channels** permission to freeze this channel."
+      );
+      setTimeout(() => reply.delete().catch(() => {}), 5000);
+      return;
+    }
+
+    try {
+      // Block sending messages for @everyone
+      await targetChannel.permissionOverwrites.edit(
+        message.guild.id,
+        {
+          SendMessages: false,
+          SendMessagesInThreads: false, // also block threads
+        }
+      );
+
+      const notice = await targetChannel.send(
+        `🔒 This channel has been **frozen** by ${message.member}. Messages are temporarily disabled.`
+      );
+
+      // Short feedback in the command channel if different
+      if (targetChannel.id !== message.channel.id) {
+        const reply = await message.reply(
+          `✅ Channel **#${targetChannel.name}** has been frozen.`
+        );
+        setTimeout(() => reply.delete().catch(() => {}), 5000);
+      }
+
+      // Optionally auto-delete the notice message later
+      setTimeout(() => notice.delete().catch(() => {}), 30_000);
+    } catch (err) {
+      console.error("[FREEZE] Failed to freeze channel:", err);
+      const reply = await message.reply(
+        "❌ An error occurred while freezing the channel."
+      );
+      setTimeout(() => reply.delete().catch(() => {}), 5000);
+    }
+
+    return;
+  }
+
+  if (cmd === "!unfreeze") {
+    // !unfreeze          -> unfreeze the current channel
+    // !unfreeze #channel -> unfreeze a specific channel
+
+    const targetChannel =
+      message.mentions.channels.first() || message.channel;
+
+    if (!targetChannel || targetChannel.type !== ChannelType.GuildText) {
+      const reply = await message.reply(
+        "Usage: `!unfreeze` (current channel) or `!unfreeze #channel`"
+      );
+      setTimeout(() => reply.delete().catch(() => {}), 3000);
+      return;
+    }
+
+    // Check bot permissions
+    const me = message.guild.members.me;
+    if (
+      !me.permissions.has(PermissionsBitField.Flags.ManageChannels)
+    ) {
+      const reply = await message.reply(
+        "⚠ I need the **Manage Channels** permission to unfreeze this channel."
+      );
+      setTimeout(() => reply.delete().catch(() => {}), 5000);
+      return;
+    }
+
+    try {
+      // Reset @everyone permissions for sending messages (back to default)
+      await targetChannel.permissionOverwrites.edit(
+        message.guild.id,
+        {
+          SendMessages: null,
+          SendMessagesInThreads: null,
+        }
+      );
+
+      const notice = await targetChannel.send(
+        `✅ This channel has been **unfrozen** by ${message.member}. You can chat again.`
+      );
+
+      if (targetChannel.id !== message.channel.id) {
+        const reply = await message.reply(
+          `✅ Channel **#${targetChannel.name}** has been unfrozen.`
+        );
+        setTimeout(() => reply.delete().catch(() => {}), 5000);
+      }
+
+      setTimeout(() => notice.delete().catch(() => {}), 30_000);
+    } catch (err) {
+      console.error("[UNFREEZE] Failed to unfreeze channel:", err);
+      const reply = await message.reply(
+        "❌ An error occurred while unfreezing the channel."
+      );
+      setTimeout(() => reply.delete().catch(() => {}), 5000);
+    }
+
+    return;
   }
 
   // BLACKLIST MANAGEMENT COMMANDS
@@ -1665,6 +1857,8 @@ if (cmd === "!syncrolexp") {
           "`!kick @user [reason]` — Kick a user.",
           "`!mute @user [minutes] [reason]` — Timeout a user.",
           "`!unmute @user` — Remove timeout.",
+          "`!freeze [#channel]` — Temporarily lock a channel so nobody can send messages.",
+          "`!unfreeze [#channel]` — Unlock a frozen channel and allow chatting again.",
           "`!addrole @user RoleName` — Add a role.",
           "`!removerole @user RoleName` — Remove a role.",
           "`!prune [1-100]` — Delete recent messages.",
@@ -1974,6 +2168,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
