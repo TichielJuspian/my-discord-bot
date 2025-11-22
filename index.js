@@ -727,16 +727,24 @@ client.on("messageCreate", async (message) => {
     await handleXpGain(message);
   }
 
-  // 2. COMMAND LOGIC
-  if (!isCommand) return;
+// 2. COMMAND LOGIC
+if (!isCommand) return;
 
-  // Delete original command message after 1 second
+const NON_DELETING_COMMANDS = [
+  "!ping",
+  "!invite",
+  "!rank",
+  "!level",
+  "!leaderboard",
+];
+
+if (!NON_DELETING_COMMANDS.includes(cmd)) {
   setTimeout(() => {
     if (!message.deleted) {
       message.delete().catch(() => {});
     }
   }, 1000);
-
+}
   // Permission checks
   const adminOnly = [
     "!clearmsglog",
@@ -875,7 +883,74 @@ if (cmd === "!level") {
   await message.channel.send({ embeds: [embed] });
   return;
 }
+  
+if (cmd === "!leaderboard") {
+  const guild = message.guild;
+  const guildId = guild.id;
+  const userId = message.author.id;
 
+  // Top 10
+  const topUsers = await xpCollection
+    .find({ guildId })
+    .sort({ xp: -1 })
+    .limit(10)
+    .toArray();
+
+  if (topUsers.length === 0) {
+    return message.reply("No leaderboard data yet.");
+  }
+
+  let description = "";
+  topUsers.forEach((user, index) => {
+    const member = guild.members.cache.get(user.userId);
+    const username = member ? member.user.username : `<@${user.userId}>`;
+    const medal =
+      index === 0 ? "🥇" :
+      index === 1 ? "🥈" :
+      index === 2 ? "🥉" : `#${index + 1}`;
+
+    description += `${medal} **${username}** — Level ${user.level} (${user.xp} XP)\n`;
+  });
+
+  // My info
+  const selfData = await xpCollection.findOne({ guildId, userId });
+  let selfRankText = "";
+
+  if (selfData) {
+    const rank = await xpCollection.countDocuments({
+      guildId,
+      xp: { $gt: selfData.xp },
+    }) + 1;
+
+    if (!topUsers.some((u) => u.userId === userId)) {
+      selfRankText = `\n👤 You are currently **#${rank}** — Level ${selfData.level} (${selfData.xp} XP)`;
+    } else {
+      selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
+    }
+  }
+
+  // 🔥 1st place PFP
+  const topUser = topUsers[0];
+  const topMember = guild.members.cache.get(topUser.userId);
+  const topAvatar = topMember
+    ? topMember.user.displayAvatarURL({ size: 256 })
+    : guild.iconURL({ size: 256 });
+
+  const lbEmbed = new EmbedBuilder()
+    .setColor("#FFD700")
+    .setTitle("🏆 Server Leaderboard (Top 10)")
+    .setDescription(description + selfRankText)
+    .setThumbnail(topAvatar) // use no.1 profile
+    .setFooter({
+      text: "Gosu General TV — Leaderboard",
+      iconURL: message.author.displayAvatarURL({ size: 128 }), //  PFP to footer icon
+    })
+    .setTimestamp();
+
+  await message.channel.send({ embeds: [lbEmbed] });
+  return;
+}
+  
   const modOnly = [
     "!kick",
     "!mute",
@@ -1846,6 +1921,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
