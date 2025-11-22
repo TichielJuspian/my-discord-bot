@@ -762,7 +762,7 @@ client.on("messageCreate", async (message) => {
       return;
     }
   }
-// 👉 General Command
+// 👉 General Commands (Rank / Leaderboard / Level)
 if (cmd === "!rank") {
   const userId = message.author.id;
   const guildId = message.guild.id;
@@ -774,15 +774,14 @@ if (cmd === "!rank") {
 
   const requiredXp = getRequiredXpForLevel(data.level + 1);
 
-  // 👉 Rank
+  // Rank calculation
   const rank = await xpCollection.countDocuments({
     guildId,
-    xp: { $gt: data.xp }
+    xp: { $gt: data.xp },
   }) + 1;
 
   const totalUsers = await xpCollection.countDocuments({ guildId });
 
-  // 👉 Next Unlock 계산
   const currentLevel = data.level || 0;
   const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
 
@@ -796,7 +795,7 @@ if (cmd === "!rank") {
     nextUnlockText = "\n**Next Unlock:** You have unlocked all available level roles!";
   }
 
-  const embed = new EmbedBuilder()
+  const rankEmbed = new EmbedBuilder()
     .setColor("#1E90FF")
     .setTitle(`📊 ${message.author.username}'s Rank`)
     .setDescription(
@@ -808,9 +807,10 @@ if (cmd === "!rank") {
     .setFooter({ text: "Gosu General TV — Rank" })
     .setTimestamp();
 
-  await message.channel.send({ embeds: [embed] });
+  await message.channel.send({ embeds: [rankEmbed] });
+  return;
 }
-  
+
 if (cmd === "!leaderboard") {
   const guildId = message.guild.id;
   const userId = message.author.id;
@@ -832,40 +832,52 @@ if (cmd === "!leaderboard") {
     description += `**${index + 1}. ${username}** — Level ${user.level} (${user.xp} XP)\n`;
   });
 
-  // 👉 Checking EXP
   const selfData = await xpCollection.findOne({ guildId, userId });
   let selfRankText = "";
 
-if (selfData) {
-  const rank = await xpCollection.countDocuments({
-    guildId,
-    xp: { $gt: selfData.xp }
-  }) + 1;
+  if (selfData) {
+    const rank = await xpCollection.countDocuments({
+      guildId,
+      xp: { $gt: selfData.xp },
+    }) + 1;
 
-  if (!topUsers.some((u) => u.userId === userId)) {
-    selfRankText = `\n👤 You are currently **#${rank}** — Level ${selfData.level} (${selfData.xp} XP)`;
-  } else {
-    selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
+    if (!topUsers.some((u) => u.userId === userId)) {
+      selfRankText = `\n👤 You are currently **#${rank}** — Level ${selfData.level} (${selfData.xp} XP)`;
+    } else {
+      selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
+    }
   }
+
+  const lbEmbed = new EmbedBuilder()
+    .setColor("#FFD700")
+    .setTitle("🏆 Server Leaderboard (Top 10)")
+    .setDescription(description + selfRankText)
+    .setFooter({ text: "Gosu General TV — Leaderboard" })
+    .setTimestamp();
+
+  await message.channel.send({ embeds: [lbEmbed] });
+  return;
 }
-  
+
 if (cmd === "!level") {
   const embed = new EmbedBuilder()
     .setColor("#32CD32")
     .setTitle("🎯 Level Rewards")
     .setDescription("Earn XP by chatting and unlock roles as you level up!");
 
+  // Level → Role list
   for (const entry of LEVEL_ROLES) {
     const role = message.guild.roles.cache.get(entry.roleId);
     if (role) {
       embed.addFields({
         name: `Level ${entry.level}`,
-        value: role.name, // 👉 역할 이름만 표시
+        value: role.name,
         inline: true,
       });
     }
   }
 
+  // Rewards
   const userId = message.author.id;
   const guildId = message.guild.id;
   const data = await xpCollection.findOne({ guildId, userId });
@@ -895,16 +907,7 @@ if (cmd === "!level") {
   embed.setFooter({ text: "Gosu General TV — Level System" }).setTimestamp();
 
   await message.channel.send({ embeds: [embed] });
-}
-
-  const embed = new EmbedBuilder()
-    .setColor("#FFD700")
-    .setTitle("🏆 Server Leaderboard (Top 10)")
-    .setDescription(description + selfRankText)
-    .setFooter({ text: "Gosu General TV — Leaderboard" })
-    .setTimestamp();
-
-  await message.channel.send({ embeds: [embed] });
+  return;
 }
 
   const modOnly = [
@@ -1311,8 +1314,8 @@ if (cmd === "!syncrolexp") {
           "- At least **10 likes or activity records**",
           "",
           "--------------------------------------------",
-                 "### 2️⃣ How to Connect Your Account to Discord",
-                  "1. Open **User Settings** (gear icon ⚙️ bottom-left)",
+          "### 2️⃣ How to Connect Your Account to Discord",
+          "1. Open **User Settings** (gear icon ⚙️ bottom-left)",
           "2. Select **Connections**",
           "3. Click **Add Connection**",
           "4. Choose TikTok / YouTube / Twitch / Facebook, then log in and link your account",
@@ -1877,6 +1880,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
