@@ -91,7 +91,9 @@ let blacklistCollection = null;
 // Map used for per-user XP cooldowns
 const xpCooldowns = new Map();
 
-// Helper: connect to MongoDB Atlas
+// ----------------------------------------------------
+// MongoDB: Connect
+// ----------------------------------------------------
 async function connectMongo() {
   if (!process.env.MONGODB_URI) {
     console.warn(
@@ -106,7 +108,7 @@ async function connectMongo() {
     const db = mongoClient.db(dbName);
     xpCollection = db.collection("user_xp");
     configCollection = db.collection("bot_config");
-    blacklistCollection = db.collection("blacklist");
+    blacklistCollection = db.collection("blacklist_words");
 
     console.log(`[MONGO] Connected to MongoDB database '${dbName}'.`);
   } catch (err) {
@@ -119,7 +121,9 @@ async function connectMongo() {
 // ----------------------------------------------------
 async function loadConfigFromMongo() {
   if (!configCollection) {
-    console.warn("[CONFIG] configCollection not ready; using default BOT_CONFIG.");
+    console.warn(
+      "[CONFIG] configCollection not ready; using default BOT_CONFIG."
+    );
     return;
   }
   try {
@@ -156,7 +160,9 @@ async function loadConfigFromMongo() {
 
 async function saveConfigToMongo() {
   if (!configCollection) {
-    console.warn("[CONFIG] configCollection not ready; cannot save BOT_CONFIG.");
+    console.warn(
+      "[CONFIG] configCollection not ready; cannot save BOT_CONFIG."
+    );
     return;
   }
   try {
@@ -179,63 +185,54 @@ async function saveConfigToMongo() {
 }
 
 // ----------------------------------------------------
-// MongoDB: Load / Save BLACKLISTED_WORDS
+// MongoDB Blacklist (per-word documents)
 // ----------------------------------------------------
-async function loadBlacklistFromMongo() {
+async function loadBlacklistFromDB() {
   if (!blacklistCollection) {
-    console.warn("[BLACKLIST] blacklistCollection not ready; using empty blacklist.");
+    console.warn("[BLACKLIST] blacklistCollection not ready; using empty list.");
     BLACKLISTED_WORDS = [];
     return;
   }
 
   try {
-    const doc = await blacklistCollection.findOne({ _id: "global" });
+    const docs = await blacklistCollection.find({}).toArray();
+    BLACKLISTED_WORDS = docs
+      .map((doc) => String(doc.word).toLowerCase().trim())
+      .filter((w) => w.length > 0);
+    console.log(
+      `[BLACKLIST] Loaded ${BLACKLISTED_WORDS.length} blacklisted words from MongoDB.`
+    );
+  } catch (err) {
+    console.error("[BLACKLIST] Failed to load blacklist from MongoDB:", err);
+    BLACKLISTED_WORDS = [];
+  }
+}
 
-    if (doc && Array.isArray(doc.words) && doc.words.length > 0) {
-      BLACKLISTED_WORDS = doc.words.map((w) => String(w).toLowerCase().trim());
-      console.log(`[BLACKLIST] Loaded ${BLACKLISTED_WORDS.length} words from MongoDB.`);
-      return;
-    }
+async function addBlacklistWord(word) {
+  if (!blacklistCollection) return;
+  const clean = String(word).toLowerCase().trim();
+  if (!clean) return;
 
-    const BLACKLIST_FILE_PATH = path.join(__dirname, "Data", "blacklist.json");
-
-    if (fs.existsSync(BLACKLIST_FILE_PATH)) {
-      console.log(`[BLACKLIST] Mongo empty -> importing from ${BLACKLIST_FILE_PATH}`);
-
-      const raw = fs.readFileSync(BLACKLIST_FILE_PATH, "utf8");
-      let arr = [];
-
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) arr = parsed;
-      } catch (err) {
-        console.error("[BLACKLIST] Failed to parse blacklist.json:", err);
-      }
-
-      BLACKLISTED_WORDS = arr.map((w) => String(w).toLowerCase().trim());
-
-      await blacklistCollection.updateOne(
-        { _id: "global" },
-        { $set: { words: BLACKLISTED_WORDS } },
-        { upsert: true }
-      );
-
-      console.log(`[BLACKLIST] Seeded ${BLACKLISTED_WORDS.length} words from file into MongoDB`);
-      return;
-    }
-
+  try {
     await blacklistCollection.updateOne(
-      { _id: "global" },
-      { $setOnInsert: { words: [] } },
+      { word: clean },
+      { $set: { word: clean } },
       { upsert: true }
     );
-
-    BLACKLISTED_WORDS = [];
-    console.log("[BLACKLIST] No data. Initialized empty MongoDB blacklist.");
-    
   } catch (err) {
-    console.error("[BLACKLIST] Error loading blacklist:", err);
-    BLACKLISTED_WORDS = [];
+    console.error("[BLACKLIST] Failed to add blacklist word:", err);
+  }
+}
+
+async function removeBlacklistWord(word) {
+  if (!blacklistCollection) return;
+  const clean = String(word).toLowerCase().trim();
+  if (!clean) return;
+
+  try {
+    await blacklistCollection.deleteOne({ word: clean });
+  } catch (err) {
+    console.error("[BLACKLIST] Failed to remove blacklist word:", err);
   }
 }
 
@@ -437,7 +434,7 @@ client.once("ready", async () => {
   console.log(`[BOT] Bot logged in as ${client.user.tag}`);
   await connectMongo();
   await loadConfigFromMongo();
-  await loadBlacklistFromMongo();
+  await loadBlacklistFromDB();
 });
 
 // =====================================================
@@ -710,11 +707,9 @@ client.on("messageCreate", async (message) => {
         }
       } else {
         // ----- English / numeric blacklist logic: word-boundary match only -----
-        // Escape regex special characters
         const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         if (!escaped) continue;
 
-        // \bword\b → only match whole words
         const regex = new RegExp(`\\b${escaped}\\b`, "i");
 
         if (regex.test(normalizedContentExisting)) {
@@ -725,7 +720,6 @@ client.on("messageCreate", async (message) => {
     }
 
     if (foundWord) {
-      // Console debug
       console.log(
         "[FILTER] Matched blacklist word:",
         foundWord,
@@ -862,7 +856,6 @@ client.on("messageCreate", async (message) => {
 
     const guild = message.guild;
 
-    // !rank  or  !rank @user
     const targetMember =
       message.mentions.members.first() || message.member;
 
@@ -884,7 +877,6 @@ client.on("messageCreate", async (message) => {
 
     const currentLevel = data.level || 0;
 
-    // Level calculation
     const currentLevelXp =
       currentLevel > 0 ? getRequiredXpForLevel(currentLevel) : 0;
     const nextLevelXp = getRequiredXpForLevel(currentLevel + 1);
@@ -893,9 +885,8 @@ client.on("messageCreate", async (message) => {
     const xpNeededThisLevel = Math.max(nextLevelXp - currentLevelXp, 1);
 
     let progress = xpIntoLevel / xpNeededThisLevel;
-    progress = Math.max(0, Math.min(1, progress)); // clamp 0~1
+    progress = Math.max(0, Math.min(1, progress));
 
-    //  Progress Bar (20칸)
     const totalBars = 20;
     const filledBars = Math.round(progress * totalBars);
     const emptyBars = totalBars - filledBars;
@@ -903,7 +894,6 @@ client.on("messageCreate", async (message) => {
       "█".repeat(filledBars > 0 ? filledBars : 0) +
       "░".repeat(emptyBars > 0 ? emptyBars : 0);
 
-    // Rank in server
     const rank =
       (await xpCollection.countDocuments({
         guildId,
@@ -912,7 +902,6 @@ client.on("messageCreate", async (message) => {
 
     const totalUsers = await xpCollection.countDocuments({ guildId });
 
-    // Next rewards
     const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
     let nextUnlockText = "";
     if (nextReward) {
@@ -926,8 +915,7 @@ client.on("messageCreate", async (message) => {
       nextUnlockText = "You have unlocked all available level roles!";
     }
 
-    // colors (레벨에 따라 색 다르게)
-    let color = "#00D1FF"; // basic
+    let color = "#00D1FF";
     if (currentLevel >= 100) color = "#FF1493";
     else if (currentLevel >= 70) color = "#FFD700";
     else if (currentLevel >= 40) color = "#9B59B6";
@@ -968,7 +956,6 @@ client.on("messageCreate", async (message) => {
       .setTitle("🎯 Level Rewards")
       .setDescription("Earn XP by chatting and unlock roles as you level up!");
 
-    // Level → Role list
     for (const entry of LEVEL_ROLES) {
       const role = message.guild.roles.cache.get(entry.roleId);
       if (role) {
@@ -980,7 +967,6 @@ client.on("messageCreate", async (message) => {
       }
     }
 
-    // Rewards
     const userId = message.author.id;
     const guildId = message.guild.id;
     const data = await xpCollection.findOne({ guildId, userId });
@@ -1028,7 +1014,6 @@ client.on("messageCreate", async (message) => {
     const guildId = guild.id;
     const userId = message.author.id;
 
-    // Top 10
     let topUsers;
     try {
       topUsers = await xpCollection
@@ -1063,7 +1048,6 @@ client.on("messageCreate", async (message) => {
       description += `${medal} **${username}** — Level ${user.level} (${user.xp} XP)\n`;
     });
 
-    // 내 정보
     const selfData = await xpCollection.findOne({ guildId, userId });
     let selfRankText = "";
 
@@ -1083,7 +1067,6 @@ client.on("messageCreate", async (message) => {
       selfRankText = "\n👤 You don't have any XP yet. Start chatting!";
     }
 
-    // 1등 프로필
     const topUser = topUsers[0];
     const topMember = guild.members.cache.get(topUser.userId);
     const topAvatar = topMember
@@ -1193,9 +1176,6 @@ client.on("messageCreate", async (message) => {
   // CHANNEL FREEZE / UNFREEZE (LOCKDOWN)
   // =====================================================
   if (cmd === "!freeze") {
-    // !freeze         -> freeze the current channel
-    // !freeze #channel -> freeze a specific channel
-
     const targetChannel =
       message.mentions.channels.first() || message.channel;
 
@@ -1207,7 +1187,6 @@ client.on("messageCreate", async (message) => {
       return;
     }
 
-    // Check bot permissions
     const me = message.guild.members.me;
     if (!me.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
       const reply = await message.reply(
@@ -1218,17 +1197,15 @@ client.on("messageCreate", async (message) => {
     }
 
     try {
-      // Block sending messages for @everyone
       await targetChannel.permissionOverwrites.edit(message.guild.id, {
         SendMessages: false,
-        SendMessagesInThreads: false, // also block threads
+        SendMessagesInThreads: false,
       });
 
       const notice = await targetChannel.send(
         `🔒 This channel has been **frozen** by ${message.member}. Messages are temporarily disabled.`
       );
 
-      // Short feedback in the command channel if different
       if (targetChannel.id !== message.channel.id) {
         const reply = await message.reply(
           `✅ Channel **#${targetChannel.name}** has been frozen.`
@@ -1236,7 +1213,6 @@ client.on("messageCreate", async (message) => {
         setTimeout(() => reply.delete().catch(() => {}), 5000);
       }
 
-      // Optionally auto-delete the notice message later
       setTimeout(() => notice.delete().catch(() => {}), 30_000);
     } catch (err) {
       console.error("[FREEZE] Failed to freeze channel:", err);
@@ -1250,9 +1226,6 @@ client.on("messageCreate", async (message) => {
   }
 
   if (cmd === "!unfreeze") {
-    // !unfreeze          -> unfreeze the current channel
-    // !unfreeze #channel -> unfreeze a specific channel
-
     const targetChannel =
       message.mentions.channels.first() || message.channel;
 
@@ -1264,7 +1237,6 @@ client.on("messageCreate", async (message) => {
       return;
     }
 
-    // Check bot permissions
     const me = message.guild.members.me;
     if (!me.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
       const reply = await message.reply(
@@ -1275,7 +1247,6 @@ client.on("messageCreate", async (message) => {
     }
 
     try {
-      // Reset @everyone permissions for sending messages (back to default)
       await targetChannel.permissionOverwrites.edit(message.guild.id, {
         SendMessages: null,
         SendMessagesInThreads: null,
@@ -1304,7 +1275,10 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
+  // =====================================================
   // BLACKLIST MANAGEMENT COMMANDS
+  // =====================================================
+
   // ========== !addword ==========
   if (cmd === "!addword") {
     const newWord = args.slice(1).join(" ").toLowerCase().trim();
@@ -1317,12 +1291,13 @@ client.on("messageCreate", async (message) => {
     }
 
     BLACKLISTED_WORDS.push(newWord);
-    await saveBlacklistToMongo(); // Save to DB
+    await addBlacklistWord(newWord);
 
     return message.reply(
       `✅ Added **${newWord}** to the blacklist. (${BLACKLISTED_WORDS.length} total)`
     );
   }
+
   // ========== !removeword ==========
   if (cmd === "!removeword") {
     const wordToRemove = args.slice(1).join(" ").toLowerCase().trim();
@@ -1341,7 +1316,7 @@ client.on("messageCreate", async (message) => {
       );
     }
 
-    await saveBlacklistToMongo(); // Save to DB
+    await removeBlacklistWord(wordToRemove);
 
     return message.reply(
       `✅ Removed **${wordToRemove}** from the blacklist. (${BLACKLISTED_WORDS.length} total)`
@@ -1366,7 +1341,7 @@ client.on("messageCreate", async (message) => {
   }
 
   if (cmd === "!reloadblacklist") {
-    await loadBlacklistFromMongo();
+    await loadBlacklistFromDB();
     const reply = await message.reply(
       `✅ Successfully reloaded **${BLACKLISTED_WORDS.length}** blacklisted words from MongoDB.`
     );
@@ -1550,14 +1525,12 @@ client.on("messageCreate", async (message) => {
       );
     }
 
-    // 1) Send the banner image above (same style as !welcome)
     await message.channel.send({
       files: [
         { attachment: NOTIFICATION_BANNER_URL, name: "notification.png" },
       ],
     });
 
-    // 2) Explanation embed
     const subscriberEmbed = new EmbedBuilder()
       .setColor("#00BFFF")
       .setTitle("🔔 Live Notification Subscription")
@@ -1600,12 +1573,10 @@ client.on("messageCreate", async (message) => {
       );
     }
 
-    // 1) Creator banner image
     await message.channel.send({
       files: [{ attachment: CREATOR_BANNER_URL, name: "verification.png" }],
     });
 
-    // 2) Creator information embed
     const creatorEmbed = new EmbedBuilder()
       .setColor("#FFB347")
       .setTitle("👑 Creator Role – Automatic Verification")
@@ -2192,4 +2163,3 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
-
