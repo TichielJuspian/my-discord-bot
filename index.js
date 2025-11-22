@@ -795,6 +795,8 @@ if (!NON_DELETING_COMMANDS.includes(cmd)) {
     "!clearactionlog",
     "!setmsglog",
     "!setactionlog",
+    "!setfilterlog", 
+    "!clearfilterlog", 
     "!setupjoin",
     "!welcome",
     "!subscriber",
@@ -2145,6 +2147,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
