@@ -751,6 +751,7 @@ client.on("messageCreate", async (message) => {
     "!welcome",
     "!subscriber",
     "!creator",
+    "!syncrolexp",
   ];
   if (adminOnly.includes(cmd)) {
     if (!isAdmin(message.member)) {
@@ -847,6 +848,7 @@ if (selfData) {
     selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
   }
 }
+  
 if (cmd === "!level") {
   const embed = new EmbedBuilder()
     .setColor("#32CD32")
@@ -1103,6 +1105,59 @@ if (cmd === "!level") {
     });
     return;
   }
+  
+if (cmd === "!syncrolexp") {
+  if (!isAdmin(message.member)) {
+    return message.reply("⛔ Only Admins can use this command.");
+  }
+
+  if (!xpCollection) {
+    return message.reply("⚠ MongoDB is not connected. Try again later.");
+  }
+
+  const guild = message.guild;
+  const guildId = guild.id;
+
+  const userLevelMap = new Map();
+
+  for (const entry of LEVEL_ROLES) {
+    const role = guild.roles.cache.get(entry.roleId);
+    if (!role) continue;
+
+    for (const [memberId, member] of role.members) {
+      const prev = userLevelMap.get(memberId) || 0;
+      if (entry.level > prev) {
+        userLevelMap.set(memberId, entry.level);
+      }
+    }
+  }
+
+  if (userLevelMap.size === 0) {
+    return message.reply("⚠ No members with level roles were found.");
+  }
+
+  let updatedCount = 0;
+
+  for (const [userId, level] of userLevelMap.entries()) {
+    const xp = getRequiredXpForLevel(level);
+
+    await xpCollection.updateOne(
+      { guildId, userId },
+      {
+        $setOnInsert: { guildId, userId },
+        $set: { level, xp },
+      },
+      { upsert: true }
+    );
+
+    updatedCount++;
+  }
+
+  await message.reply(
+    `✅ Synced XP/Levels for **${updatedCount}** members based on their level roles.`
+  );
+  return;
+}
 
   if (cmd === "!welcome") {
     const welcomeEmbed = new EmbedBuilder()
@@ -1822,6 +1877,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
