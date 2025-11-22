@@ -183,59 +183,59 @@ async function saveConfigToMongo() {
 // ----------------------------------------------------
 async function loadBlacklistFromMongo() {
   if (!blacklistCollection) {
-    console.warn(
-      "[BLACKLIST] blacklistCollection not ready; using empty blacklist."
-    );
+    console.warn("[BLACKLIST] blacklistCollection not ready; using empty blacklist.");
     BLACKLISTED_WORDS = [];
     return;
   }
 
   try {
     const doc = await blacklistCollection.findOne({ _id: "global" });
-    if (doc && Array.isArray(doc.words)) {
-      BLACKLISTED_WORDS = doc.words.map((word) =>
-        String(word).toLowerCase().trim()
-      );
-      console.log(
-        `[BLACKLIST] Loaded ${BLACKLISTED_WORDS.length} words from MongoDB.`
-      );
-    } else {
-      // Create empty document if not exists
+
+    if (doc && Array.isArray(doc.words) && doc.words.length > 0) {
+      BLACKLISTED_WORDS = doc.words.map((w) => String(w).toLowerCase().trim());
+      console.log(`[BLACKLIST] Loaded ${BLACKLISTED_WORDS.length} words from MongoDB.`);
+      return;
+    }
+
+    const BLACKLIST_FILE_PATH = path.join(__dirname, "Data", "blacklist.json");
+
+    if (fs.existsSync(BLACKLIST_FILE_PATH)) {
+      console.log(`[BLACKLIST] Mongo empty -> importing from ${BLACKLIST_FILE_PATH}`);
+
+      const raw = fs.readFileSync(BLACKLIST_FILE_PATH, "utf8");
+      let arr = [];
+
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) arr = parsed;
+      } catch (err) {
+        console.error("[BLACKLIST] Failed to parse blacklist.json:", err);
+      }
+
+      BLACKLISTED_WORDS = arr.map((w) => String(w).toLowerCase().trim());
+
       await blacklistCollection.updateOne(
         { _id: "global" },
-        { $setOnInsert: { words: [] } },
+        { $set: { words: BLACKLISTED_WORDS } },
         { upsert: true }
       );
-      BLACKLISTED_WORDS = [];
-      console.log(
-        "[BLACKLIST] No existing blacklist document found. Created empty one in MongoDB."
-      );
+
+      console.log(`[BLACKLIST] Seeded ${BLACKLISTED_WORDS.length} words from file into MongoDB`);
+      return;
     }
-  } catch (err) {
-    console.error("[BLACKLIST] Error loading blacklist from MongoDB:", err);
-    BLACKLISTED_WORDS = [];
-  }
-}
 
-async function saveBlacklistToMongo() {
-  if (!blacklistCollection) {
-    console.warn(
-      "[BLACKLIST] blacklistCollection not ready; cannot save blacklist."
-    );
-    return;
-  }
-
-  try {
     await blacklistCollection.updateOne(
       { _id: "global" },
-      { $set: { words: BLACKLISTED_WORDS } },
+      { $setOnInsert: { words: [] } },
       { upsert: true }
     );
-    console.log(
-      `[BLACKLIST] Saved ${BLACKLISTED_WORDS.length} words to MongoDB.`
-    );
+
+    BLACKLISTED_WORDS = [];
+    console.log("[BLACKLIST] No data. Initialized empty MongoDB blacklist.");
+    
   } catch (err) {
-    console.error("[BLACKLIST] Error saving blacklist to MongoDB:", err);
+    console.error("[BLACKLIST] Error loading blacklist:", err);
+    BLACKLISTED_WORDS = [];
   }
 }
 
@@ -2192,3 +2192,4 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
