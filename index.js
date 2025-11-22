@@ -17,6 +17,7 @@ const {
   ButtonBuilder,
   ActionRowBuilder,
   ChannelType,
+  Collection,
 } = require("discord.js");
 
 const { MongoClient } = require("mongodb");
@@ -368,6 +369,8 @@ const client = new Client({
     Partials.GuildMember,
   ],
 });
+
+client.commands = new Collection();
 
 // --------------------
 // Helper: Role Checking
@@ -1673,3 +1676,4 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
