@@ -932,229 +932,77 @@ if (cmd === "!leaderboard") {
   const guildId = guild.id;
   const userId = message.author.id;
 
-  // Top 10 from DB
-  const topUsers = await xpCollection
-    .find({ guildId })
-    .sort({ xp: -1 })
-    .limit(10)
-    .toArray();
+  // Top 10
+  let topUsers;
+  try {
+    topUsers = await xpCollection
+      .find({ guildId })
+      .sort({ xp: -1 })
+      .limit(10)
+      .toArray();
+  } catch (err) {
+    console.error("[LEADERBOARD] DB error:", err);
+    return message.reply("⚠ Failed to load leaderboard. Please try again later.");
+  }
 
-  if (topUsers.length === 0) {
+  if (!topUsers || topUsers.length === 0) {
     return message.reply("No leaderboard data yet.");
   }
 
-  // ==========================
-  // 1) Create Canvas
-  // ==========================
-  const width = 900;
-  const height = 550;
-  const canvas = Canvas.createCanvas(width, height);
-  const ctx = canvas.getContext("2d");
+  let description = "";
+  topUsers.forEach((user, index) => {
+    const member = guild.members.cache.get(user.userId);
+    const username = member ? member.user.username : `<@${user.userId}>`;
+    const medal =
+      index === 0 ? "🥇" :
+      index === 1 ? "🥈" :
+      index === 2 ? "🥉" : `#${index + 1}`;
 
-  // Background gradient
-  const gradient = ctx.createLinearGradient(0, 0, width, height);
-  gradient.addColorStop(0, "#141E30");
-  gradient.addColorStop(1, "#243B55");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
+    description += `${medal} **${username}** — Level ${user.level} (${user.xp} XP)\n`;
+  });
 
-  // Top title bar
-  ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
-  // rounded rectangle
-  const radius = 20;
-  const x = 25;
-  const y = 20;
-  const w = width - 50;
-  const h = 80;
-
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + w - radius, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-  ctx.lineTo(x + w, y + h - radius);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-  ctx.lineTo(x + radius, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.font = "bold 28px sans-serif";
-  ctx.fillStyle = "#FFD700";
-  ctx.textAlign = "left";
-  ctx.fillText("Gosu General TV — Leaderboard", 50, 65);
-
-  ctx.font = "16px sans-serif";
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillText("Top 10 Chatters by XP", 50, 95);
-
-  // ==========================
-  // 2) Draw each row
-  // ==========================
-  const rowStartY = 120;
-  const rowHeight = 40;
-  const avatarSize = 32;
-
-  for (let i = 0; i < topUsers.length; i++) {
-    const userData = topUsers[i];
-    const member = guild.members.cache.get(userData.userId);
-
-    const username = member ? member.user.username : `Unknown (${userData.userId})`;
-    const level = userData.level || 0;
-    const xp = userData.xp || 0;
-
-    const rowY = rowStartY + i * rowHeight;
-
-    // Row background
-    ctx.fillStyle = i % 2 === 0 ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.25)";
-
-    const rx = 25;
-    const ry = rowY;
-    const rw = width - 50;
-    const rh = rowHeight - 6;
-    const rr = 10;
-
-    ctx.beginPath();
-    ctx.moveTo(rx + rr, ry);
-    ctx.lineTo(rx + rw - rr, ry);
-    ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + rr);
-    ctx.lineTo(rx + rw, ry + rh - rr);
-    ctx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - rr, ry + rh);
-    ctx.lineTo(rx + rr, ry + rh);
-    ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - rr);
-    ctx.lineTo(rx, ry + rr);
-    ctx.quadraticCurveTo(rx, ry, rx + rr, ry);
-    ctx.closePath();
-    ctx.fill();
-
-    // Rank medal
-    ctx.font = "bold 18px sans-serif";
-    let medal = `#${i + 1}`;
-    let medalColor = "#FFFFFF";
-
-    if (i === 0) {
-      medal = "🥇";
-      medalColor = "#FFD700";
-    } else if (i === 1) {
-      medal = "🥈";
-      medalColor = "#C0C0C0";
-    } else if (i === 2) {
-      medal = "🥉";
-      medalColor = "#CD7F32";
-    }
-
-    ctx.fillStyle = medalColor;
-    ctx.textAlign = "left";
-    ctx.fillText(medal, 40, rowY + 24);
-
-    // Avatar (circle)
-    let avatar = null;
-    if (member) {
-      try {
-        const avatarURL = member.user.displayAvatarURL({
-          extension: "png",
-          size: 128,
-        });
-        avatar = await Canvas.loadImage(avatarURL);
-      } catch (e) {
-        avatar = null;
-      }
-    }
-
-    const avatarX = 80;
-    const avatarY = rowY + 4;
-
-    if (avatar) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(
-        avatarX + avatarSize / 2,
-        avatarY + avatarSize / 2,
-        avatarSize / 2,
-        0,
-        Math.PI * 2,
-        true
-      );
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
-      ctx.restore();
-    } else {
-      ctx.fillStyle = "#555";
-      ctx.beginPath();
-      ctx.arc(
-        avatarX + avatarSize / 2,
-        avatarY + avatarSize / 2,
-        avatarSize / 2,
-        0,
-        Math.PI * 2,
-        true
-      );
-      ctx.fill();
-    }
-
-    // Username
-    ctx.font = "bold 18px sans-serif";
-    ctx.fillStyle = "#FFFFFF";
-    ctx.textAlign = "left";
-    ctx.fillText(username, 130, rowY + 24);
-
-    // Level text
-    ctx.font = "14px sans-serif";
-    ctx.fillStyle = "#A9CCE3";
-    ctx.textAlign = "right";
-    ctx.fillText(`Lv.${level}`, width - 230, rowY + 22);
-
-    // XP text
-    ctx.font = "12px sans-serif";
-    ctx.fillStyle = "#D6EAF8";
-    ctx.fillText(`${xp.toLocaleString()} XP`, width - 60, rowY + 22);
-  }
-
-  // ==========================
-  // 3) Self rank text (bottom)
-  // ==========================
+  // 내 정보
   const selfData = await xpCollection.findOne({ guildId, userId });
   let selfRankText = "";
 
   if (selfData) {
-    const rank = (await xpCollection.countDocuments({
-      guildId,
-      xp: { $gt: selfData.xp },
-    })) + 1;
+    const rank =
+      (await xpCollection.countDocuments({
+        guildId,
+        xp: { $gt: selfData.xp },
+      })) + 1;
 
-    if (rank <= 10) {
-      selfRankText = `You are in the Top 10! (Rank #${rank})`;
+    if (!topUsers.some((u) => u.userId === userId)) {
+      selfRankText = `\n👤 You are currently **#${rank}** — Level ${selfData.level} (${selfData.xp} XP)`;
     } else {
-      selfRankText = `Your Rank: #${rank} — Level ${selfData.level} (${selfData.xp} XP)`;
+      selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
     }
   } else {
-    selfRankText = "You don't have any XP yet. Start chatting!";
+    selfRankText = "\n👤 You don't have any XP yet. Start chatting!";
   }
 
-  // ==========================
-  // 4) Send embed with image
-  // ==========================
-  const attachment = {
-    attachment: canvas.toBuffer(),
-    name: "leaderboard.png",
-  };
+  // 1등 프로필
+  const topUser = topUsers[0];
+  const topMember = guild.members.cache.get(topUser.userId);
+  const topAvatar = topMember
+    ? topMember.user.displayAvatarURL({ size: 256 })
+    : guild.iconURL({ size: 256 });
 
   const lbEmbed = new EmbedBuilder()
     .setColor("#FFD700")
     .setTitle("🏆 Server Leaderboard (Top 10)")
-    .setDescription(selfRankText)
-    .setImage("attachment://leaderboard.png")
+    .setDescription(description + selfRankText)
+    .setThumbnail(topAvatar)
     .setFooter({
       text: "Gosu General TV — Leaderboard",
       iconURL: message.author.displayAvatarURL({ size: 128 }),
     })
     .setTimestamp();
 
-  await message.channel.send({ embeds: [lbEmbed], files: [attachment] });
+  await message.channel.send({ embeds: [lbEmbed] });
   return;
 }
+
   
   const modOnly = [
     "!kick",
@@ -2126,5 +1974,6 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
