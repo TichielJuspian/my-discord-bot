@@ -755,29 +755,6 @@ client.on("messageCreate", async (message) => {
       }
 
       const warningMessage = await message.channel.send(
-        `**${member}** Your message contained a blacklisted word and has been removed.`
-      );
-      setTimeout(() => warningMessage.delete().catch(() => {}), 7000);
-      return;
-    }
-
-      if (
-        message.guild.members.me.permissions.has(
-          PermissionsBitField.Flags.ManageMessages
-        )
-      ) {
-        if (!message.deleted) {
-          message.delete().catch((err) => {
-            console.error(`Failed to delete message: ${message.id}`, err);
-          });
-        }
-      } else {
-        console.error(
-          "Bot lacks 'Manage Messages' permission to delete filtered messages."
-        );
-      }
-
-      const warningMessage = await message.channel.send(
         `**${member}** Watch your language! Your message contained a blacklisted word and has been removed.`
       );
       setTimeout(() => warningMessage.delete().catch(() => {}), 7000);
@@ -2168,6 +2145,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
