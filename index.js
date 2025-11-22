@@ -764,17 +764,34 @@ client.on("messageCreate", async (message) => {
   }
 // 👉 General Commands (Rank / Leaderboard / Level)
 if (cmd === "!rank") {
-  const userId = message.author.id;
-  const guildId = message.guild.id;
+  const guild = message.guild;
+
+  // 👉 User Logic
+  // !rank              → Myself
+  // !rank @user        → Ping user
+  const targetMember =
+    message.mentions.members.first() || message.member;
+
+  if (!targetMember) {
+    return message.reply("⚠ Could not find that user.");
+  }
+
+  const userId = targetMember.id;
+  const guildId = guild.id;
 
   const data = await xpCollection.findOne({ guildId, userId });
   if (!data) {
-    return message.reply("You don't have any XP yet. Start chatting to earn some!");
+    return message.reply(
+      `${targetMember.id === message.author.id
+        ? "You don't"
+        : `${targetMember.user.username} doesn't`
+      } have any XP yet. Start chatting to earn some!`
+    );
   }
 
   const requiredXp = getRequiredXpForLevel(data.level + 1);
 
-  // Rank calculation
+  // 👉 Rank calulation
   const rank = await xpCollection.countDocuments({
     guildId,
     xp: { $gt: data.xp },
@@ -782,12 +799,13 @@ if (cmd === "!rank") {
 
   const totalUsers = await xpCollection.countDocuments({ guildId });
 
+  // 👉 Next Unlock calulation
   const currentLevel = data.level || 0;
   const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
 
   let nextUnlockText = "";
   if (nextReward) {
-    const nextRole = message.guild.roles.cache.get(nextReward.roleId);
+    const nextRole = guild.roles.cache.get(nextReward.roleId);
     if (nextRole) {
       nextUnlockText = `\n**Next Unlock:** Level ${nextReward.level} — ${nextRole.name}`;
     }
@@ -797,7 +815,7 @@ if (cmd === "!rank") {
 
   const rankEmbed = new EmbedBuilder()
     .setColor("#1E90FF")
-    .setTitle(`📊 ${message.author.username}'s Rank`)
+    .setTitle(`📊 ${targetMember.user.username}'s Rank`)
     .setDescription(
       `**Level:** ${data.level}\n` +
       `**XP:** ${data.xp} / ${requiredXp}\n` +
@@ -810,8 +828,8 @@ if (cmd === "!rank") {
   await message.channel.send({ embeds: [rankEmbed] });
   return;
 }
-
-if (cmd === "!leaderboard") {
+  
+  if (cmd === "!leaderboard") {
   const guildId = message.guild.id;
   const userId = message.author.id;
 
@@ -1880,6 +1898,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
