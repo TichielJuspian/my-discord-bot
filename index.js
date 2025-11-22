@@ -766,9 +766,6 @@ client.on("messageCreate", async (message) => {
 if (cmd === "!rank") {
   const guild = message.guild;
 
-  // 👉 User Logic
-  // !rank              → Myself
-  // !rank @user        → Ping user
   const targetMember =
     message.mentions.members.first() || message.member;
 
@@ -791,7 +788,6 @@ if (cmd === "!rank") {
 
   const requiredXp = getRequiredXpForLevel(data.level + 1);
 
-  // 👉 Rank calulation
   const rank = await xpCollection.countDocuments({
     guildId,
     xp: { $gt: data.xp },
@@ -799,7 +795,6 @@ if (cmd === "!rank") {
 
   const totalUsers = await xpCollection.countDocuments({ guildId });
 
-  // 👉 Next Unlock calulation
   const currentLevel = data.level || 0;
   const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
 
@@ -807,73 +802,26 @@ if (cmd === "!rank") {
   if (nextReward) {
     const nextRole = guild.roles.cache.get(nextReward.roleId);
     if (nextRole) {
-      nextUnlockText = `\n**Next Unlock:** Level ${nextReward.level} — ${nextRole.name}`;
+      nextUnlockText = `Next Unlock: **Level ${nextReward.level}** → ${nextRole.name}`;
     }
   } else {
-    nextUnlockText = "\n**Next Unlock:** You have unlocked all available level roles!";
+    nextUnlockText = "You unlocked all available rewards!";
   }
 
   const rankEmbed = new EmbedBuilder()
-    .setColor("#1E90FF")
-    .setTitle(`📊 ${targetMember.user.username}'s Rank`)
-    .setDescription(
-      `**Level:** ${data.level}\n` +
-      `**XP:** ${data.xp} / ${requiredXp}\n` +
-      `**Rank:** #${rank} out of ${totalUsers}` +
-      nextUnlockText
+    .setColor("#00D1FF")
+    .setTitle(`${targetMember.user.username}'s Profile`)
+    .setThumbnail(targetMember.user.displayAvatarURL({ size: 256 })) // 🔥 여기 추가됨
+    .addFields(
+      { name: "📌 Level", value: `${data.level}`, inline: true },
+      { name: "⭐ XP", value: `${data.xp} / ${requiredXp}`, inline: true },
+      { name: "🏆 Rank", value: `#${rank} of ${totalUsers}`, inline: true },
+      { name: "🎯 Next Reward", value: nextUnlockText, inline: false }
     )
-    .setFooter({ text: "Gosu General TV — Rank" })
+    .setFooter({ text: "Gosu General TV — Rank System" })
     .setTimestamp();
 
   await message.channel.send({ embeds: [rankEmbed] });
-  return;
-}
-  
-  if (cmd === "!leaderboard") {
-  const guildId = message.guild.id;
-  const userId = message.author.id;
-
-  const topUsers = await xpCollection
-    .find({ guildId })
-    .sort({ xp: -1 })
-    .limit(10)
-    .toArray();
-
-  if (topUsers.length === 0) {
-    return message.reply("No leaderboard data yet.");
-  }
-
-  let description = "";
-  topUsers.forEach((user, index) => {
-    const member = message.guild.members.cache.get(user.userId);
-    const username = member ? member.user.username : `<@${user.userId}>`;
-    description += `**${index + 1}. ${username}** — Level ${user.level} (${user.xp} XP)\n`;
-  });
-
-  const selfData = await xpCollection.findOne({ guildId, userId });
-  let selfRankText = "";
-
-  if (selfData) {
-    const rank = await xpCollection.countDocuments({
-      guildId,
-      xp: { $gt: selfData.xp },
-    }) + 1;
-
-    if (!topUsers.some((u) => u.userId === userId)) {
-      selfRankText = `\n👤 You are currently **#${rank}** — Level ${selfData.level} (${selfData.xp} XP)`;
-    } else {
-      selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
-    }
-  }
-
-  const lbEmbed = new EmbedBuilder()
-    .setColor("#FFD700")
-    .setTitle("🏆 Server Leaderboard (Top 10)")
-    .setDescription(description + selfRankText)
-    .setFooter({ text: "Gosu General TV — Leaderboard" })
-    .setTimestamp();
-
-  await message.channel.send({ embeds: [lbEmbed] });
   return;
 }
 
@@ -1898,6 +1846,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
