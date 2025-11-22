@@ -145,7 +145,7 @@ async function handleXpGain(message) {
   try {
     const filter = { guildId, userId };
     const update = {
-      $setOnInsert: { guildId, userId, xp: 0, level: 0 },
+      $setOnInsert: { guildId, userId, level: 0 },
       $inc: { xp: xpGain },
     };
 
@@ -1822,6 +1822,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
