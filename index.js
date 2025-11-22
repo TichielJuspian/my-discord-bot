@@ -1,4 +1,3 @@
-```js
 // =====================================================
 // Gosu Custom Discord Bot (Final Build - All Features Merged)
 // Discord.js v14 + MongoDB Leveling + MongoDB Config/Blacklist
@@ -2203,3 +2202,4 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
