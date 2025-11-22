@@ -21,7 +21,7 @@ const {
 } = require("discord.js");
 
 const { MongoClient } = require("mongodb");
-const Canvas = require("canvas");
+const Canvas = require("@napi-rs/canvas");
 
 // -----------------------------
 // FILE PATH CONSTANTS
@@ -2127,3 +2127,4 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
