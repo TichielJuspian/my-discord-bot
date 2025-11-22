@@ -781,20 +781,35 @@ if (cmd === "!rank") {
 
   const totalUsers = await xpCollection.countDocuments({ guildId });
 
+  // 👉 Next Unlock 계산
+  const currentLevel = data.level || 0;
+  const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
+
+  let nextUnlockText = "";
+  if (nextReward) {
+    const nextRole = message.guild.roles.cache.get(nextReward.roleId);
+    if (nextRole) {
+      nextUnlockText = `\n**Next Unlock:** Level ${nextReward.level} — ${nextRole.name}`;
+    }
+  } else {
+    nextUnlockText = "\n**Next Unlock:** You have unlocked all available level roles!";
+  }
+
   const embed = new EmbedBuilder()
     .setColor("#1E90FF")
     .setTitle(`📊 ${message.author.username}'s Rank`)
     .setDescription(
       `**Level:** ${data.level}\n` +
       `**XP:** ${data.xp} / ${requiredXp}\n` +
-      `**Rank:** #${rank} out of ${totalUsers}`
+      `**Rank:** #${rank} out of ${totalUsers}` +
+      nextUnlockText
     )
     .setFooter({ text: "Gosu General TV — Rank" })
     .setTimestamp();
 
   await message.channel.send({ embeds: [embed] });
 }
-
+  
 if (cmd === "!leaderboard") {
   const guildId = message.guild.id;
   const userId = message.author.id;
@@ -831,6 +846,53 @@ if (selfData) {
   } else {
     selfRankText = `\n👤 You are in the **Top 10!** Great job!`;
   }
+}
+if (cmd === "!level") {
+  const embed = new EmbedBuilder()
+    .setColor("#32CD32")
+    .setTitle("🎯 Level Rewards")
+    .setDescription("Earn XP by chatting and unlock roles as you level up!");
+
+  for (const entry of LEVEL_ROLES) {
+    const role = message.guild.roles.cache.get(entry.roleId);
+    if (role) {
+      embed.addFields({
+        name: `Level ${entry.level}`,
+        value: role.name, // 👉 역할 이름만 표시
+        inline: true,
+      });
+    }
+  }
+
+  const userId = message.author.id;
+  const guildId = message.guild.id;
+  const data = await xpCollection.findOne({ guildId, userId });
+
+  if (data) {
+    const currentLevel = data.level || 0;
+    const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
+
+    if (nextReward) {
+      const nextRole = message.guild.roles.cache.get(nextReward.roleId);
+      if (nextRole) {
+        embed.addFields({
+          name: "Next Unlock",
+          value: `At **Level ${nextReward.level}** you will earn role: **${nextRole.name}**`,
+          inline: false,
+        });
+      }
+    } else {
+      embed.addFields({
+        name: "Max Rewards",
+        value: "You have unlocked all available level roles!",
+        inline: false,
+      });
+    }
+  }
+
+  embed.setFooter({ text: "Gosu General TV — Level System" }).setTimestamp();
+
+  await message.channel.send({ embeds: [embed] });
 }
 
   const embed = new EmbedBuilder()
@@ -1442,7 +1504,10 @@ if (selfData) {
         [
           "**General**",
           "`!ping` — Check if the bot is online.",
-          "`!invite` — Show the server invite link.",
+          "`!invite` — Show the server invite link.",     
+          "`!rank` — View your current level, XP, and rank.",
+          "`!leaderboard` — See the top 10 users by XP.",
+          "`!level` — View level rewards and role unlocks.",          
           "",
           "**Moderator Commands**",
           "`!kick @user [reason]` — Kick a user.",
@@ -1757,5 +1822,6 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
