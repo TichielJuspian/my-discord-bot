@@ -267,11 +267,18 @@ async function removeBlacklistWord(word) {
 }
 
 // ----------------------------------------------------
-// XP Calulation
+// XP Calculation
 // ----------------------------------------------------
 function getRequiredXpForLevel(level) {
-
   return 100 * level * level + 100;
+}
+
+function getTotalXpForLevel(level) {
+  let total = 0;
+  for (let i = 1; i <= level; i++) {
+    total += getRequiredXpForLevel(i);
+  }
+  return total;
 }
 
 async function handleXpGain(message) {
@@ -313,10 +320,9 @@ async function handleXpGain(message) {
     const totalXp = data.xp; 
     let currentLevel = data.level || 0;
     let newLevel = currentLevel;
-
     while (
       newLevel < 1000 &&
-      totalXp >= getRequiredXpForLevel(newLevel + 1)
+      totalXp >= getTotalXpForLevel(newLevel + 1)
     ) {
       newLevel++;
     }
@@ -2163,4 +2169,5 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
