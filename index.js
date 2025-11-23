@@ -1,6 +1,6 @@
 // =====================================================
-// Gosu Custom Discord Bot (Final Build - All Features Merged)
-// Discord.js v14 + MongoDB Leveling + MongoDB Config/Blacklist
+// Gosu Custom Discord Bot (Refactored)
+// Discord.js v14 + MongoDB Leveling + Config/Blacklist
 // =====================================================
 require("dotenv").config();
 
@@ -46,7 +46,6 @@ const SUB_ROLE = "497654614729031681";
 // VOICE CHANNEL CREATOR CONFIG
 // ----------------------------------------------------
 const CREATE_CHANNEL_IDS = ["720658789832851487", "1441159364298936340"];
-
 const TEMP_VOICE_CHANNEL_IDS = new Set();
 
 // ----------------------------------------------------
@@ -84,7 +83,7 @@ let blacklistCollection = null;
 const xpCooldowns = new Map();
 
 // ----------------------------------------------------
-// Mongo
+// MongoDB Connection
 // ----------------------------------------------------
 async function connectMongo() {
   if (!process.env.MONGODB_URI) {
@@ -233,7 +232,7 @@ async function loadBlacklistFromMongo() {
 }
 
 // ----------------------------------------------------
-// MongoDB Blacklist Helpers (permanent save)
+// MongoDB Blacklist Helpers
 // ----------------------------------------------------
 async function addBlacklistWord(word) {
   if (!blacklistCollection) return;
@@ -266,19 +265,22 @@ async function removeBlacklistWord(word) {
   }
 }
 
-// ----------------------------------------------------
-// XP Calculation
-// ----------------------------------------------------
-function getRequiredXpForLevel(level) {
+// ====================================================
+// XP / LEVEL SYSTEM (REFactored)
+// ====================================================
 
+// XP required to REACH a level (total cumulative XP threshold)
+function getRequiredXpForLevel(level) {
   return 100 * level * level + 100;
 }
 
+// Handles XP gain on message
 async function handleXpGain(message) {
   if (!xpCollection) return;
 
   const member = message.member;
   const user = message.author;
+
   if (!member || !message.guild || user.bot) return;
 
   const guildId = message.guild.id;
@@ -292,13 +294,13 @@ async function handleXpGain(message) {
 
   const xpGain =
     Math.floor(Math.random() * (XP_CONFIG.maxXP - XP_CONFIG.minXP + 1)) +
-    XP_CONFIG.minXP; // 
+    XP_CONFIG.minXP;
 
   try {
     const filter = { guildId, userId };
     const update = {
       $setOnInsert: { guildId, userId, level: 0 },
-      $inc: { xp: xpGain }, 
+      $inc: { xp: xpGain }, // total XP
     };
 
     const result = await xpCollection.findOneAndUpdate(filter, update, {
@@ -309,10 +311,11 @@ async function handleXpGain(message) {
     const data = result.value;
     if (!data) return;
 
-    const totalXp = data.xp; 
+    const totalXp = data.xp;
     let currentLevel = data.level || 0;
     let newLevel = currentLevel;
 
+    // Level up while totalXp crosses the threshold for next levels
     while (
       newLevel < 1000 &&
       totalXp >= getRequiredXpForLevel(newLevel + 1)
@@ -324,6 +327,7 @@ async function handleXpGain(message) {
 
     await xpCollection.updateOne(filter, { $set: { level: newLevel } });
 
+    // Grant level roles
     for (const entry of LEVEL_ROLES) {
       if (
         currentLevel < entry.level &&
@@ -346,7 +350,7 @@ async function handleXpGain(message) {
       .setTitle("✨ Level Up!")
       .setDescription(
         `> ${member} has reached **Level ${newLevel}**!\n` +
-        "Keep chatting and participating to gain more experience."
+          "Keep chatting and participating to gain more experience."
       )
       .setFooter({ text: "Gosu General TV — Level System" })
       .setTimestamp();
@@ -357,21 +361,47 @@ async function handleXpGain(message) {
   }
 }
 
+// ----------------------------------------------------
+// Helper: Moderation Log
+// ----------------------------------------------------
+async function sendModLog(guild, user, action, moderator, reason, duration) {
+  if (!BOT_CONFIG.modLogChannelId) return;
 
-    const levelEmbed = new EmbedBuilder()
-      .setColor("#00FF7F")
-      .setTitle("✨ Level Up!")
-      .setDescription(
-        `> ${member} has reached **Level ${newLevel}**!\n` +
-        "Keep chatting and participating to gain more experience."
-      )
-      .setFooter({ text: "Gosu General TV — Level System" })
-      .setTimestamp();
+  const logChannel = guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
+  if (!logChannel) return;
 
-    await message.channel.send({ embeds: [levelEmbed] });
-  } catch (err) {
-    console.error("[LEVEL] Error while processing XP:", err);
+  const logEmbed = new EmbedBuilder()
+    .setColor(
+      action === "BAN" ? "#B22222" : action === "KICK" ? "#FF4500" : "#4169E1"
+    )
+    .setTitle(`🔨 User ${action}`)
+    .addFields(
+      { name: "Target", value: `${user.tag} (${user.id})`, inline: false },
+      {
+        name: "Moderator",
+        value: `${moderator.tag} (${moderator.id})`,
+        inline: true,
+      },
+      {
+        name: "Reason",
+        value: reason || "Not specified",
+        inline: true,
+      }
+    )
+    .setTimestamp()
+    .setFooter({ text: `Action: ${action}` });
+
+  if (duration) {
+    logEmbed.addFields({
+      name: "Duration",
+      value: `${duration} minutes`,
+      inline: true,
+    });
   }
+
+  logChannel
+    .send({ embeds: [logEmbed] })
+    .catch((err) => console.error("[ERROR] Error sending mod log:", err));
 }
 
 // ----------------------------------------------------
@@ -447,7 +477,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   const guild = newState.guild || oldState.guild;
   if (!guild) return;
 
-  // 새 VO 채널 생성 트리거 채널에 들어갔을 때
+  // User joined a "create" voice channel
   if (newState.channelId && CREATE_CHANNEL_IDS.includes(newState.channelId)) {
     const member = newState.member;
     const createChannel = newState.channel;
@@ -456,8 +486,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     if (!member || !category) return;
 
     if (
-      !guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels) ||
-      !guild.members.me.permissions.has(PermissionsBitField.Flags.MoveMembers)
+      !guild.members.me.permissions.has(
+        PermissionsBitField.Flags.ManageChannels
+      ) ||
+      !guild.members.me.permissions.has(
+        PermissionsBitField.Flags.MoveMembers
+      )
     ) {
       console.error(
         "Bot lacks 'Manage Channels' or 'Move Members' permission for VO Creator."
@@ -505,6 +539,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     }
   }
 
+  // User left a voice channel: delete empty temporary channels
   if (oldState.channelId && !CREATE_CHANNEL_IDS.includes(oldState.channelId)) {
     const oldChannel = oldState.channel;
     if (!oldChannel) return;
@@ -658,6 +693,7 @@ client.on("messageCreate", async (message) => {
       return;
     }
 
+    // Word blacklist (KR + EN handling)
     const normalizedContentExisting = message.content
       .normalize("NFC")
       .toLowerCase();
@@ -774,6 +810,7 @@ client.on("messageCreate", async (message) => {
     }
   }
 
+  // XP gain (only for non-bot users)
   if (!message.author.bot) {
     await handleXpGain(message);
   }
@@ -823,109 +860,116 @@ client.on("messageCreate", async (message) => {
     }
   }
 
-  // ---------------- RANK / LEVEL / LB ----------------
-if (cmd === "!rank") {
-  if (!xpCollection) {
-    return message.reply(
-      "⚠ Level system is not ready. Try again in a moment."
-    );
-  }
-
-  const guild = message.guild;
-  const targetMember =
-    message.mentions.members?.first() || message.member;
-
-  if (!targetMember) {
-    return message.reply("⚠ Could not find that user.");
-  }
-
-  const userId = targetMember.id;
-  const guildId = guild.id;
-
-  const data = await xpCollection.findOne({ guildId, userId });
-  if (!data) {
-    return message.reply(
-      targetMember.id === message.author.id
-        ? "You don't have any XP yet. Start chatting to earn some!"
-        : `${targetMember.user.username} doesn't have any XP yet.`
-    );
-  }
-
-  const totalXp = data.xp;
-  const currentLevel = data.level || 0;
-
-  const prevLevelXp =
-    currentLevel > 0 ? getRequiredXpForLevel(currentLevel) : 0;
-  const nextLevelXp = getRequiredXpForLevel(currentLevel + 1);
-
-  const xpIntoLevel = totalXp - prevLevelXp;
-  const xpNeededThisLevel = Math.max(nextLevelXp - prevLevelXp, 1);
-
-  let progress = xpIntoLevel / xpNeededThisLevel;
-  progress = Math.max(0, Math.min(1, progress));
-
-  const totalBars = 20;
-  const filledBars = Math.round(progress * totalBars);
-  const emptyBars = totalBars - filledBars;
-  const bar =
-    "█".repeat(Math.max(filledBars, 0)) +
-    "░".repeat(Math.max(emptyBars, 0));
-
-  const rank =
-    (await xpCollection.countDocuments({
-      guildId,
-      xp: { $gt: totalXp },
-    })) + 1;
-
-  const totalUsers = await xpCollection.countDocuments({ guildId });
-
-  const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
-  let nextUnlockText = "";
-  if (nextReward) {
-    const nextRole = guild.roles.cache.get(nextReward.roleId);
-    if (nextRole) {
-      nextUnlockText = `At **Level ${nextReward.level}** you will earn role: **${nextRole.name}**`;
-    } else {
-      nextUnlockText = `Next reward at **Level ${nextReward.level}**`;
+  // ---------------- RANK / LEVEL / LEADERBOARD ----------------
+  if (cmd === "!rank") {
+    if (!xpCollection) {
+      return message.reply(
+        "⚠ Level system is not ready. Try again in a moment."
+      );
     }
-  } else {
-    nextUnlockText = "You have unlocked all available level roles!";
+
+    const guild = message.guild;
+    const targetMember =
+      message.mentions.members.first() || message.member;
+
+    if (!targetMember) {
+      return message.reply("⚠ Could not find that user.");
+    }
+
+    const userId = targetMember.id;
+    const guildId = guild.id;
+
+    const data = await xpCollection.findOne({ guildId, userId });
+    if (!data) {
+      return message.reply(
+        targetMember.id === message.author.id
+          ? "You don't have any XP yet. Start chatting to earn some!"
+          : `${targetMember.user.username} doesn't have any XP yet.`
+      );
+    }
+
+    const totalXp = data.xp || 0;
+    const currentLevel = data.level || 0;
+
+    const currentLevelThreshold =
+      currentLevel > 0 ? getRequiredXpForLevel(currentLevel) : 0;
+    const nextLevelThreshold = getRequiredXpForLevel(currentLevel + 1);
+
+    const xpIntoLevel = totalXp - currentLevelThreshold;
+    const xpNeededThisLevel = Math.max(
+      nextLevelThreshold - currentLevelThreshold,
+      1
+    );
+
+    let progress = xpIntoLevel / xpNeededThisLevel;
+    progress = Math.max(0, Math.min(1, progress));
+
+    const totalBars = 20;
+    const filledBars = Math.round(progress * totalBars);
+    const emptyBars = totalBars - filledBars;
+    const bar =
+      "█".repeat(Math.max(filledBars, 0)) +
+      "░".repeat(Math.max(emptyBars, 0));
+
+    const rank =
+      (await xpCollection.countDocuments({
+        guildId,
+        xp: { $gt: totalXp },
+      })) + 1;
+
+    const totalUsers = await xpCollection.countDocuments({ guildId });
+
+    const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
+    let nextUnlockText = "";
+    if (nextReward) {
+      const nextRole = guild.roles.cache.get(nextReward.roleId);
+      if (nextRole) {
+        nextUnlockText = `At **Level ${nextReward.level}** you will earn role: **${nextRole.name}**`;
+      } else {
+        nextUnlockText = `Next reward at **Level ${nextReward.level}**`;
+      }
+    } else {
+      nextUnlockText = "You have unlocked all available level roles!";
+    }
+
+    let color = "#00D1FF";
+    if (currentLevel >= 100) color = "#FF1493";
+    else if (currentLevel >= 70) color = "#FFD700";
+    else if (currentLevel >= 40) color = "#9B59B6";
+    else if (currentLevel >= 20) color = "#1ABC9C";
+
+    const rankEmbed = new EmbedBuilder()
+      .setColor(color)
+      .setTitle(`📊 ${targetMember.user.username}'s Rank`)
+      .setThumbnail(targetMember.user.displayAvatarURL({ size: 256 }))
+      .addFields(
+        { name: "🧬 Level", value: `${currentLevel}`, inline: true },
+        {
+          name: "⭐ XP",
+          value: `${totalXp} / ${nextLevelThreshold}`,
+          inline: true,
+        },
+        {
+          name: "🏆 Rank",
+          value: `#${rank} of ${totalUsers}`,
+          inline: true,
+        },
+        {
+          name: "📈 Progress to Next Level",
+          value: `\`${bar}\`\n${xpIntoLevel} / ${xpNeededThisLevel} XP`,
+          inline: false,
+        },
+        { name: "🎁 Next Reward", value: nextUnlockText, inline: false }
+      )
+      .setFooter({
+        text: "Gosu General TV — Rank System",
+        iconURL: message.author.displayAvatarURL({ size: 128 }),
+      })
+      .setTimestamp();
+
+    await message.channel.send({ embeds: [rankEmbed] });
+    return;
   }
-
-  let color = "#00D1FF";
-  if (currentLevel >= 100) color = "#FF1493";
-  else if (currentLevel >= 70) color = "#FFD700";
-  else if (currentLevel >= 40) color = "#9B59B6";
-  else if (currentLevel >= 20) color = "#1ABC9C";
-
-  const rankEmbed = new EmbedBuilder()
-    .setColor(color)
-    .setTitle(`📊 ${targetMember.user.username}'s Rank`)
-    .setThumbnail(targetMember.user.displayAvatarURL({ size: 256 }))
-    .addFields(
-      { name: "🧬 Level", value: `${currentLevel}`, inline: true },
-      { name: "⭐ XP", value: `${totalXp} / ${nextLevelXp}`, inline: true },
-      {
-        name: "🏆 Rank",
-        value: `#${rank} of ${totalUsers}`,
-        inline: true,
-      },
-      {
-        name: "📈 Progress to Next Level",
-        value: `\`${bar}\`\n${xpIntoLevel} / ${xpNeededThisLevel} XP`,
-        inline: false,
-      },
-      { name: "🎁 Next Reward", value: nextUnlockText, inline: false }
-    )
-    .setFooter({
-      text: "Gosu General TV — Rank System",
-      iconURL: message.author.displayAvatarURL({ size: 128 }),
-    })
-    .setTimestamp();
-
-  await message.channel.send({ embeds: [rankEmbed] });
-  return;
-}
 
   if (cmd === "!level") {
     const embed = new EmbedBuilder()
@@ -1064,6 +1108,10 @@ if (cmd === "!rank") {
     await message.channel.send({ embeds: [lbEmbed] });
     return;
   }
+
+  // ----------------------------------------------------
+  // MOD / ADMIN COMMANDS (이 부분은 기존 구조 그대로 유지)
+  // ----------------------------------------------------
 
   const modOnly = [
     "!kick",
@@ -1785,6 +1833,7 @@ if (cmd === "!rank") {
       return;
     }
 
+    
     const role = message.guild.roles.cache.find(
       (r) => r.name.toLowerCase() === roleName.toLowerCase()
     );
@@ -1805,6 +1854,9 @@ if (cmd === "!rank") {
       return;
     }
   }
+
+    const role = message.guild.roles.cache.find(
+      (r) => r.name.toLowerCase() === ro
 
   if (cmd === "!removerole") {
     const target = message.mentions.members?.first();
@@ -2179,5 +2231,6 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
