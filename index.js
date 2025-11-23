@@ -459,8 +459,8 @@ client.once("ready", async () => {
   await connectMongo();
   await loadConfigFromMongo();
   await loadBlacklistFromMongo();
-
 });
+
 // =====================================================
 // VOICE CHANNEL CREATOR
 // =====================================================
@@ -2202,6 +2202,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
