@@ -84,7 +84,7 @@ let blacklistCollection = null;
 const xpCooldowns = new Map();
 
 // ----------------------------------------------------
-// Mongo 연결
+// Mongo
 // ----------------------------------------------------
 async function connectMongo() {
   if (!process.env.MONGODB_URI) {
@@ -267,7 +267,7 @@ async function removeBlacklistWord(word) {
 }
 
 // ----------------------------------------------------
-// XP 계산
+// XP Calulation
 // ----------------------------------------------------
 function getRequiredXpForLevel(level) {
   return 100 * level * level + 100;
@@ -308,20 +308,18 @@ async function handleXpGain(message) {
     const data = result.value;
     if (!data) return;
 
-let currentLevel = data.level || 0;
-let newLevel = currentLevel;
-let currentXp = data.xp;
-let requiredXp = getRequiredXpForLevel(newLevel + 1);
+    let currentLevel = data.level || 0;
+    let newLevel = currentLevel;
+    let requiredXp = getRequiredXpForLevel(newLevel + 1);
 
-while (currentXp >= requiredXp && newLevel < 1000) {
-  currentXp -= requiredXp;
-  newLevel++;
-  requiredXp = getRequiredXpForLevel(newLevel + 1);
-}
+    while (data.xp >= requiredXp && newLevel < 1000) {
+      newLevel++;
+      requiredXp = getRequiredXpForLevel(newLevel + 1);
+    }
 
-if (newLevel !== currentLevel) {
-  await xpCollection.updateOne(filter, { $set: { level: newLevel, xp: currentXp } });
-}
+    if (newLevel === currentLevel) return;
+
+    await xpCollection.updateOne(filter, { $set: { level: newLevel } });
 
     for (const entry of LEVEL_ROLES) {
       if (
@@ -472,6 +470,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   const guild = newState.guild || oldState.guild;
   if (!guild) return;
 
+  // 새 VO 채널 생성 트리거 채널에 들어갔을 때
   if (newState.channelId && CREATE_CHANNEL_IDS.includes(newState.channelId)) {
     const member = newState.member;
     const createChannel = newState.channel;
@@ -480,12 +479,8 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     if (!member || !category) return;
 
     if (
-      !guild.members.me.permissions.has(
-        PermissionsBitField.Flags.ManageChannels
-      ) ||
-      !guild.members.me.permissions.has(
-        PermissionsBitField.Flags.MoveMembers
-      )
+      !guild.members.me.permissions.has(PermissionsBitField.Flags.ManageChannels) ||
+      !guild.members.me.permissions.has(PermissionsBitField.Flags.MoveMembers)
     ) {
       console.error(
         "Bot lacks 'Manage Channels' or 'Move Members' permission for VO Creator."
@@ -518,7 +513,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           },
         ],
       });
-      
+
       TEMP_VOICE_CHANNEL_IDS.add(newChannel.id);
 
       await member.voice.setChannel(newChannel);
@@ -534,32 +529,33 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   }
 
   if (oldState.channelId && !CREATE_CHANNEL_IDS.includes(oldState.channelId)) {
-  const oldChannel = oldState.channel;
-  if (!oldChannel) return;
+    const oldChannel = oldState.channel;
+    if (!oldChannel) return;
 
-  const isTemporaryChannel = TEMP_VOICE_CHANNEL_IDS.has(oldChannel.id);
+    const isTemporaryChannel = TEMP_VOICE_CHANNEL_IDS.has(oldChannel.id);
 
-  if (isTemporaryChannel && oldChannel.members.size === 0) {
-    console.log(
-      `Attempting to delete empty temporary VO channel: ${oldChannel.name}`
-    );
-    try {
-      await oldChannel.delete();
-      TEMP_VOICE_CHANNEL_IDS.delete(oldChannel.id); // ✅ Set에서도 제거
+    if (isTemporaryChannel && oldChannel.members.size === 0) {
       console.log(
-        `Successfully deleted empty temporary VO channel: ${oldChannel.name}`
+        `Attempting to delete empty temporary VO channel: ${oldChannel.name}`
       );
-    } catch (error) {
-      console.error(
-        `🔴 Failed to delete empty temporary VO channel (${oldChannel.name}):`,
-        error.message
-      );
-      console.error(
-        "CHECK BOT PERMISSIONS: Bot needs 'Manage Channels' permission."
-      );
+      try {
+        await oldChannel.delete();
+        TEMP_VOICE_CHANNEL_IDS.delete(oldChannel.id);
+        console.log(
+          `Successfully deleted empty temporary VO channel: ${oldChannel.name}`
+        );
+      } catch (error) {
+        console.error(
+          `🔴 Failed to delete empty temporary VO channel (${oldChannel.name}):`,
+          error.message
+        );
+        console.error(
+          "CHECK BOT PERMISSIONS: Bot needs 'Manage Channels' permission."
+        );
+      }
     }
   }
-}
+});
 
 // =====================================================
 // PREFIX COMMANDS & CHAT FILTER + LEVELING
@@ -2206,4 +2202,3 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
-
