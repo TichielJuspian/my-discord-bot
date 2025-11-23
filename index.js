@@ -460,26 +460,6 @@ client.once("ready", async () => {
   await loadConfigFromMongo();
   await loadBlacklistFromMongo();
 
-
-  (async()=>{
-      const seed = [
-        "시발","씨발","병신","개새끼","미친","좆","새끼","느금마","애미","패드립","섹스","성인","야짤","음란",
-        "야동","도배","어그로","시청자수","시청자 수","저격","스트리머","시1발","씨1발","개1새끼",
-        "ㅂㅅ","ㅄ","ㅅㅂ","ㅈㄴ","ㅆㅂ","ㅁㅊ","fuck","nig","fag","shit","asshole","bitch","cunt",
-        "nigger","retard","kys","slut","whore","porn","sex","nude","adverts","promote","fck","fvck",
-        "fuk","phuc","phuq","sh1t","5hit","a55hole","b1tch","n1gger","niga","p0rn","s3x","5lut","wh0re",
-        "p0rn0","puta","joder","mierda","cabron","pendejo","maricon","chingar","coño","zorra",
-        "idiota","publicidad","pvt4","m1erda","cabr0n"
-      ];
-      
-      for (const word of seed){
-          await blacklistCollection.updateOne({word},{$set:{word}}, {upsert:true});
-      }
-
-      console.log("Seeded 77 words to MongoDB");
-  })();
-
-
 });
 // =====================================================
 // VOICE CHANNEL CREATOR
@@ -2222,5 +2202,6 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
