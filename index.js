@@ -270,15 +270,8 @@ async function removeBlacklistWord(word) {
 // XP Calculation
 // ----------------------------------------------------
 function getRequiredXpForLevel(level) {
-  return 100 * level * level + 100;
-}
 
-function getTotalXpForLevel(level) {
-  let total = 0;
-  for (let i = 1; i <= level; i++) {
-    total += getRequiredXpForLevel(i);
-  }
-  return total;
+  return 100 * level * level + 100;
 }
 
 async function handleXpGain(message) {
@@ -286,7 +279,6 @@ async function handleXpGain(message) {
 
   const member = message.member;
   const user = message.author;
-
   if (!member || !message.guild || user.bot) return;
 
   const guildId = message.guild.id;
@@ -300,7 +292,7 @@ async function handleXpGain(message) {
 
   const xpGain =
     Math.floor(Math.random() * (XP_CONFIG.maxXP - XP_CONFIG.minXP + 1)) +
-    XP_CONFIG.minXP;
+    XP_CONFIG.minXP; // 
 
   try {
     const filter = { guildId, userId };
@@ -320,9 +312,10 @@ async function handleXpGain(message) {
     const totalXp = data.xp; 
     let currentLevel = data.level || 0;
     let newLevel = currentLevel;
+
     while (
       newLevel < 1000 &&
-      totalXp >= getTotalXpForLevel(newLevel + 1)
+      totalXp >= getRequiredXpForLevel(newLevel + 1)
     ) {
       newLevel++;
     }
@@ -347,6 +340,23 @@ async function handleXpGain(message) {
         }
       }
     }
+
+    const levelEmbed = new EmbedBuilder()
+      .setColor("#00FF7F")
+      .setTitle("✨ Level Up!")
+      .setDescription(
+        `> ${member} has reached **Level ${newLevel}**!\n` +
+        "Keep chatting and participating to gain more experience."
+      )
+      .setFooter({ text: "Gosu General TV — Level System" })
+      .setTimestamp();
+
+    await message.channel.send({ embeds: [levelEmbed] });
+  } catch (err) {
+    console.error("[LEVEL] Error while processing XP:", err);
+  }
+}
+
 
     const levelEmbed = new EmbedBuilder()
       .setColor("#00FF7F")
