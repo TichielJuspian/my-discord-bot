@@ -311,6 +311,7 @@ async function handleXpGain(message) {
     let requiredXp = getRequiredXpForLevel(newLevel + 1);
 
     while (data.xp >= requiredXp && newLevel < 1000) {
+      xp -= requiredXp;
       newLevel++;
       requiredXp = getRequiredXpForLevel(newLevel + 1);
     }
@@ -2202,4 +2203,5 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
