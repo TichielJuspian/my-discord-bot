@@ -1833,7 +1833,6 @@ client.on("messageCreate", async (message) => {
       return;
     }
 
-    
     const role = message.guild.roles.cache.find(
       (r) => r.name.toLowerCase() === roleName.toLowerCase()
     );
@@ -1854,9 +1853,6 @@ client.on("messageCreate", async (message) => {
       return;
     }
   }
-
-    const role = message.guild.roles.cache.find(
-      (r) => r.name.toLowerCase() === ro
 
   if (cmd === "!removerole") {
     const target = message.mentions.members?.first();
@@ -2231,6 +2227,3 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
-
-
-
