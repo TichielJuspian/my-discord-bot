@@ -270,11 +270,13 @@ async function removeBlacklistWord(word) {
 // XP Calulation
 // ----------------------------------------------------
 function getRequiredXpForLevel(level) {
+
   return 100 * level * level + 100;
 }
 
 async function handleXpGain(message) {
   if (!xpCollection) return;
+
   const member = message.member;
   const user = message.author;
 
@@ -297,7 +299,7 @@ async function handleXpGain(message) {
     const filter = { guildId, userId };
     const update = {
       $setOnInsert: { guildId, userId, level: 0 },
-      $inc: { xp: xpGain },
+      $inc: { xp: xpGain }, 
     };
 
     const result = await xpCollection.findOneAndUpdate(filter, update, {
@@ -308,13 +310,15 @@ async function handleXpGain(message) {
     const data = result.value;
     if (!data) return;
 
+    const totalXp = data.xp; 
     let currentLevel = data.level || 0;
     let newLevel = currentLevel;
-    let requiredXp = getRequiredXpForLevel(newLevel + 1);
 
-    while (data.xp >= requiredXp && newLevel < 1000) {
+    while (
+      newLevel < 1000 &&
+      totalXp >= getRequiredXpForLevel(newLevel + 1)
+    ) {
       newLevel++;
-      requiredXp = getRequiredXpForLevel(newLevel + 1);
     }
 
     if (newLevel === currentLevel) return;
@@ -343,7 +347,7 @@ async function handleXpGain(message) {
       .setTitle("✨ Level Up!")
       .setDescription(
         `> ${member} has reached **Level ${newLevel}**!\n` +
-          "Keep chatting and participating to gain more experience."
+        "Keep chatting and participating to gain more experience."
       )
       .setFooter({ text: "Gosu General TV — Level System" })
       .setTimestamp();
@@ -352,49 +356,6 @@ async function handleXpGain(message) {
   } catch (err) {
     console.error("[LEVEL] Error while processing XP:", err);
   }
-}
-
-// ----------------------------------------------------
-// Helper: Moderation Log
-// ----------------------------------------------------
-async function sendModLog(guild, user, action, moderator, reason, duration) {
-  if (!BOT_CONFIG.modLogChannelId) return;
-
-  const logChannel = guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
-  if (!logChannel) return;
-
-  const logEmbed = new EmbedBuilder()
-    .setColor(
-      action === "BAN" ? "#B22222" : action === "KICK" ? "#FF4500" : "#4169E1"
-    )
-    .setTitle(`🔨 User ${action}`)
-    .addFields(
-      { name: "Target", value: `${user.tag} (${user.id})`, inline: false },
-      {
-        name: "Moderator",
-        value: `${moderator.tag} (${moderator.id})`,
-        inline: true,
-      },
-      {
-        name: "Reason",
-        value: reason || "Not specified",
-        inline: true,
-      }
-    )
-    .setTimestamp()
-    .setFooter({ text: `Action: ${action}` });
-
-  if (duration) {
-    logEmbed.addFields({
-      name: "Duration",
-      value: `${duration} minutes`,
-      inline: true,
-    });
-  }
-
-  logChannel
-    .send({ embeds: [logEmbed] })
-    .catch((err) => console.error("[ERROR] Error sending mod log:", err));
 }
 
 // ----------------------------------------------------
@@ -847,108 +808,108 @@ client.on("messageCreate", async (message) => {
   }
 
   // ---------------- RANK / LEVEL / LB ----------------
-  if (cmd === "!rank") {
-    if (!xpCollection) {
-      return message.reply(
-        "⚠ Level system is not ready. Try again in a moment."
-      );
-    }
-
-    const guild = message.guild;
-
-    const targetMember =
-      message.mentions.members.first() || message.member;
-
-    if (!targetMember) {
-      return message.reply("⚠ Could not find that user.");
-    }
-
-    const userId = targetMember.id;
-    const guildId = guild.id;
-
-    const data = await xpCollection.findOne({ guildId, userId });
-    if (!data) {
-      return message.reply(
-        targetMember.id === message.author.id
-          ? "You don't have any XP yet. Start chatting to earn some!"
-          : `${targetMember.user.username} doesn't have any XP yet.`
-      );
-    }
-
-    const currentLevel = data.level || 0;
-
-    const currentLevelXp =
-      currentLevel > 0 ? getRequiredXpForLevel(currentLevel) : 0;
-    const nextLevelXp = getRequiredXpForLevel(currentLevel + 1);
-
-    const xpIntoLevel = data.xp - currentLevelXp;
-    const xpNeededThisLevel = Math.max(nextLevelXp - currentLevelXp, 1);
-
-    let progress = xpIntoLevel / xpNeededThisLevel;
-    progress = Math.max(0, Math.min(1, progress));
-
-    const totalBars = 20;
-    const filledBars = Math.round(progress * totalBars);
-    const emptyBars = totalBars - filledBars;
-    const bar =
-      "█".repeat(filledBars > 0 ? filledBars : 0) +
-      "░".repeat(emptyBars > 0 ? emptyBars : 0);
-
-    const rank =
-      (await xpCollection.countDocuments({
-        guildId,
-        xp: { $gt: data.xp },
-      })) + 1;
-
-    const totalUsers = await xpCollection.countDocuments({ guildId });
-
-    const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
-    let nextUnlockText = "";
-    if (nextReward) {
-      const nextRole = guild.roles.cache.get(nextReward.roleId);
-      if (nextRole) {
-        nextUnlockText = `At **Level ${nextReward.level}** you will earn role: **${nextRole.name}**`;
-      } else {
-        nextUnlockText = `Next reward at **Level ${nextReward.level}**`;
-      }
-    } else {
-      nextUnlockText = "You have unlocked all available level roles!";
-    }
-
-    let color = "#00D1FF";
-    if (currentLevel >= 100) color = "#FF1493";
-    else if (currentLevel >= 70) color = "#FFD700";
-    else if (currentLevel >= 40) color = "#9B59B6";
-    else if (currentLevel >= 20) color = "#1ABC9C";
-
-    const rankEmbed = new EmbedBuilder()
-      .setColor(color)
-      .setTitle(`📊 ${targetMember.user.username}'s Rank`)
-      .setThumbnail(targetMember.user.displayAvatarURL({ size: 256 }))
-      .addFields(
-        { name: "🧬 Level", value: `${currentLevel}`, inline: true },
-        { name: "⭐ XP", value: `${data.xp} / ${nextLevelXp}`, inline: true },
-        {
-          name: "🏆 Rank",
-          value: `#${rank} of ${totalUsers}`,
-          inline: true,
-        },
-        {
-          name: "📈 Progress to Next Level",
-          value: `\`${bar}\`\n${xpIntoLevel} / ${xpNeededThisLevel} XP`,
-          inline: false,
-        },
-        { name: "🎁 Next Reward", value: nextUnlockText, inline: false }
-      )
-      .setFooter({
-        text: "Gosu General TV — Rank System",
-        iconURL: message.author.displayAvatarURL({ size: 128 }),
-      })
-      .setTimestamp();
-
-    await message.channel.send({ embeds: [rankEmbed] });
-    return;
+if (cmd === "!rank") {
+  if (!xpCollection) {
+    return message.reply(
+      "⚠ Level system is not ready. Try again in a moment."
+    );
   }
+
+  const guild = message.guild;
+  const targetMember =
+    message.mentions.members?.first() || message.member;
+
+  if (!targetMember) {
+    return message.reply("⚠ Could not find that user.");
+  }
+
+  const userId = targetMember.id;
+  const guildId = guild.id;
+
+  const data = await xpCollection.findOne({ guildId, userId });
+  if (!data) {
+    return message.reply(
+      targetMember.id === message.author.id
+        ? "You don't have any XP yet. Start chatting to earn some!"
+        : `${targetMember.user.username} doesn't have any XP yet.`
+    );
+  }
+
+  const totalXp = data.xp;
+  const currentLevel = data.level || 0;
+
+  const prevLevelXp =
+    currentLevel > 0 ? getRequiredXpForLevel(currentLevel) : 0;
+  const nextLevelXp = getRequiredXpForLevel(currentLevel + 1);
+
+  const xpIntoLevel = totalXp - prevLevelXp;
+  const xpNeededThisLevel = Math.max(nextLevelXp - prevLevelXp, 1);
+
+  let progress = xpIntoLevel / xpNeededThisLevel;
+  progress = Math.max(0, Math.min(1, progress));
+
+  const totalBars = 20;
+  const filledBars = Math.round(progress * totalBars);
+  const emptyBars = totalBars - filledBars;
+  const bar =
+    "█".repeat(Math.max(filledBars, 0)) +
+    "░".repeat(Math.max(emptyBars, 0));
+
+  const rank =
+    (await xpCollection.countDocuments({
+      guildId,
+      xp: { $gt: totalXp },
+    })) + 1;
+
+  const totalUsers = await xpCollection.countDocuments({ guildId });
+
+  const nextReward = LEVEL_ROLES.find((entry) => entry.level > currentLevel);
+  let nextUnlockText = "";
+  if (nextReward) {
+    const nextRole = guild.roles.cache.get(nextReward.roleId);
+    if (nextRole) {
+      nextUnlockText = `At **Level ${nextReward.level}** you will earn role: **${nextRole.name}**`;
+    } else {
+      nextUnlockText = `Next reward at **Level ${nextReward.level}**`;
+    }
+  } else {
+    nextUnlockText = "You have unlocked all available level roles!";
+  }
+
+  let color = "#00D1FF";
+  if (currentLevel >= 100) color = "#FF1493";
+  else if (currentLevel >= 70) color = "#FFD700";
+  else if (currentLevel >= 40) color = "#9B59B6";
+  else if (currentLevel >= 20) color = "#1ABC9C";
+
+  const rankEmbed = new EmbedBuilder()
+    .setColor(color)
+    .setTitle(`📊 ${targetMember.user.username}'s Rank`)
+    .setThumbnail(targetMember.user.displayAvatarURL({ size: 256 }))
+    .addFields(
+      { name: "🧬 Level", value: `${currentLevel}`, inline: true },
+      { name: "⭐ XP", value: `${totalXp} / ${nextLevelXp}`, inline: true },
+      {
+        name: "🏆 Rank",
+        value: `#${rank} of ${totalUsers}`,
+        inline: true,
+      },
+      {
+        name: "📈 Progress to Next Level",
+        value: `\`${bar}\`\n${xpIntoLevel} / ${xpNeededThisLevel} XP`,
+        inline: false,
+      },
+      { name: "🎁 Next Reward", value: nextUnlockText, inline: false }
+    )
+    .setFooter({
+      text: "Gosu General TV — Rank System",
+      iconURL: message.author.displayAvatarURL({ size: 128 }),
+    })
+    .setTimestamp();
+
+  await message.channel.send({ embeds: [rankEmbed] });
+  return;
+}
 
   if (cmd === "!level") {
     const embed = new EmbedBuilder()
@@ -2202,3 +2163,4 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
