@@ -268,10 +268,12 @@ async function removeBlacklistWord(word) {
 // ====================================================
 // XP / LEVEL SYSTEM (REFactored)
 // ====================================================
+// XP needed just to go from (level-1) -> level
 function getRequiredXpForLevel(level) {
   return 100 * level * level + 100;
 }
 
+// Total XP required to REACH this level (cumulative)
 function getTotalXpForLevel(level) {
   if (level <= 0) return 0;
 
@@ -282,19 +284,17 @@ function getTotalXpForLevel(level) {
   return total;
 }
 
+// Convert total accumulated XP -> level
 function getLevelFromTotalXp(totalXp) {
   let level = 0;
-  let xpLeft = totalXp;
-  let neededForNext = getRequiredXpForLevel(level + 1);
 
-  while (level < 1000 && xpLeft >= neededForNext) {
-    xpLeft -= neededForNext;
+  while (level < 1000 && totalXp >= getTotalXpForLevel(level + 1)) {
     level++;
-    neededForNext = getRequiredXpForLevel(level + 1);
   }
 
   return level;
 }
+
 // ===================== XP GAIN LOGIC =====================
 async function handleXpGain(message) {
   if (!xpCollection) return;
@@ -911,11 +911,14 @@ if (cmd === "!rank") {
     );
   }
 
-  const prevLevelTotalXp = getTotalXpForLevel(currentLevel);       
-  const nextLevelTotalXp = getTotalXpForLevel(currentLevel + 1);  
+// cumulative XP thresholds
+const prevLevelTotalXp = getTotalXpForLevel(currentLevel);
+const nextLevelTotalXp = getTotalXpForLevel(currentLevel + 1);
 
-  const xpIntoLevel = totalXp - prevLevelTotalXp;
-  const xpNeededThisLevel = Math.max(nextLevelTotalXp - prevLevelTotalXp, 1);
+// XP inside this level
+const xpIntoLevel = totalXp - prevLevelTotalXp;
+const xpNeededThisLevel = Math.max(nextLevelTotalXp - prevLevelTotalXp, 1);
+
 
   let progress = xpIntoLevel / xpNeededThisLevel;
   progress = Math.max(0, Math.min(1, progress));
@@ -1509,20 +1512,22 @@ if (cmd === "!rank") {
 
     let updatedCount = 0;
 
-    for (const [userId, level] of userLevelMap.entries()) {
-      const xp = getRequiredXpForLevel(level);
+for (const [userId, level] of userLevelMap.entries()) {
+  // set XP to the total XP needed to REACH this level
+  const xp = getTotalXpForLevel(level);
 
-      await xpCollection.updateOne(
-        { guildId, userId },
-        {
-          $setOnInsert: { guildId, userId },
-          $set: { level, xp },
-        },
-        { upsert: true }
-      );
+  await xpCollection.updateOne(
+    { guildId, userId },
+    {
+      $setOnInsert: { guildId, userId },
+      $set: { level, xp },
+    },
+    { upsert: true }
+  );
 
-      updatedCount++;
-    }
+  updatedCount++;
+}
+
 
     await message.reply(
       `✅ Synced XP/Levels for **${updatedCount}** members based on their level roles.`
@@ -2235,4 +2240,5 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
