@@ -272,28 +272,28 @@ function getRequiredXpForLevel(level) {
   return 100 * level * level + 100;
 }
 
-function getTotalXpForLevel(level) {
-  if (level <= 0) return 0;
+// function getTotalXpForLevel(level) {
+//   if (level <= 0) return 0;
 
-  let total = 0;
-  for (let i = 1; i <= level; i++) {
-    total += getRequiredXpForLevel(i);
-  }
-  return total;
-}
+//   let total = 0;
+//   for (let i = 1; i <= level; i++) {
+//     total += getRequiredXpForLevel(i);
+//   }
+//   return total;
+// }
 
 function getLevelFromTotalXp(totalXp) {
-  let level = 0;
-  let xpLeft = totalXp;
-  let neededForNext = getRequiredXpForLevel(level + 1);
+  // let level = 0;
+  // let xpLeft = totalXp;
+  // let neededForNext = getRequiredXpForLevel(level + 1);
 
-  while (level < 1000 && xpLeft >= neededForNext) {
-    xpLeft -= neededForNext;
-    level++;
-    neededForNext = getRequiredXpForLevel(level + 1);
-  }
+  // while (level < 1000 && xpLeft >= neededForNext) {
+  //   level++;
+  //   neededForNext = getRequiredXpForLevel(level + 1);
+  // }
 
-  return level;
+  // return level;
+  return Math.floor(Math.sqrt((totalXp - 100) / 100));
 }
 // ===================== XP GAIN LOGIC =====================
 async function handleXpGain(message) {
@@ -631,6 +631,7 @@ client.on("messageCreate", async (message) => {
         "twitch.tv",
         "google.com",
         "naver.com",
+        "tenor.com"
       ];
 
       if (!safeDomains.some((domain) => normalizedMessage.includes(domain))) {
@@ -911,8 +912,8 @@ if (cmd === "!rank") {
     );
   }
 
-  const prevLevelTotalXp = getTotalXpForLevel(currentLevel);       
-  const nextLevelTotalXp = getTotalXpForLevel(currentLevel + 1);  
+  const prevLevelTotalXp = getRequiredXpForLevel(currentLevel);       
+  const nextLevelTotalXp = getRequiredXpForLevel(currentLevel + 1);  
 
   const xpIntoLevel = totalXp - prevLevelTotalXp;
   const xpNeededThisLevel = Math.max(nextLevelTotalXp - prevLevelTotalXp, 1);
@@ -2235,4 +2236,5 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
