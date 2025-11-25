@@ -270,29 +270,22 @@ async function removeBlacklistWord(word) {
 // ====================================================
 // XP needed just to go from (level-1) -> level
 function getRequiredXpForLevel(level) {
-  return Math.round(250 * level + 1500);
+  return 200 * level + 100;
 }
 
-// Total XP required to REACH this level (cumulative)
+// cumulative XP needed to reach level L
 function getTotalXpForLevel(level) {
   if (level <= 0) return 0;
-
-  let total = 0;
-  for (let i = 1; i <= level; i++) {
-    total += getRequiredXpForLevel(i);
-  }
-  return total;
+  return 100 * level * level - 100;
 }
 
-// Convert total accumulated XP -> level
+// converting total XP → level
 function getLevelFromTotalXp(totalXp) {
-  let level = 0;
-
-  while (level < 1000 && totalXp >= getTotalXpForLevel(level + 1)) {
-    level++;
+  let L = 0;
+  while (totalXp >= getTotalXpForLevel(L+1)) {
+    L++;
   }
-
-  return level;
+  return L;
 }
 
 // ===================== XP GAIN LOGIC =====================
@@ -2240,6 +2233,7 @@ client.on("interactionCreate", async (interaction) => {
 // BOT LOGIN
 // =====================================================
 client.login(process.env.Bot_Token);
+
 
 
 
