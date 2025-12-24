@@ -365,7 +365,7 @@ client.on("messageCreate", async (message) => {
   }
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 4)
-// Admin Panels, Moderation (Expanded), Events, Login
+// Admin Panels, Moderation, Events, Login 
 // =====================================================================
 
   // --- ADMIN PANEL COMMANDS ---
@@ -406,13 +406,29 @@ client.on("messageCreate", async (message) => {
     message.channel.send({ embeds: [embed] });
   }
 
-  // --- MODERATION (Expanded Style) ---
+  // --- MODERATION ---
   if (cmd === "kick" && isMod) { 
       const t = message.mentions.members.first(); 
       if(t?.kickable) { 
           await t.kick(); 
           message.reply(`👢 Kicked **${t.user.username}**.`); 
-          sendModLog(message.guild, t.user, "KICK", message.author, args.slice(1).join(" ")); 
+          
+          // PREMIUM MOD LOG (KICK)
+          if(BOT_CONFIG.modLogChannelId) {
+             const ch = message.guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
+             if(ch) {
+                 const embed = new EmbedBuilder()
+                    .setColor("#FF8C00") // Orange
+                    .setAuthor({ name: "Member Kicked", iconURL: t.user.displayAvatarURL() })
+                    .addFields(
+                        { name: "User", value: `${t.user.tag} (${t.user.id})`, inline: true },
+                        { name: "Moderator", value: `${message.author.tag}`, inline: true },
+                        { name: "Reason", value: args.slice(1).join(" ") || "No reason provided", inline: false }
+                    )
+                    .setTimestamp();
+                 ch.send({ embeds: [embed] });
+             }
+          }
       } 
   }
 
@@ -421,7 +437,23 @@ client.on("messageCreate", async (message) => {
       if(t?.bannable) { 
           await t.ban(); 
           message.reply(`🔨 Banned **${t.user.username}**.`); 
-          sendModLog(message.guild, t.user, "BAN", message.author, args.slice(1).join(" ")); 
+          
+          // PREMIUM MOD LOG (BAN)
+          if(BOT_CONFIG.modLogChannelId) {
+             const ch = message.guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
+             if(ch) {
+                 const embed = new EmbedBuilder()
+                    .setColor("#8B0000") // Dark Red
+                    .setAuthor({ name: "Member Banned", iconURL: t.user.displayAvatarURL() })
+                    .addFields(
+                        { name: "User", value: `${t.user.tag} (${t.user.id})`, inline: true },
+                        { name: "Moderator", value: `${message.author.tag}`, inline: true },
+                        { name: "Reason", value: args.slice(1).join(" ") || "No reason provided", inline: false }
+                    )
+                    .setTimestamp();
+                 ch.send({ embeds: [embed] });
+             }
+          }
       } 
   }
   
@@ -431,6 +463,23 @@ client.on("messageCreate", async (message) => {
       if(t) { 
           await t.timeout(m*60000); 
           message.reply(`🔇 Muted **${t.user.username}** for ${m}m.`); 
+          
+          // PREMIUM MOD LOG (MUTE)
+          if(BOT_CONFIG.modLogChannelId) {
+             const ch = message.guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
+             if(ch) {
+                 const embed = new EmbedBuilder()
+                    .setColor("#FFD700") // Gold
+                    .setAuthor({ name: "Member Muted", iconURL: t.user.displayAvatarURL() })
+                    .addFields(
+                        { name: "User", value: `${t.user.tag} (${t.user.id})`, inline: true },
+                        { name: "Duration", value: `${m} minutes`, inline: true },
+                        { name: "Moderator", value: `${message.author.tag}`, inline: true }
+                    )
+                    .setTimestamp();
+                 ch.send({ embeds: [embed] });
+             }
+          }
       } 
   }
   
@@ -442,14 +491,14 @@ client.on("messageCreate", async (message) => {
       } 
   }
   
-  // Freeze Messages (Korean)
+  // [UPDATED] Freeze Messages (English)
   if (cmd === "freeze" && isMod) { 
       message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false }); 
-      message.channel.send("채팅방을 얼렸습니다. 여러분 잠깐 열을 식혀주세요"); 
+      message.channel.send("❄️ **The chat has been frozen.** Everyone, please cool down for a moment."); 
   }
   if (cmd === "unfreeze" && isMod) { 
       message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: null }); 
-      message.channel.send("freeze가 해제됬습니다."); 
+      message.channel.send("♨️ **The freeze has been lifted.**"); 
   }
 
   if (cmd === "addword" && isMod) { 
@@ -482,7 +531,7 @@ client.on("messageCreate", async (message) => {
     message.channel.send(`✅ Synced **${c}** users.`);
   }
 
-  // --- LOG & WELCOME CONFIG (Expanded Style) ---
+  // --- LOG & WELCOME CONFIG ---
   if (cmd.startsWith("set") && isAdmin(message.member)) {
     const ch = message.mentions.channels.first() || message.channel;
     
@@ -529,20 +578,62 @@ client.on("interactionCreate", async (i) => {
   } catch (e) {}
 });
 
-client.on("messageDelete", m => {
-    if(BOT_CONFIG.msgLogChannelId && m.guild) m.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId)?.send(`🗑️ Deleted: ${m.author?.tag} - ${m.content}`).catch(()=>{});
+// [UPDATED] Message Delete Log (Premium Style)
+client.on("messageDelete", async (m) => {
+    if (!m.guild || m.author.bot) return;
+    if (!BOT_CONFIG.msgLogChannelId) return;
+
+    const ch = m.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId);
+    if (!ch) return;
+
+    const embed = new EmbedBuilder()
+        .setColor("#FF4500") // Red Sidebar
+        .setAuthor({ name: "Message Deleted", iconURL: "https://cdn-icons-png.flaticon.com/512/3405/3405244.png" }) // Trash Icon
+        .addFields(
+            { name: "User", value: `${m.author.username} (${m.author.id})`, inline: false },
+            { name: "Channel", value: `${m.channel}`, inline: false },
+            { name: "Content", value: m.content || "*[Image/No Text]*", inline: false }
+        )
+        .setFooter({ text: "Message Deleted" })
+        .setTimestamp();
+
+    ch.send({ embeds: [embed] }).catch(() => {});
 });
 
-client.on("guildMemberRemove", m => {
-    if(BOT_CONFIG.actionLogChannelId) m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId)?.send(`🚪 ${m.user.tag} Left`).catch(()=>{});
+// [UPDATED] Member Left Log (Dyno Style)
+client.on("guildMemberRemove", async (m) => {
+    if(!BOT_CONFIG.actionLogChannelId) return;
+    const ch = m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId);
+    
+    if(ch) {
+        const embed = new EmbedBuilder()
+            .setColor("#FF4500") // Red/Orange
+            .setAuthor({ name: "Member Left", iconURL: m.user.displayAvatarURL() })
+            .setDescription(`${m} ${m.user.username}`)
+            .setFooter({ text: `ID: ${m.id}` })
+            .setTimestamp();
+        
+        ch.send({ embeds: [embed] }).catch(()=>{});
+    }
 });
 
-// WELCOME EVENT
+// [UPDATED] Member Join Log (Dyno Style + Welcome Card)
 client.on("guildMemberAdd", async (m) => {
-    // 1. Action Log
-    if(BOT_CONFIG.actionLogChannelId) m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId)?.send(`✅ ${m.user.tag} Joined`).catch(()=>{});
+    // 1. Action Log (Green Style)
+    if(BOT_CONFIG.actionLogChannelId) {
+        const ch = m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId);
+        if(ch) {
+            const embed = new EmbedBuilder()
+                .setColor("#00FF00") // Green
+                .setAuthor({ name: "Member Joined", iconURL: m.user.displayAvatarURL() })
+                .setDescription(`${m} ${m.user.username}`)
+                .setFooter({ text: `ID: ${m.id}` })
+                .setTimestamp();
+            ch.send({ embeds: [embed] }).catch(()=>{});
+        }
+    }
 
-    // 2. Welcome Card
+    // 2. Welcome Card (Channel Message)
     if(BOT_CONFIG.welcomeChannelId) {
         const ch = m.guild.channels.cache.get(BOT_CONFIG.welcomeChannelId);
         if(ch) {
