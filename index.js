@@ -1,7 +1,7 @@
-// =====================================================
-// Gosu Custom Discord Bot (Real Complete Version)
-// Features: All Commands, MongoDB Leveling, Smart Filter, Full Logging
-// =====================================================
+// =====================================================================
+// Gosu Custom Discord Bot (Original Scale Restoration - Part 1)
+// Setup, Configuration, MongoDB Connection, Constants
+// =====================================================================
 require("dotenv").config();
 
 const fs = require("fs");
@@ -22,21 +22,22 @@ const {
 
 const { MongoClient } = require("mongodb");
 
-// -----------------------------
-// 1. CONFIGURATION & FILE PATHS
-// -----------------------------
+// ---------------------------------------------------------------------
+// 1. FILE PATH CONFIGURATION
+// ---------------------------------------------------------------------
 const DATA_DIR = "./Data";
 const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
 const CONFIG_FILE_PATH = path.join(DATA_DIR, "config.json");
 
-// 데이터 폴더가 없으면 생성
+// 데이터 폴더가 없으면 생성 (에러 방지)
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
+  console.log(`[INIT] Created directory: ${DATA_DIR}`);
 }
 
-// -----------------------------
-// 2. ROLE & CHANNEL IDs (서버 ID 확인 필수)
-// -----------------------------
+// ---------------------------------------------------------------------
+// 2. ROLE & CHANNEL IDs (서버 환경에 맞춰 확인 필수)
+// ---------------------------------------------------------------------
 const GOSU_ROLE = "496717793388134410";
 const MOD_ROLE = "495727371140202506";
 const ADMIN_ROLE = "495718851288236032";
@@ -44,25 +45,26 @@ const SUB_ROLE = "497654614729031681";
 const CREATOR_ROLE = "1441214177128743017";
 const VERIFICATION_ROLE = "1441311763806031893";
 
-// ★ SILVER ROLE ID (Level 10 - GIF/링크 사용 권한)
+// ★ SILVER ROLE ID (Level 10 Reward - GIF/Link 허용)
 const SILVER_ROLE_ID = "497491254838427674"; 
 
-// 자동 생성 음성 채널 ID
+// Voice Creator Channel IDs
 const CREATE_CHANNEL_IDS = ["720658789832851487", "1441159364298936340"];
 const TEMP_VOICE_CHANNEL_IDS = new Set();
 
-// -----------------------------
-// 3. LEVELING SYSTEM CONFIG
-// -----------------------------
+// ---------------------------------------------------------------------
+// 3. LEVELING SYSTEM CONFIGURATION
+// ---------------------------------------------------------------------
 const XP_CONFIG = {
   minXP: 5,
   maxXP: 15,
   cooldownMs: 30000, // 30초 쿨타임
 };
 
+// 레벨별 보상 역할 목록
 const LEVEL_ROLES = [
   { level: 5, roleId: "497843968151781378" },
-  { level: 10, roleId: SILVER_ROLE_ID }, // Level 10 = Silver
+  { level: 10, roleId: SILVER_ROLE_ID }, // Level 10 = Silver (GIF Unlock)
   { level: 20, roleId: "687470373331402752" },
   { level: 30, roleId: "497578834376392724" },
   { level: 40, roleId: "1441513975161294889" },
@@ -73,25 +75,26 @@ const LEVEL_ROLES = [
   { level: 150, roleId: "1441518689290817646" },
 ];
 
-// -----------------------------
+// ---------------------------------------------------------------------
 // 4. GLOBAL STATE VARIABLES
-// -----------------------------
+// ---------------------------------------------------------------------
 let BOT_CONFIG = {
   actionLogChannelId: null,
   msgLogChannelId: null,
   modLogChannelId: null,
   filterLogChannelId: null,
 };
+
 let BLACKLISTED_WORDS = [];
 const xpCooldowns = new Map();
 
-// MongoDB Client
+// MongoDB Client Setup
 const mongoClient = new MongoClient(process.env.MONGODB_URI);
 let xpCollection = null;
 
-// -----------------------------
+// ---------------------------------------------------------------------
 // 5. CLIENT INITIALIZATION
-// -----------------------------
+// ---------------------------------------------------------------------
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -105,42 +108,54 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.User, Partials.GuildMember],
 });
 
-// -----------------------------
-// 6. HELPER FUNCTIONS
-// -----------------------------
-
-// 파일 로드 (설정 및 블랙리스트)
+// ---------------------------------------------------------------------
+// 6. HELPER FUNCTIONS: FILE MANAGEMENT
+// ---------------------------------------------------------------------
 function loadLocalFiles() {
     // Config 로드
     try {
         if (fs.existsSync(CONFIG_FILE_PATH)) {
-            BOT_CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE_PATH, "utf8"));
-            console.log("[FILE] Config loaded.");
+            const raw = fs.readFileSync(CONFIG_FILE_PATH, "utf8");
+            BOT_CONFIG = JSON.parse(raw);
+            console.log("[FILE] Config loaded successfully.");
         } else {
             fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify(BOT_CONFIG, null, 2));
+            console.log("[FILE] Created new config file.");
         }
-    } catch (e) { console.error("Config Load Error:", e); }
+    } catch (e) {
+        console.error("[ERROR] Failed to load config:", e);
+    }
 
     // Blacklist 로드
     try {
         if (fs.existsSync(BLACKLIST_FILE_PATH)) {
-            BLACKLISTED_WORDS = JSON.parse(fs.readFileSync(BLACKLIST_FILE_PATH, "utf8"));
-            console.log(`[FILE] Blacklist loaded (${BLACKLISTED_WORDS.length} words).`);
+            const raw = fs.readFileSync(BLACKLIST_FILE_PATH, "utf8");
+            BLACKLISTED_WORDS = JSON.parse(raw);
+            console.log(`[FILE] Blacklist loaded: ${BLACKLISTED_WORDS.length} words.`);
         } else {
             fs.writeFileSync(BLACKLIST_FILE_PATH, JSON.stringify(BLACKLISTED_WORDS, null, 2));
+            console.log("[FILE] Created new blacklist file.");
         }
-    } catch (e) { console.error("Blacklist Load Error:", e); }
+    } catch (e) {
+        console.error("[ERROR] Failed to load blacklist:", e);
+    }
 }
 
 function saveConfig() {
-    fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify(BOT_CONFIG, null, 2));
+    try {
+        fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify(BOT_CONFIG, null, 2));
+    } catch (e) { console.error("[ERROR] Saving config:", e); }
 }
 
 function saveBlacklist() {
-    fs.writeFileSync(BLACKLIST_FILE_PATH, JSON.stringify(BLACKLISTED_WORDS, null, 2));
+    try {
+        fs.writeFileSync(BLACKLIST_FILE_PATH, JSON.stringify(BLACKLISTED_WORDS, null, 2));
+    } catch (e) { console.error("[ERROR] Saving blacklist:", e); }
 }
 
-// 권한 확인 함수
+// ---------------------------------------------------------------------
+// 7. HELPER FUNCTIONS: PERMISSIONS & DATABASE
+// ---------------------------------------------------------------------
 function isModerator(member) {
     if (!member) return false;
     return (
@@ -158,48 +173,48 @@ function isAdmin(member) {
     );
 }
 
-// 로그 전송 함수
-async function sendModLog(guild, user, action, moderator, reason, duration) {
-    if (!BOT_CONFIG.modLogChannelId) return;
-    const channel = guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
-    if (!channel) return;
-
-    const embed = new EmbedBuilder()
-        .setColor(action === "BAN" ? "#FF0000" : "#FFA500")
-        .setTitle(`🔨 Moderation: ${action}`)
-        .addFields(
-            { name: "Target", value: `${user.tag} (${user.id})`, inline: false },
-            { name: "Moderator", value: `${moderator.tag}`, inline: true },
-            { name: "Reason", value: reason, inline: true }
-        )
-        .setTimestamp();
-
-    if (duration) embed.addFields({ name: "Duration", value: `${duration}m`, inline: true });
-    
-    channel.send({ embeds: [embed] }).catch(() => {});
-}
-
-// -----------------------------
-// 7. MONGODB & XP LOGIC
-// -----------------------------
 async function connectMongo() {
     try {
         await mongoClient.connect();
         const db = mongoClient.db(process.env.MONGODB_DB_NAME || "gosuBot");
         xpCollection = db.collection("user_xp");
-        console.log("[MONGO] Connected to MongoDB for XP System.");
+        console.log("[MONGO] Connected to MongoDB Atlas successfully.");
     } catch (e) {
-        console.error("[MONGO] Connection Failed:", e);
+        console.error("[MONGO] Connection Failed. XP features will be disabled.", e);
     }
 }
 
+// ---------------------------------------------------------------------
+// 8. BOT READY EVENT
+// ---------------------------------------------------------------------
+client.once("ready", async () => {
+    console.log(`\n=============================================`);
+    console.log(`[BOT] Logged in as ${client.user.tag}`);
+    console.log(`[BOT] ID: ${client.user.id}`);
+    console.log(`=============================================\n`);
+    
+    loadLocalFiles();
+    await connectMongo();
+});
+// =====================================================================
+// Gosu Custom Discord Bot (Original Scale Restoration - Part 2)
+// Leveling Logic, Moderation Logger, Voice Creator
+// =====================================================================
+
+// ---------------------------------------------------------------------
+// 9. LEVEL SYSTEM LOGIC
+// ---------------------------------------------------------------------
 function getLevelFromTotalXp(totalXp) {
     let level = 0;
-    // XP 공식: 100 * level^2 + 100
+    // 공식: 100 * level^2 + 100 (누적 XP 기반 계산)
     while (totalXp >= (100 * (level + 1) * (level + 1) - 100)) {
         level++;
     }
     return level;
+}
+
+function getRequiredXpForLevel(level) {
+    return 200 * level + 100;
 }
 
 async function handleXpGain(message) {
@@ -209,14 +224,14 @@ async function handleXpGain(message) {
     const now = Date.now();
     const lastXp = xpCooldowns.get(key) || 0;
 
-    // 쿨타임 체크
+    // 쿨타임 확인
     if (now - lastXp < XP_CONFIG.cooldownMs) return;
     xpCooldowns.set(key, now);
 
+    // 랜덤 XP (5~15)
     const xpGain = Math.floor(Math.random() * (XP_CONFIG.maxXP - XP_CONFIG.minXP + 1)) + XP_CONFIG.minXP;
 
     try {
-        // DB 업데이트
         const result = await xpCollection.findOneAndUpdate(
             { guildId: message.guild.id, userId: message.author.id },
             { 
@@ -231,23 +246,24 @@ async function handleXpGain(message) {
 
         const newLevel = getLevelFromTotalXp(data.xp);
         
-        // 레벨업 로직
+        // 레벨업 발생 시
         if (newLevel > data.level) {
             await xpCollection.updateOne({ _id: data._id }, { $set: { level: newLevel } });
 
-            // 보상 역할 지급
+            // 역할 보상 지급
             for (const reward of LEVEL_ROLES) {
                 if (data.level < reward.level && newLevel >= reward.level) {
                     const role = message.guild.roles.cache.get(reward.roleId);
                     if (role) {
                         await message.member.roles.add(role).catch(console.error);
                         
-                        // ★ SILVER ROLE 획득 알림 (Level 10)
+                        // ★ SILVER ROLE ALERT (Level 10)
                         if (reward.roleId === SILVER_ROLE_ID) {
                             const embed = new EmbedBuilder()
                                 .setColor("#C0C0C0")
                                 .setTitle("🥈 Silver Rank Achieved!")
-                                .setDescription(`Congratulations ${message.member}! You reached **Level 10**.\n✅ You can now use **GIFs and Links**!`);
+                                .setDescription(`Congratulations ${message.member}! You reached **Level 10**.\n✅ You can now use **GIFs and Links**!`)
+                                .setThumbnail(message.author.displayAvatarURL());
                             message.channel.send({ embeds: [embed] });
                         }
                     }
@@ -256,26 +272,44 @@ async function handleXpGain(message) {
 
             const levelEmbed = new EmbedBuilder()
                 .setColor("#00FF7F")
-                .setDescription(`🎉 **${message.author}** has reached **Level ${newLevel}**!`);
+                .setTitle("🎉 Level Up!")
+                .setDescription(`**${message.author}** has reached **Level ${newLevel}**!`)
+                .setFooter({ text: "Gosu General TV — Level System" });
             message.channel.send({ embeds: [levelEmbed] });
         }
     } catch (e) { console.error("[XP] Error:", e); }
 }
 
-// -----------------------------
-// 8. INITIALIZATION
-// -----------------------------
-client.once("ready", async () => {
-    console.log(`[BOT] Logged in as ${client.user.tag}`);
-    loadLocalFiles();
-    await connectMongo();
-});
+// ---------------------------------------------------------------------
+// 10. MODERATION LOGGING SYSTEM
+// ---------------------------------------------------------------------
+async function sendModLog(guild, user, action, moderator, reason, duration) {
+    if (!BOT_CONFIG.modLogChannelId) return;
+    const channel = guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
+    if (!channel) return;
 
-// -----------------------------
-// 9. VOICE CHANNEL CREATOR
-// -----------------------------
+    const embed = new EmbedBuilder()
+        .setColor(action === "BAN" ? "#FF0000" : "#FFA500")
+        .setTitle(`🔨 Moderation Action: ${action}`)
+        .addFields(
+            { name: "Target User", value: `${user.tag} (${user.id})`, inline: false },
+            { name: "Moderator", value: `${moderator.tag}`, inline: true },
+            { name: "Reason", value: reason || "No reason provided", inline: true }
+        )
+        .setTimestamp();
+
+    if (duration) {
+        embed.addFields({ name: "Duration", value: `${duration} minutes`, inline: true });
+    }
+    
+    channel.send({ embeds: [embed] }).catch((err) => console.error("[LOG] Failed to send log:", err));
+}
+
+// ---------------------------------------------------------------------
+// 11. VOICE CHANNEL CREATOR
+// ---------------------------------------------------------------------
 client.on("voiceStateUpdate", async (oldState, newState) => {
-    // 1. Create Channel
+    // 1. 채널 생성 (Create)
     if (newState.channelId && CREATE_CHANNEL_IDS.includes(newState.channelId)) {
         const member = newState.member;
         const parent = newState.channel.parent;
@@ -285,28 +319,43 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
                 name: `🎧 ${member.user.username}'s VO`,
                 type: ChannelType.GuildVoice,
                 parent: parent,
+                userLimit: 5,
                 permissionOverwrites: [
-                    { id: newState.guild.id, allow: [PermissionsBitField.Flags.Connect], deny: [PermissionsBitField.Flags.ManageChannels] },
-                    { id: member.id, allow: [PermissionsBitField.Flags.ManageChannels, PermissionsBitField.Flags.MoveMembers] }
+                    { 
+                        id: newState.guild.id, 
+                        allow: [PermissionsBitField.Flags.Connect], 
+                        deny: [PermissionsBitField.Flags.ManageChannels] 
+                    },
+                    { 
+                        id: member.id, 
+                        allow: [
+                            PermissionsBitField.Flags.ManageChannels, 
+                            PermissionsBitField.Flags.MoveMembers,
+                            PermissionsBitField.Flags.MuteMembers
+                        ] 
+                    }
                 ]
             });
             TEMP_VOICE_CHANNEL_IDS.add(ch.id);
             member.voice.setChannel(ch);
-        } catch (e) { console.error("VO Create Error", e); }
+            console.log(`[VOICE] Created channel for ${member.user.tag}`);
+        } catch (e) { console.error("[VOICE] Creation Error:", e); }
     }
     
-    // 2. Delete Channel
+    // 2. 채널 삭제 (Delete) - 임시 채널이 비었을 때
     if (oldState.channelId && TEMP_VOICE_CHANNEL_IDS.has(oldState.channelId)) {
         if (oldState.channel.members.size === 0) {
             oldState.channel.delete().catch(() => {});
             TEMP_VOICE_CHANNEL_IDS.delete(oldState.channelId);
+            console.log(`[VOICE] Deleted empty channel: ${oldState.channel.name}`);
         }
     }
 });
+// =====================================================================
+// Gosu Custom Discord Bot (Original Scale Restoration - Part 3)
+// Message Filters (Scam, Silver GIF), General & Mod Commands
+// =====================================================================
 
-// =====================================================
-// 10. MAIN MESSAGE EVENT (FILTERS & COMMANDS)
-// =====================================================
 client.on("messageCreate", async (message) => {
     if (!message.guild || message.author.bot) return;
 
@@ -314,22 +363,27 @@ client.on("messageCreate", async (message) => {
     const lowerContent = content.toLowerCase();
     const isMod = isModerator(message.member);
     
-    // ★ SILVER ROLE CHECK
+    // ★ SILVER ROLE CHECK (GIF 권한 확인용)
     const isSilver = message.member.roles.cache.has(SILVER_ROLE_ID);
 
     // ---------------------------------------------------
-    // A. SCAM & MALICIOUS PATTERNS (최우선 차단)
+    // A. SCAM & MALICIOUS PATTERNS (최우선 차단 - Silver도 예외 없음)
     // ---------------------------------------------------
     const scamPatterns = [
         "free nitro", "steamcommunity.com/gift", "airdrop", "discord.gg/invite", 
-        "dlscord.gg", "bit.ly/", "tinyurl.com", "hacked"
+        "dlscord.gg", "bit.ly/", "tinyurl.com", "hacked", "gift free"
     ];
 
     if (!isMod && scamPatterns.some(p => lowerContent.includes(p))) {
         if (message.deletable) message.delete().catch(() => {});
         const msg = await message.channel.send(`🚨 **${message.author}** Malicious/Scam link detected and blocked.`);
         setTimeout(() => msg.delete().catch(() => {}), 5000);
-        return; // 종료
+        // 로그가 켜져있다면 기록
+        if(BOT_CONFIG.filterLogChannelId) {
+            const ch = message.guild.channels.cache.get(BOT_CONFIG.filterLogChannelId);
+            if(ch) ch.send(`🚨 **Scam Blocked**\nUser: ${message.author.tag}\nContent: ||${content}||`);
+        }
+        return; 
     }
 
     // ---------------------------------------------------
@@ -347,7 +401,7 @@ client.on("messageCreate", async (message) => {
             allow = true;
         }
 
-        // ★ 예외: Silver라도 초대 링크와 야한 사이트는 차단
+        // ★ 예외: Silver라도 초대 링크와 야한 사이트는 무조건 차단
         if (hasDiscordInvite || hasOnlyFans) {
             allow = false;
         }
@@ -356,7 +410,7 @@ client.on("messageCreate", async (message) => {
             if (message.deletable) message.delete().catch(() => {});
             const msg = await message.channel.send(`🚫 **${message.author}** Links/GIFs are restricted to **Silver Rank (Level 10+)**.`);
             setTimeout(() => msg.delete().catch(() => {}), 5000);
-            return; // 종료
+            return; 
         }
     }
 
@@ -367,11 +421,11 @@ client.on("messageCreate", async (message) => {
         if (message.deletable) message.delete().catch(() => {});
         const msg = await message.channel.send(`🚫 **${message.author}** Forbidden word detected.`);
         setTimeout(() => msg.delete().catch(() => {}), 5000);
-        return; // 종료
+        return; 
     }
 
     // ---------------------------------------------------
-    // D. XP GAIN (필터 통과 시)
+    // D. XP GAIN PROCESSING
     // ---------------------------------------------------
     await handleXpGain(message);
 
@@ -383,17 +437,17 @@ client.on("messageCreate", async (message) => {
     const args = content.slice(1).split(/ +/);
     const cmd = args.shift().toLowerCase();
 
-    // Clean up command message (optional)
+    // 명령어를 치면 1초 뒤에 해당 명령어 채팅 삭제 (깔끔하게 유지)
     if (!["ping", "invite", "rank", "leaderboard", "level"].includes(cmd)) {
         setTimeout(() => { if (!message.deleted) message.delete().catch(() => {}); }, 1000);
     }
 
-    // --- GENERAL COMMANDS ---
+    // [GENERAL COMMANDS]
     if (cmd === "!ping") {
         return message.reply("Pong!");
     }
     if (cmd === "!invite") {
-        return message.reply("📨 https://discord.gg/gosugeneral");
+        return message.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
     }
     if (cmd === "!help") {
         const embed = new EmbedBuilder().setColor("#00FFFF").setTitle("🤖 Bot Commands")
@@ -405,7 +459,7 @@ client.on("messageCreate", async (message) => {
         return message.channel.send({ embeds: [embed] });
     }
 
-    // --- LEVELING COMMANDS ---
+    // [LEVELING COMMANDS]
     if (cmd === "!rank") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
         const target = message.mentions.users.first() || message.author;
@@ -427,7 +481,7 @@ client.on("messageCreate", async (message) => {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
         const top = await xpCollection.find({ guildId: message.guild.id }).sort({ xp: -1 }).limit(10).toArray();
         
-        const description = top.map((u, i) => `${i + 1}. <@${u.userId}> — Level ${u.level}`).join("\n");
+        const description = top.map((u, i) => `${i + 1}. <@${u.userId}> — Level ${u.level} (${u.xp} XP)`).join("\n");
         const embed = new EmbedBuilder().setColor("Gold").setTitle("🏆 Leaderboard").setDescription(description || "No data.");
         return message.channel.send({ embeds: [embed] });
     }
@@ -438,7 +492,7 @@ client.on("messageCreate", async (message) => {
         return message.channel.send({ embeds: [embed] });
     }
 
-    // --- MODERATION COMMANDS ---
+    // [MODERATION COMMANDS]
     if (cmd === "!kick") {
         if (!isModerator(message.member)) return;
         const target = message.mentions.members.first();
@@ -449,21 +503,7 @@ client.on("messageCreate", async (message) => {
             message.reply(`👢 Kicked ${target.user.tag}`);
             sendModLog(message.guild, target.user, "KICK", message.author, reason);
         } else {
-            message.reply("❌ Cannot kick user.");
-        }
-    }
-
-    if (cmd === "!ban") {
-        if (!isAdmin(message.member)) return;
-        const target = message.mentions.members.first();
-        const reason = args.slice(1).join(" ") || "No reason";
-
-        if (target && target.bannable) {
-            await target.ban({ reason });
-            message.reply(`🔨 Banned ${target.user.tag}`);
-            sendModLog(message.guild, target.user, "BAN", message.author, reason);
-        } else {
-            message.reply("❌ Cannot ban user.");
+            message.reply("❌ Cannot kick user. (Check hierarchy)");
         }
     }
 
@@ -478,7 +518,7 @@ client.on("messageCreate", async (message) => {
             message.reply(`🔇 Muted ${target.user.tag} for ${mins}m`);
             sendModLog(message.guild, target.user, "MUTE", message.author, reason, mins);
         } else {
-            message.reply("Usage: `!mute @user [minutes]`");
+            message.reply("Usage: `!mute @user [minutes] [reason]`");
         }
     }
 
@@ -495,7 +535,7 @@ client.on("messageCreate", async (message) => {
         if (!isModerator(message.member)) return;
         const channel = message.mentions.channels.first() || message.channel;
         await channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false });
-        message.channel.send(`❄️ Channel ${channel} has been frozen.`);
+        message.channel.send(`❄️ Channel ${channel} has been frozen by ${message.author}.`);
     }
 
     if (cmd === "!unfreeze") {
@@ -517,7 +557,6 @@ client.on("messageCreate", async (message) => {
         }
     }
 
-    // Blacklist Commands
     if (cmd === "!addword") {
         if (!isModerator(message.member)) return;
         const word = args.join(" ").toLowerCase();
@@ -540,50 +579,50 @@ client.on("messageCreate", async (message) => {
         if (!isModerator(message.member)) return;
         message.reply(`🚫 **Blacklist:** ${BLACKLISTED_WORDS.join(", ")}`);
     }
+// =====================================================================
+// Gosu Custom Discord Bot (Original Scale Restoration - Part 4)
+// Admin Commands, Panels, Button Logic, Login
+// =====================================================================
+
+    // [ADMIN COMMANDS & PANELS]
+    if (cmd === "!ban") {
+        if (!isAdmin(message.member)) return;
+        const target = message.mentions.members.first();
+        const reason = args.slice(1).join(" ") || "No reason";
+
+        if (target && target.bannable) {
+            await target.ban({ reason });
+            message.reply(`🔨 Banned ${target.user.tag}`);
+            sendModLog(message.guild, target.user, "BAN", message.author, reason);
+        } else {
+            message.reply("❌ Cannot ban user.");
+        }
+    }
 
     if (cmd === "!reloadblacklist") {
         if (!isAdmin(message.member)) return;
         loadLocalFiles();
-        message.reply("✅ Blacklist reloaded.");
+        message.reply("✅ Blacklist reloaded from file.");
     }
 
-    // Role Commands
-    if (cmd === "!addrole") {
-        if (!isModerator(message.member)) return;
-        const target = message.mentions.members.first();
-        const roleName = args.slice(1).join(" ");
-        const role = message.guild.roles.cache.find(r => r.name.toLowerCase() === roleName.toLowerCase());
-        
-        if (target && role) {
-            await target.roles.add(role);
-            message.reply(`✅ Added role **${role.name}**.`);
-        } else {
-            message.reply("Usage: `!addrole @user RoleName`");
-        }
-    }
+    // --- SETUP COMMANDS (Panels) ---
+    const RULES_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440992642761752656/must_read.png";
+    const WELCOME_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440988230492225646/welcome.png";
+    const NOTI_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png";
+    const CREATOR_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1441312962903015576/verification.png";
 
-    if (cmd === "!removerole") {
-        if (!isModerator(message.member)) return;
-        const target = message.mentions.members.first();
-        const roleName = args.slice(1).join(" ");
-        const role = message.guild.roles.cache.find(r => r.name.toLowerCase() === roleName.toLowerCase());
-        
-        if (target && role) {
-            await target.roles.remove(role);
-            message.reply(`✅ Removed role **${role.name}**.`);
-        }
-    }
-
-    // --- ADMIN SETUP COMMANDS (PANELS) ---
     if (cmd === "!setupjoin") {
         if (!isAdmin(message.member)) return;
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("agree_rules").setLabel("Agree To Rules").setStyle(ButtonStyle.Success).setEmoji("✅")
         );
-        // Banner
-        if (RULES_BANNER_URL) await message.channel.send({ files: [RULES_BANNER_URL] });
+        // 배너 이미지 전송
+        await message.channel.send({ files: [RULES_BANNER] });
         
-        const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("📜 Server Rules").setDescription("Please read the rules and click the button below.");
+        const embed = new EmbedBuilder()
+            .setColor("#1e90ff")
+            .setTitle("📜 Server Rules")
+            .setDescription("Please read the rules carefully and click the button below to join.");
         message.channel.send({ embeds: [embed], components: [row] });
     }
 
@@ -592,8 +631,8 @@ client.on("messageCreate", async (message) => {
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setLabel("YouTube").setStyle(ButtonStyle.Link).setURL("https://youtube.com/@Teamgosu")
         );
-        if (WELCOME_BANNER_URL) await message.channel.send({ files: [WELCOME_BANNER_URL] });
-        const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("Welcome!").setDescription("Enjoy your stay.");
+        if (WELCOME_BANNER) await message.channel.send({ files: [WELCOME_BANNER] });
+        const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("Welcome!").setDescription("Enjoy your stay in Gosu General TV.");
         message.channel.send({ embeds: [embed], components: [row] });
     }
 
@@ -602,8 +641,8 @@ client.on("messageCreate", async (message) => {
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("subscribe_toggle").setLabel("Subscribe").setStyle(ButtonStyle.Primary).setEmoji("🔔")
         );
-        if (NOTIFICATION_BANNER_URL) await message.channel.send({ files: [NOTIFICATION_BANNER_URL] });
-        const embed = new EmbedBuilder().setColor("#FF0000").setTitle("🔴 Live Notifications").setDescription("Click to toggle alerts.");
+        if (NOTI_BANNER) await message.channel.send({ files: [NOTI_BANNER] });
+        const embed = new EmbedBuilder().setColor("#FF0000").setTitle("🔴 Live Notifications").setDescription("Click the button to toggle alerts.");
         message.channel.send({ embeds: [embed], components: [row] });
     }
 
@@ -612,12 +651,12 @@ client.on("messageCreate", async (message) => {
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("apply_creator").setLabel("Apply").setStyle(ButtonStyle.Secondary)
         );
-        if (CREATOR_BANNER_URL) await message.channel.send({ files: [CREATOR_BANNER_URL] });
+        if (CREATOR_BANNER) await message.channel.send({ files: [CREATOR_BANNER] });
         const embed = new EmbedBuilder().setColor("#FFB347").setTitle("👑 Creator Role").setDescription("Apply for creator verification.");
         message.channel.send({ embeds: [embed], components: [row] });
     }
 
-    // --- LOG CONFIG COMMANDS ---
+    // --- LOG CONFIG ---
     if (cmd.startsWith("!set") && cmd.includes("log")) {
         if (!isAdmin(message.member)) return;
         const channel = message.mentions.channels.first() || message.channel;
@@ -628,13 +667,13 @@ client.on("messageCreate", async (message) => {
         if (cmd === "!setfilterlog") BOT_CONFIG.filterLogChannelId = channel.id;
         
         saveConfig();
-        message.reply(`✅ **${cmd.replace("set", "").toUpperCase()}** set to ${channel}.`);
+        message.reply(`✅ **${cmd.replace("!set", "").toUpperCase()}** set to ${channel}.`);
     }
 });
 
-// =====================================================
-// 11. EVENT LOGGING (Delete/Update/Members)
-// =====================================================
+// ---------------------------------------------------------------------
+// 12. EVENT LOGGING (Delete/Update/Members)
+// ---------------------------------------------------------------------
 client.on("messageDelete", async (message) => {
     if (!message.guild || !BOT_CONFIG.msgLogChannelId) return;
     const ch = message.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId);
@@ -669,9 +708,9 @@ client.on("guildMemberRemove", member => {
     }
 });
 
-// =====================================================
-// 12. BUTTON INTERACTIONS
-// =====================================================
+// ---------------------------------------------------------------------
+// 13. BUTTON INTERACTIONS
+// ---------------------------------------------------------------------
 client.on("interactionCreate", async (i) => {
     if (!i.isButton()) return;
     const { customId, member } = i;
@@ -679,15 +718,15 @@ client.on("interactionCreate", async (i) => {
     try {
         if (customId === "agree_rules") {
             await member.roles.add(GOSU_ROLE);
-            i.reply({ content: "✅ Welcome! Access Granted.", ephemeral: true });
+            i.reply({ content: "✅ Rules accepted! Welcome to the server.", ephemeral: true });
         }
         if (customId === "subscribe_toggle") {
             if (member.roles.cache.has(SUB_ROLE)) {
                 await member.roles.remove(SUB_ROLE);
-                i.reply({ content: "🔕 Unsubscribed.", ephemeral: true });
+                i.reply({ content: "🔕 Unsubscribed from live notifications.", ephemeral: true });
             } else {
                 await member.roles.add(SUB_ROLE);
-                i.reply({ content: "🔔 Subscribed!", ephemeral: true });
+                i.reply({ content: "🔔 Subscribed to live notifications!", ephemeral: true });
             }
         }
         if (customId === "apply_creator") {
@@ -696,7 +735,7 @@ client.on("interactionCreate", async (i) => {
     } catch (e) { console.error(e); }
 });
 
-// =====================================================
-// 13. BOT LOGIN
-// =====================================================
+// ---------------------------------------------------------------------
+// 14. BOT LOGIN
+// ---------------------------------------------------------------------
 client.login(process.env.Bot_Token);
