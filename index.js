@@ -417,20 +417,17 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 });
 
 // =====================================================================
-// Gosu Custom Discord Bot (Original Expanded Version - Part 3)
-// Message Filters (Scam, Silver GIF), General & Mod Commands
+// Gosu Custom Discord Bot (Final English Build - Part 3)
+// Filters, Commands (Enhanced Rank Search)
 // =====================================================================
 
 client.on("messageCreate", async (message) => {
-    // Ignore bots and DMs
     if (!message.guild || message.author.bot) return;
 
-    // ---------------------------------------------------
-    // PRE-PROCESSING
-    // ---------------------------------------------------
+    // Parse Command First
     const content = message.content.trim();
     const args = content.slice(1).split(/ +/);
-    const cmd = args.shift().toLowerCase(); // Prefix removed
+    const cmd = args.shift().toLowerCase();
     const isCommand = content.startsWith("!");
 
     const lowerContent = content.toLowerCase();
@@ -438,295 +435,248 @@ client.on("messageCreate", async (message) => {
     const isSilver = message.member.roles.cache.has(SILVER_ROLE_ID);
 
     // ---------------------------------------------------
-    // 1. FILTER LOGIC (Skipped if user is Mod or sending a command)
+    // 1. FILTER LOGIC (Skip for commands)
     // ---------------------------------------------------
     if (!isMod && !isCommand) {
+        // A. Scam Check
+        const scams = ["free nitro", "steamcommunity.com/gift", "airdrop", "discord.gg/invite", "dlscord.gg", "bit.ly/", "gift free"];
+        if (scams.some(s => lowerContent.includes(s))) {
+            if(message.deletable) message.delete().catch(()=>{});
+            return message.channel.send(`🚨 **${message.author.username}** Scam link blocked.`).then(m=>setTimeout(()=>m.delete(),5000));
+        }
         
-        // A. SCAM & MALICIOUS PATTERNS (Critical Priority)
-        const scamPatterns = [
-            "free nitro", 
-            "steamcommunity.com/gift", 
-            "airdrop", 
-            "discord.gg/invite", 
-            "dlscord.gg", 
-            "bit.ly/", 
-            "tinyurl.com", 
-            "hacked", 
-            "gift free"
-        ];
-
-        if (scamPatterns.some(p => lowerContent.includes(p))) {
-            if (message.deletable) message.delete().catch(() => {});
-            const msg = await message.channel.send(`🚨 **${message.author}** Malicious/Scam link detected and blocked.`);
-            setTimeout(() => msg.delete().catch(() => {}), 5000);
-            
-            // Log to Filter Log Channel
-            if(BOT_CONFIG.filterLogChannelId) {
-                const ch = message.guild.channels.cache.get(BOT_CONFIG.filterLogChannelId);
-                if(ch) ch.send(`🚨 **Scam Blocked**\nUser: ${message.author.tag}\nContent: ||${content}||`);
-            }
-            return; // Stop processing
-        }
-
-        // B. LINK & GIF FILTER
-        // General link detection
+        // B. Link Check (Silver Only)
         const hasLink = /(https?:\/\/[^\s]+)/.test(lowerContent);
-        // Discord invites
-        const hasDiscordInvite = /discord\.gg\//.test(lowerContent) && !lowerContent.includes("gosugeneral");
-        // NSFW
-        const hasOnlyFans = lowerContent.includes("onlyfans") || lowerContent.includes("only fans");
-
-        if (hasLink || hasDiscordInvite || hasOnlyFans) {
-            let allow = false;
-
-            // ★ Silver Role: Allow general links/GIFs
-            if (isSilver) {
-                allow = true;
-            }
-
-            // ★ Exception: Invites and NSFW are blocked even for Silver
-            if (hasDiscordInvite || hasOnlyFans) {
-                allow = false;
-            }
-
-            if (!allow) {
-                if (message.deletable) message.delete().catch(() => {});
-                const msg = await message.channel.send(`🚫 **${message.author}** Links/GIFs are restricted to **Silver Rank (Level 10+)**.`);
-                setTimeout(() => msg.delete().catch(() => {}), 5000);
-                return; // Stop processing
-            }
+        if (hasLink && !isSilver) {
+            if(message.deletable) message.delete().catch(()=>{});
+            return message.channel.send(`🚫 **${message.author.username}** Links require **Silver Rank (Lv 10)**.`).then(m=>setTimeout(()=>m.delete(),5000));
         }
 
-        // C. BLACKLIST WORD FILTER
-        // Check if message contains any blacklisted word
+        // C. Blacklist Check
         if (BLACKLISTED_WORDS.some(w => lowerContent.includes(w))) {
-            if (message.deletable) message.delete().catch(() => {});
-            const msg = await message.channel.send(`🚫 **${message.author}** Forbidden word detected.`);
-            setTimeout(() => msg.delete().catch(() => {}), 5000);
-            return; // Stop processing
+            if(message.deletable) message.delete().catch(()=>{});
+            return message.channel.send(`🚫 **${message.author.username}** Forbidden word detected.`).then(m=>setTimeout(()=>m.delete(),5000));
         }
     }
 
-    // ---------------------------------------------------
-    // 2. XP GAIN (Only for non-command messages)
-    // ---------------------------------------------------
+    // XP Gain (Skip for commands)
     if (!isCommand) {
         await handleXpGain(message);
-        return; // Exit here if it's just a chat message
+        return; 
     }
 
     // ---------------------------------------------------
-    // 3. COMMAND EXECUTION
+    // 2. COMMAND LOGIC
     // ---------------------------------------------------
     
-    // Auto-delete command invocation message to keep chat clean
-    // (Except for simple info commands)
+    // Auto-delete trigger message
     if (!["ping", "invite", "rank", "leaderboard", "level"].includes(cmd)) {
         setTimeout(() => { if (!message.deleted) message.delete().catch(() => {}); }, 1000);
     }
 
-    // [GENERAL COMMANDS]
-    if (cmd === "ping") {
-        return message.reply("Pong!");
-    }
-
-    if (cmd === "invite") {
-        return message.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
-    }
+    // [GENERAL]
+    if (cmd === "ping") return message.reply("Pong!");
+    if (cmd === "invite") return message.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
     
     if (cmd === "help") {
-        const embed = new EmbedBuilder()
-            .setColor("#00FFFF")
-            .setTitle("🤖 Bot Commands")
-            .addFields(
-                { name: "General", value: "`!ping`, `!invite`, `!rank`, `!leaderboard`, `!level`" },
-                { name: "Moderation", value: "`!kick`, `!ban`, `!mute`, `!unmute`, `!freeze`, `!unfreeze`, `!prune`" },
-                { name: "Filter", value: "`!addword`, `!removeword`, `!listwords`, `!reloadblacklist`" },
-                { name: "Admin", value: "`!setupjoin`, `!welcome`, `!subscriber`, `!creator`, `!syncrolexp`" },
-                { name: "Logging", value: "`!setmodlog`, `!setmsglog`, `!setactionlog`" }
-            );
+        const embed = new EmbedBuilder().setColor("#00FFFF").setTitle("🤖 Bot Commands")
+            .setDescription("**General**: `!ping`, `!rank`, `!leaderboard`, `!level`\n**Mod**: `!kick`, `!mute`, `!freeze`\n**Admin**: `!setupjoin`, `!syncrolexp`...");
         return message.channel.send({ embeds: [embed] });
     }
 
-    // [LEVELING COMMANDS]
+    // [LEVELING - ENHANCED RANK SEARCH]
     if (cmd === "rank") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
-        const target = message.mentions.users.first() || message.author;
-        const data = await xpCollection.findOne({ guildId: message.guild.id, userId: target.id });
         
-        if (!data) return message.reply("No XP data found for this user.");
-        
-        const rank = (await xpCollection.countDocuments({ guildId: message.guild.id, xp: { $gt: data.xp } })) + 1;
-        const embed = new EmbedBuilder()
-            .setColor("#00D1FF")
-            .setTitle(`📊 Rank: ${target.username}`)
-            .setThumbnail(target.displayAvatarURL())
-            .addFields(
-                { name: "Level", value: `${data.level}`, inline: true },
-                { name: "XP", value: `${data.xp}`, inline: true },
-                { name: "Rank", value: `#${rank}`, inline: true }
+        let targetMember;
+
+        // 1. Check for Mention (@User)
+        if (message.mentions.members.size > 0) {
+            targetMember = message.mentions.members.first();
+        } 
+        // 2. Check for Name/ID Search (e.g. !rank gosu)
+        else if (args.length > 0) {
+            const search = args.join(" ").toLowerCase();
+            targetMember = message.guild.members.cache.find(m => 
+                m.user.username.toLowerCase().includes(search) || 
+                (m.nickname && m.nickname.toLowerCase().includes(search)) ||
+                m.user.id === search
             );
-        return message.channel.send({ embeds: [embed] });
+        } 
+        // 3. Default to Self
+        else {
+            targetMember = message.member;
+        }
+
+        if (!targetMember) return message.reply("❌ User not found.");
+
+        const targetUser = targetMember.user;
+        const data = await xpCollection.findOne({ guildId: message.guild.id, userId: targetUser.id });
+        
+        if (!data) return message.reply(`❌ No XP data found for **${targetUser.username}**.`);
+
+        // Rank Calculation
+        const rank = (await xpCollection.countDocuments({ guildId: message.guild.id, xp: { $gt: data.xp } })) + 1;
+        const totalUsers = await xpCollection.countDocuments({ guildId: message.guild.id });
+
+        // XP Progress
+        const currentLevel = data.level || 0;
+        const xpForCurrentLevel = getTotalXpForLevel(currentLevel);
+        const xpForNextLevel = getTotalXpForLevel(currentLevel + 1);
+        
+        const xpIntoLevel = data.xp - xpForCurrentLevel;
+        const xpToNextLevel = xpForNextLevel - xpForCurrentLevel;
+        
+        // Progress Bar
+        const percentage = Math.min(Math.max(xpIntoLevel / xpToNextLevel, 0), 1);
+        const totalBars = 15;
+        const filledBars = Math.round(percentage * totalBars);
+        const emptyBars = totalBars - filledBars;
+        const progressBar = "█".repeat(filledBars) + "░".repeat(emptyBars);
+
+        // Next Reward Info
+        const nextRewardEntry = LEVEL_ROLES.find(r => r.level > currentLevel);
+        let nextRewardText = "You have unlocked all rewards!";
+        if (nextRewardEntry) {
+            const role = message.guild.roles.cache.get(nextRewardEntry.roleId);
+            const roleName = role ? role.name : `Level ${nextRewardEntry.level} Role`;
+            nextRewardText = `At **Level ${nextRewardEntry.level}** you will earn role: **${roleName}**`;
+        }
+
+        // Build Rich Embed (No Ping - Uses Username)
+        const rankEmbed = new EmbedBuilder()
+            .setColor(targetMember.displayHexColor === "#000000" ? "#9B59B6" : targetMember.displayHexColor)
+            .setAuthor({ name: `${targetUser.username}'s Rank`, iconURL: targetUser.displayAvatarURL() })
+            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+            .addFields(
+                { name: "🧬 Level", value: `${currentLevel}`, inline: true },
+                { name: "⭐ XP", value: `${data.xp} / ${xpForNextLevel}`, inline: true },
+                { name: "🏆 Rank", value: `#${rank} of ${totalUsers}`, inline: true },
+                { name: "📈 Progress to Next Level", value: `${progressBar}\n${xpIntoLevel} / ${xpToNextLevel} XP`, inline: false },
+                { name: "🎁 Next Reward", value: nextRewardText, inline: false }
+            )
+            .setFooter({ text: "Gosu General TV — Rank System", iconURL: message.guild.iconURL() })
+            .setTimestamp();
+
+        return message.channel.send({ embeds: [rankEmbed] });
     }
 
     if (cmd === "leaderboard") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
-        
         const top = await xpCollection.find({ guildId: message.guild.id }).sort({ xp: -1 }).limit(10).toArray();
-        if (top.length === 0) return message.reply("No data available yet.");
+        const description = top.map((u, i) => `${i+1}. <@${u.userId}> — Lv ${u.level} (${u.xp} XP)`).join("\n");
+        const embed = new EmbedBuilder().setColor("Gold").setTitle("🏆 Leaderboard").setDescription(description || "No Data");
+        return message.channel.send({ embeds: [embed] });
+    }
 
-        const description = top.map((u, i) => {
-            return `${i + 1}. <@${u.userId}> — Level ${u.level} (${u.xp} XP)`;
+   // [LEVELING - ENHANCED REWARD LIST]
+    if (cmd === "level") {
+        // 1. Fetch User Data
+        let userLevel = 0;
+        if (xpCollection) {
+            const data = await xpCollection.findOne({ guildId: message.guild.id, userId: message.author.id });
+            if (data) userLevel = data.level;
+        }
+
+        // 2. Build Progress List
+        // Use map to create a visual list of rewards
+        const description = LEVEL_ROLES.map(entry => {
+            const role = message.guild.roles.cache.get(entry.roleId);
+            const roleName = role ? role.toString() : `Unknown Role (ID: ${entry.roleId})`;
+            
+            // Check if user has reached this level
+            if (userLevel >= entry.level) {
+                return `✅ **Lv ${entry.level}** — ${roleName} (Unlocked)`;
+            } else {
+                return `🔒 **Lv ${entry.level}** — ${roleName}`;
+            }
         }).join("\n");
 
-        const embed = new EmbedBuilder()
-            .setColor("Gold")
-            .setTitle("🏆 Leaderboard")
-            .setDescription(description);
-        return message.channel.send({ embeds: [embed] });
-    }
-
-    if (cmd === "level") {
-        const embed = new EmbedBuilder()
-            .setColor("Green")
-            .setTitle("🎯 Level Rewards")
-            .setDescription(LEVEL_ROLES.map(r => `**Lv ${r.level}**: <@&${r.roleId}>`).join("\n"));
-        return message.channel.send({ embeds: [embed] });
-    }
-
-    // [ADMIN - SYNC]
-    if (cmd === "syncrolexp") {
-        if (!isAdmin(message.member)) return message.reply("⛔ Admin only.");
-        const statusMsg = await message.channel.send("🔄 Syncing roles to DB... This might take a moment.");
+        // 3. Find Next Milestone
+        const nextReward = LEVEL_ROLES.find(r => r.level > userLevel);
+        let progressText = "🎉 You have unlocked all rewards!";
         
+        if (nextReward) {
+            const levelsLeft = nextReward.level - userLevel;
+            progressText = `🔥 **${levelsLeft}** more levels to unlock **Level ${nextReward.level}** reward!`;
+        }
+
+        // 4. Create Rich Embed
+        const levelEmbed = new EmbedBuilder()
+            .setColor(userLevel > 0 ? "#00FF7F" : "#95A5A6") // Green if active, Gray if lvl 0
+            .setTitle("🎯 Level Rewards & Progress")
+            .setThumbnail(message.author.displayAvatarURL())
+            .setDescription(`**Current Level: ${userLevel}**\n\n${description}`)
+            .addFields(
+                { name: "🚀 Next Milestone", value: progressText, inline: false }
+            )
+            .setFooter({ text: "Keep chatting to unlock more roles!", iconURL: message.guild.iconURL() });
+
+        return message.channel.send({ embeds: [levelEmbed] });
+    }
+
+    // [ADMIN]
+    if (cmd === "syncrolexp") {
+        if(!isAdmin(message.member)) return message.reply("⛔ Admin only.");
+        message.reply("🔄 Syncing roles...");
         let count = 0;
         for (const reward of LEVEL_ROLES) {
             const role = message.guild.roles.cache.get(reward.roleId);
             if (!role) continue;
-            
-            for (const [memberId, member] of role.members) {
+            for (const [mid, m] of role.members) {
                 const minXp = getTotalXpForLevel(reward.level);
-                
-                // Check DB
-                const userDoc = await xpCollection.findOne({ guildId: message.guild.id, userId: memberId });
-                
-                // If user has role but level is too low in DB, force update
+                const userDoc = await xpCollection.findOne({ guildId: message.guild.id, userId: mid });
                 if (!userDoc || userDoc.level < reward.level) {
-                    await xpCollection.updateOne(
-                        { guildId: message.guild.id, userId: memberId },
-                        { $set: { level: reward.level, xp: minXp } }, 
-                        { upsert: true }
-                    );
+                    await xpCollection.updateOne({ guildId: message.guild.id, userId: mid }, { $set: { level: reward.level, xp: minXp } }, { upsert: true });
                     count++;
                 }
             }
         }
-        await statusMsg.edit(`✅ Synced **${count}** users based on their roles.`);
+        message.channel.send(`✅ Synced **${count}** users.`);
     }
 
-    // [MODERATION COMMANDS]
+    // [MODERATION]
     if (cmd === "kick") {
-        if (!isModerator(message.member)) return;
-        const target = message.mentions.members.first();
-        const reason = args.slice(1).join(" ") || "No reason provided";
-        
-        if (target && target.kickable) {
-            await target.kick(reason);
-            message.reply(`👢 Successfully kicked **${target.user.tag}**.`);
-            sendModLog(message.guild, target.user, "KICK", message.author, reason);
-        } else {
-            message.reply("❌ Cannot kick user. Check role hierarchy.");
-        }
+        if(!isMod) return;
+        const t = message.mentions.members.first();
+        if(t?.kickable) { await t.kick(); message.reply(`👢 Kicked **${t.user.username}**.`); sendModLog(message.guild, t.user, "KICK", message.author, "Manual"); }
     }
-
     if (cmd === "ban") {
-        if (!isAdmin(message.member)) return;
-        const target = message.mentions.members.first();
-        const reason = args.slice(1).join(" ") || "No reason provided";
-
-        if (target && target.bannable) {
-            await target.ban({ reason });
-            message.reply(`🔨 Successfully banned **${target.user.tag}**.`);
-            sendModLog(message.guild, target.user, "BAN", message.author, reason);
-        } else {
-            message.reply("❌ Cannot ban user.");
-        }
+        if(!isAdmin(message.member)) return;
+        const t = message.mentions.members.first();
+        if(t?.bannable) { await t.ban(); message.reply(`🔨 Banned **${t.user.username}**.`); sendModLog(message.guild, t.user, "BAN", message.author, "Manual"); }
     }
-
     if (cmd === "mute") {
-        if (!isModerator(message.member)) return;
-        const target = message.mentions.members.first();
-        const mins = parseInt(args[1]);
-        const reason = args.slice(2).join(" ") || "No reason provided";
-
-        if (target && !isNaN(mins)) {
-            await target.timeout(mins * 60 * 1000, reason);
-            message.reply(`🔇 Muted **${target.user.tag}** for ${mins} minutes.`);
-            sendModLog(message.guild, target.user, "MUTE", message.author, reason, mins);
-        } else {
-            message.reply("Usage: `!mute @user [minutes] [reason]`");
-        }
+        if(!isMod) return;
+        const t = message.mentions.members.first();
+        const m = parseInt(args[1]);
+        if(t && m) { await t.timeout(m*60000); message.reply(`🔇 Muted **${t.user.username}** for ${m}m.`); sendModLog(message.guild, t.user, "MUTE", message.author, "Manual"); }
     }
-
     if (cmd === "unmute") {
-        if (!isModerator(message.member)) return;
-        const target = message.mentions.members.first();
-        if (target) {
-            await target.timeout(null);
-            message.reply(`🔊 Unmuted **${target.user.tag}**.`);
-        }
+        if(!isMod) return;
+        const t = message.mentions.members.first();
+        if(t) { await t.timeout(null); message.reply(`🔊 Unmuted **${t.user.username}**.`); }
     }
-
     if (cmd === "freeze") {
-        if (!isModerator(message.member)) return;
-        const channel = message.mentions.channels.first() || message.channel;
-        await channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false });
-        message.channel.send(`❄️ Channel ${channel} has been **frozen**.`);
+        if(!isMod) return;
+        message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false });
+        message.channel.send("❄️ Frozen");
     }
-
     if (cmd === "unfreeze") {
-        if (!isModerator(message.member)) return;
-        const channel = message.mentions.channels.first() || message.channel;
-        await channel.permissionOverwrites.edit(message.guild.id, { SendMessages: null });
-        message.channel.send(`♨️ Channel ${channel} has been **thawed**.`);
+        if(!isMod) return;
+        message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: null });
+        message.channel.send("♨️ Thawed");
     }
-
     if (cmd === "prune") {
-        if (!isModerator(message.member)) return;
-        const amount = parseInt(args[0]);
-        if (amount && amount <= 100) {
-            await message.channel.bulkDelete(amount, true);
-            const msg = await message.channel.send(`🧹 Deleted **${amount}** messages.`);
-            setTimeout(() => msg.delete().catch(() => {}), 2000);
-        } else {
-            message.reply("Usage: `!prune [1-100]`");
-        }
+        if(!isMod) return;
+        const n = parseInt(args[0]);
+        if(n) message.channel.bulkDelete(n, true);
     }
-
     if (cmd === "addword") {
-        if (!isModerator(message.member)) return;
-        const word = args.join(" ").toLowerCase();
-        if (word) {
-            BLACKLISTED_WORDS.push(word);
-            saveBlacklist();
-            message.reply(`✅ Added "**${word}**" to blacklist.`);
-        }
-    }
-
-    if (cmd === "removeword") {
-        if (!isModerator(message.member)) return;
-        const word = args.join(" ").toLowerCase();
-        BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(w => w !== word);
-        saveBlacklist();
-        message.reply(`✅ Removed "**${word}**" from blacklist.`);
-    }
-
-    if (cmd === "listwords") {
-        if (!isModerator(message.member)) return;
-        message.reply(`🚫 **Blacklist:** ${BLACKLISTED_WORDS.join(", ")}`);
-    }
-
-// =====================================================================
+        if(!isMod) return;
+        const w = args.join(" ").toLowerCase();
+        if(w) { BLACKLISTED_WORDS.push(w); saveBlacklist(); message.reply("Added."); }
+    }// =====================================================================
 // Gosu Custom Discord Bot (Original Expanded Version - Part 4)
 // Admin Panels, Button Logic, Events, Login
 // =====================================================================
