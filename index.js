@@ -248,21 +248,19 @@ client.on("voiceStateUpdate", async (oldS, newS) => {
 
 // =====================================================================
 // Gosu Custom Discord Bot (Final Split Version - Part 3)
-// Filters & Commands (Rich Help + Premium Rank + No Ping)
+// Filters & Unified Command Handler (Fixed Prefix Parsing)
 // =====================================================================
 
 client.on("messageCreate", async (message) => {
     if (!message.guild || message.author.bot) return;
 
     const content = message.content.trim();
-    const args = content.slice(1).split(/ +/);
-    const cmd = args.shift().toLowerCase();
     const isCommand = content.startsWith("!");
     const lowerContent = content.toLowerCase();
     const isMod = isModerator(message.member);
     const isSilver = message.member.roles.cache.has(SILVER_ROLE_ID);
 
-    // 1. FILTER LOGIC
+    // 1. CHAT FILTERS (Only for non-mods and non-commands)
     if (!isMod && !isCommand) {
         const scams = ["free nitro", "steamcommunity.com", "discord.gg/invite", "dlscord.gg", "bit.ly/"];
         if (scams.some(s => lowerContent.includes(s))) {
@@ -282,130 +280,81 @@ client.on("messageCreate", async (message) => {
         }
     }
 
+    // 2. XP SYSTEM (Process if not a command)
     if (!isCommand) {
         await handleXpGain(message);
         return; 
     }
 
-    // 2. COMMAND LOGIC
-    if (!["ping", "invite", "rank", "leaderboard", "level", "help"].includes(cmd)) {
+    // 3. COMMAND PARSING
+    const args = content.slice(1).split(/ +/); // Remove "!" and split
+    const cmd = args.shift().toLowerCase();    // Now cmd is "ping", "rank", etc.
+
+    // Auto-delete command messages for cleanliness (except general ones)
+    const keepMessages = ["ping", "invite", "rank", "leaderboard", "level", "help"];
+    if (!keepMessages.includes(cmd)) {
         setTimeout(() => { if (!message.deleted) message.delete().catch(() => {}); }, 1000);
     }
 
+    // --- GENERAL COMMANDS ---
     if (cmd === "ping") return message.reply("Pong!");
-    if (cmd === "invite") return message.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
     
-    // [RESTORED RICH HELP COMMAND]
+    if (cmd === "invite") return message.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
+
     if (cmd === "help") {
         const embed = new EmbedBuilder()
             .setColor("#00FFFF")
             .setTitle("🤖 Gosu Bot Command List")
-            .setDescription("Here is the full list of available commands.")
+            .setDescription("Full list of available commands:")
             .addFields(
-                { 
-                    name: "🌐 General", 
-                    value: "`!rank` — Check your (or others') rank & XP\n`!leaderboard` — View Top 10 users\n`!level` — View level rewards\n`!invite` — Get server invite link", 
-                    inline: false 
-                },
-                { 
-                    name: "🛡️ Moderation (Mod Only)", 
-                    value: "`!kick <@user>` — Kick a user\n`!mute <@user> <min>` — Timeout a user\n`!unmute <@user>` — Remove timeout\n`!freeze` / `!unfreeze` — Lock/Unlock channel\n`!prune <n>` — Delete <n> messages\n`!addword <word>` / `!removeword` — Manage blacklist", 
-                    inline: false 
-                },
-                { 
-                    name: "⚙️ Admin & Setup (Admin Only)", 
-                    value: "`!ban <@user>` — Ban a user\n`!syncrolexp` — Sync XP based on roles\n`!reloadblacklist` — Reload bad words from DB\n\n**Panels:**\n`!setupjoin` — Rules Panel\n`!welcome` — Welcome Panel\n`!subscriber` — Notification Panel\n`!creator` — Creator Verify Panel", 
-                    inline: false 
-                },
-                {
-                    name: "📝 Log Configuration",
-                    value: "`!setmodlog #ch` / `!clearmodlog`\n`!setmsglog #ch` / `!clearmsglog`\n`!setactionlog #ch` / `!clearactionlog`",
-                    inline: false
-                }
+                { name: "🌐 General", value: "`!rank` / `!rank @user`\n`!leaderboard`\n`!level`\n`!invite` / `!ping`" },
+                { name: "🛡️ Mod", value: "`!kick` / `!mute` / `!unmute`\n`!freeze` / `!unfreeze`\n`!prune <n>`\n`!addword` / `!removeword`" },
+                { name: "⚙️ Admin", value: "`!ban` / `!syncrolexp`\n`!setmodlog` / `!setmsglog` / `!setactionlog`\n`!setupjoin` / `!welcome` / `!subscriber` / `!creator`" }
             )
-            .setFooter({ text: "Gosu General TV", iconURL: message.guild.iconURL() });
-
+            .setFooter({ text: "Gosu General TV" });
         return message.channel.send({ embeds: [embed] });
     }
 
-   // [PREMIUM RANK CARD - MENTION SUPPORT RESTORED]
-    if (cmd === "!rank") {
+    if (cmd === "rank") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
-        
-        // 1. Determine Target: Mentioned User OR Self
-        // If user typed "!rank @Gosu", target is Gosu.
-        // If user typed "!rank", target is Self.
         const targetMember = message.mentions.members.first() || message.member;
         const targetUser = targetMember.user;
-        const guildId = message.guild.id;
-
-        // 2. Fetch Data
-        const data = await xpCollection.findOne({ guildId, userId: targetUser.id });
+        const data = await xpCollection.findOne({ guildId: message.guild.id, userId: targetUser.id });
         
         if (!data) {
-            if (targetUser.id === message.author.id) {
-                return message.reply("📊 You don't have any XP yet. Start chatting to earn some!");
-            } else {
-                return message.reply(`❌ **${targetUser.username}** has no XP data yet.`);
-            }
+            return message.reply(targetUser.id === message.author.id ? "📊 You don't have XP yet." : `❌ **${targetUser.username}** has no XP data.`);
         }
 
-        // 3. Calculate Stats
+        const rank = (await xpCollection.countDocuments({ guildId: message.guild.id, xp: { $gt: data.xp } })) + 1;
         const currentLevel = data.level || 0;
-        
-        // XP Calculation (Quadratic Formula)
-        const currentLevelBaseXp = currentLevel === 0 ? 0 : (100 * currentLevel * currentLevel);
         const nextLevelBaseXp = 100 * (currentLevel + 1) * (currentLevel + 1);
+        const xpCurrentProgress = data.xp - (100 * currentLevel * currentLevel || 0);
+        const xpNeeded = nextLevelBaseXp - (100 * currentLevel * currentLevel || 0);
         
-        const xpNeededForNextLevel = nextLevelBaseXp - currentLevelBaseXp;
-        const xpCurrentProgress = data.xp - currentLevelBaseXp;
+        const percent = Math.min(Math.max(xpCurrentProgress / xpNeeded, 0), 1);
+        const bar = "█".repeat(Math.round(percent * 15)) + "░".repeat(15 - Math.round(percent * 15));
 
-        // Rank Calculation
-        const rank = (await xpCollection.countDocuments({ guildId, xp: { $gt: data.xp } })) + 1;
-        const totalUsers = await xpCollection.countDocuments({ guildId });
-
-        // 4. Progress Bar & Percent
-        const percentRaw = Math.min(Math.max(xpCurrentProgress / xpNeededForNextLevel, 0), 1);
-        const percentText = Math.floor(percentRaw * 100);
-        
-        const totalBars = 15;
-        const filledBars = Math.round(percentRaw * totalBars);
-        const emptyBars = totalBars - filledBars;
-        const progressBar = "█".repeat(filledBars) + "░".repeat(emptyBars);
-
-        // 5. Next Reward Info
         const nextRewardEntry = LEVEL_ROLES.find(r => r.level > currentLevel);
-        let nextRewardText = "🎉 You have unlocked all rewards!";
-        
+        let rewardText = "🎉 Max rewards reached!";
         if (nextRewardEntry) {
-            const role = message.guild.roles.cache.get(nextRewardEntry.roleId);
-            const roleName = role ? role.name : `Level ${nextRewardEntry.level} Role`;
-            
-            const rewardTotalXp = 100 * nextRewardEntry.level * nextRewardEntry.level;
-            const xpRemaining = rewardTotalXp - data.xp;
-            
-            nextRewardText = `**${xpRemaining.toLocaleString()} XP** left until **${roleName}** (Lv ${nextRewardEntry.level})`;
+            const xpLeft = (100 * nextRewardEntry.level * nextRewardEntry.level) - data.xp;
+            rewardText = `**${xpLeft.toLocaleString()} XP** left until **Lv ${nextRewardEntry.level}**`;
         }
 
-        // 6. Build Embed
-        const rankEmbed = new EmbedBuilder()
+        const embed = new EmbedBuilder()
             .setColor(targetMember.displayHexColor === "#000000" ? "#9B59B6" : targetMember.displayHexColor)
             .setAuthor({ name: `${targetUser.username}'s Rank`, iconURL: targetUser.displayAvatarURL() })
             .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
             .addFields(
                 { name: "🧬 Level", value: `${currentLevel}`, inline: true },
-                { name: "🏆 Rank", value: `#${rank} / ${totalUsers}`, inline: true },
+                { name: "🏆 Rank", value: `#${rank}`, inline: true },
                 { name: "⭐ XP", value: `${data.xp.toLocaleString()}`, inline: true },
-                { name: "📈 Progress", value: `${progressBar} **${percentText}%**\n${xpCurrentProgress.toLocaleString()} / ${xpNeededForNextLevel.toLocaleString()} XP`, inline: false },
-                { name: "🎁 Next Reward", value: nextRewardText, inline: false }
-            )
-            .setFooter({ text: "Gosu General TV — Rank System", iconURL: message.guild.iconURL() })
-            .setTimestamp();
-
-        return message.channel.send({ embeds: [rankEmbed] });
+                { name: "📈 Progress", value: `${bar} **${Math.floor(percent * 100)}%**\n${xpCurrentProgress.toLocaleString()} / ${xpNeeded.toLocaleString()} XP` },
+                { name: "🎁 Next Reward", value: rewardText }
+            );
+        return message.channel.send({ embeds: [embed] });
     }
 
-    // [PREMIUM LEADERBOARD - MEDALS & TOP IMAGE]
     if (cmd === "leaderboard") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
         const top = await xpCollection.find({ guildId: message.guild.id }).sort({ xp: -1 }).limit(10).toArray();
@@ -414,122 +363,74 @@ client.on("messageCreate", async (message) => {
         const topMember = message.guild.members.cache.get(top[0].userId);
         const topAvatar = topMember ? topMember.user.displayAvatarURL({ dynamic: true }) : message.guild.iconURL();
 
-        let description = "";
+        let list = "";
         for (let i = 0; i < top.length; i++) {
-            const u = top[i];
-            const member = message.guild.members.cache.get(u.userId);
+            const member = message.guild.members.cache.get(top[i].userId);
             const name = member ? `**${member.user.username}**` : "Unknown";
-            
-            let rankEmoji = `#${i + 1}`;
-            if (i === 0) rankEmoji = "🥇"; if (i === 1) rankEmoji = "🥈"; if (i === 2) rankEmoji = "🥉";
-            
-            description += `${rankEmoji} ${name} — Lv ${u.level} (${(u.xp / 1000).toFixed(1)}k XP)\n`;
+            let medal = `#${i + 1}`;
+            if (i === 0) medal = "🥇"; if (i === 1) medal = "🥈"; if (i === 2) medal = "🥉";
+            list += `${medal} ${name} — Lv ${top[i].level} (${(top[i].xp / 1000).toFixed(1)}k XP)\n`;
         }
 
-        const embed = new EmbedBuilder().setColor("#FFD700").setTitle("🏆 Server Leaderboard").setThumbnail(topAvatar).setDescription(description).setFooter({ text: "Keep chatting to climb the ranks!" });
+        const embed = new EmbedBuilder().setColor("#FFD700").setTitle("🏆 Leaderboard").setThumbnail(topAvatar).setDescription(list);
         return message.channel.send({ embeds: [embed] });
     }
 
-    // [LEVEL CHECKLIST - CLICKABLE ROLES]
     if (cmd === "level") {
-        let userLevel = 0;
-        if (xpCollection) {
-            const d = await xpCollection.findOne({ guildId: message.guild.id, userId: message.author.id });
-            if (d) userLevel = d.level;
-        }
+        const data = await xpCollection.findOne({ guildId: message.guild.id, userId: message.author.id });
+        const userLevel = data ? data.level : 0;
         const list = LEVEL_ROLES.map(r => {
             const role = message.guild.roles.cache.get(r.roleId);
-            const roleName = role ? role.toString() : "Unknown Role";
-            return `${userLevel >= r.level ? "✅" : "🔒"} **Lv ${r.level}** — ${roleName}`;
+            return `${userLevel >= r.level ? "✅" : "🔒"} **Lv ${r.level}** — ${role ? role.toString() : "Unknown Role"}`;
         }).join("\n");
-        const embed = new EmbedBuilder().setColor("Green").setTitle("🎯 Level Rewards").setThumbnail(message.author.displayAvatarURL({ dynamic: true })).setDescription(`**Current Level: ${userLevel}**\n\n${list}`);
+        const embed = new EmbedBuilder().setColor("Green").setTitle("🎯 Level Rewards").setThumbnail(message.author.displayAvatarURL({ dynamic: true })).setDescription(`**Your Level: ${userLevel}**\n\n${list}`);
         return message.channel.send({ embeds: [embed] });
     }
-
-    if (cmd === "syncrolexp") {
-        if(!isAdmin(message.member)) return;
+// --- MODERATION ---
+    if (cmd === "kick" && isMod) {
+        const t = message.mentions.members.first();
+        if(t?.kickable) { await t.kick(); message.reply(`👢 Kicked **${t.user.username}**.`); sendModLog(message.guild, t.user, "KICK", message.author, args.slice(1).join(" ")); }
+    }
+    if (cmd === "ban" && isAdmin(message.member)) {
+        const t = message.mentions.members.first();
+        if(t?.bannable) { await t.ban(); message.reply(`🔨 Banned **${t.user.username}**.`); sendModLog(message.guild, t.user, "BAN", message.author, args.slice(1).join(" ")); }
+    }
+    if (cmd === "mute" && isMod) {
+        const t = message.mentions.members.first();
+        const m = parseInt(args[1]);
+        if(t && m) { await t.timeout(m*60000); message.reply(`🔇 Muted **${t.user.username}** for ${m}m.`); }
+    }
+    if (cmd === "freeze" && isMod) {
+        message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false });
+        message.channel.send("❄️ Frozen");
+    }
+    if (cmd === "unfreeze" && isMod) {
+        message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: null });
+        message.channel.send("♨️ Thawed");
+    }
+    if (cmd === "prune" && isMod) {
+        const n = parseInt(args[0]);
+        if(n) message.channel.bulkDelete(n, true);
+    }
+    if (cmd === "addword" && isMod) {
+        const w = args.join(" ").toLowerCase();
+        if(w) { BLACKLISTED_WORDS.push(w); await saveBlacklist(); message.reply("Added to DB."); }
+    }
+    if (cmd === "syncrolexp" && isAdmin(message.member)) {
         message.reply("🔄 Syncing...");
         let c = 0;
         for (const r of LEVEL_ROLES) {
             const role = message.guild.roles.cache.get(r.roleId);
             if (!role) continue;
             for (const [id, m] of role.members) {
-                const min = getTotalXpForLevel(r.level);
-                const doc = await xpCollection.findOne({ guildId: message.guild.id, userId: id });
-                if (!doc || doc.level < r.level) {
-                    await xpCollection.updateOne({ guildId: message.guild.id, userId: id }, { $set: { level: r.level, xp: min } }, { upsert: true });
-                    c++;
-                }
+                await xpCollection.updateOne({ guildId: message.guild.id, userId: id }, { $set: { level: r.level, xp: 100 * r.level * r.level } }, { upsert: true });
+                c++;
             }
         }
         message.channel.send(`✅ Synced **${c}** users.`);
     }
 
-    // MODERATION
-    if (cmd === "kick") {
-        if(!isMod) return;
-        const t = message.mentions.members.first();
-        if(t?.kickable) { await t.kick(); message.reply(`👢 Kicked **${t.user.username}**.`); sendModLog(message.guild, t.user, "KICK", message.author, args.slice(1).join(" ")); }
-    }
-    if (cmd === "ban") {
-        if(!isAdmin(message.member)) return;
-        const t = message.mentions.members.first();
-        if(t?.bannable) { await t.ban(); message.reply(`🔨 Banned **${t.user.username}**.`); sendModLog(message.guild, t.user, "BAN", message.author, args.slice(1).join(" ")); }
-    }
-    if (cmd === "mute") {
-        if(!isMod) return;
-        const t = message.mentions.members.first();
-        const m = parseInt(args[1]);
-        if(t && m) { await t.timeout(m*60000); message.reply(`🔇 Muted **${t.user.username}** for ${m}m.`); sendModLog(message.guild, t.user, "MUTE", message.author, "Manual"); }
-    }
-    if (cmd === "unmute") {
-        if(!isMod) return;
-        const t = message.mentions.members.first();
-        if(t) { await t.timeout(null); message.reply(`🔊 Unmuted **${t.user.username}**.`); }
-    }
-    if (cmd === "freeze") {
-        if(!isMod) return;
-        message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false });
-        message.channel.send("❄️ Frozen");
-    }
-    if (cmd === "unfreeze") {
-        if(!isMod) return;
-        message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: null });
-        message.channel.send("♨️ Thawed");
-    }
-    if (cmd === "prune") {
-        if(!isMod) return;
-        const n = parseInt(args[0]);
-        if(n) message.channel.bulkDelete(n, true);
-    }
-    
-    // DB CONFIG COMMANDS
-    if (cmd === "addword") {
-        if(!isMod) return;
-        const w = args.join(" ").toLowerCase();
-        if(w) { BLACKLISTED_WORDS.push(w); await saveBlacklist(); message.reply("Added."); }
-    }
-    if (cmd === "removeword") {
-        if(!isMod) return;
-        const w = args.join(" ").toLowerCase();
-        BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(x => x !== w);
-        await saveBlacklist(); 
-        message.reply("Removed.");
-    }
-    if (cmd === "reloadblacklist") {
-        if (!isAdmin(message.member)) return;
-        await connectAndLoad();
-        message.reply("✅ Blacklist refreshed from DB.");
-    }
-
-// =====================================================================
-// Gosu Custom Discord Bot (Final Split Version - Part 4)
-// Admin Panels, Logs, Login (Creator Guide Updated)
-// =====================================================================
-
-    // -------------------------------------------------------------
-    // [Image Banner Setup] GitHub Permanent Links
-    // -------------------------------------------------------------
+    // --- ADMIN PANELS ---
     const BANNERS = {
         RULES: "https://github.com/TichielJuspian/images/blob/main/must%20read.png?raw=true", 
         WELCOME: "https://github.com/TichielJuspian/images/blob/main/welcome.png?raw=true", 
@@ -537,170 +438,57 @@ client.on("messageCreate", async (message) => {
         CREATOR: "https://github.com/TichielJuspian/images/blob/main/verification.png?raw=true" 
     };
 
-    if (cmd === "reloadblacklist") {
-        if (!isAdmin(message.member)) return;
-        await connectAndLoad();
-        message.reply("✅ Blacklist refreshed from Database.");
-    }
-
-    // 1. RULES PANEL (!setupjoin)
-    if (cmd === "!setupjoin") {
-        if (!isAdmin(message.member)) return;
+    if (cmd === "setupjoin" && isAdmin(message.member)) {
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("agree_rules").setLabel("Agree To Rules").setStyle(ButtonStyle.Success).setEmoji("✅"));
-        
-        try { await message.channel.send({ files: [BANNERS.RULES] }); } catch (e) {}
-
-        const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Community!").setDescription("Here you can join events, get updates, talk with the community, and enjoy the content together.\n\n--------------------------------------------------\n\n📜 **Server Rules**\n\n✨ **1 – Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.\n\n✨ **2 – No Spam**\nAvoid repeated messages, emoji spam, or unnecessary mentions.\n\n✨ **3 – No NSFW or Harmful Content**\nNo adult content, gore, or anything unsafe.\n\n✨ **4 – No Advertising**\nNo links, promos, or self-promotion without staff approval.\n\n✨ **5 – Keep it Clean**\nNo hate speech, slurs, or extreme drama.\n\n✨ **6 – Follow Staff Instructions**\nIf staff gives instructions, please follow them.\n\n--------------------------------------------------\nPress **Agree To Rules** below to enter and enjoy the server! 🎊");
+        await message.channel.send({ files: [BANNERS.RULES] });
+        const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("📜 Server Rules").setDescription("Please read the rules and click Agree to join.");
         message.channel.send({ embeds: [embed], components: [row] });
     }
-
-    // 2. WELCOME PANEL (!welcome)
-    if (cmd === "!welcome") {
-        if (!isAdmin(message.member)) return;
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("YouTube Channel").setStyle(ButtonStyle.Link).setURL("https://youtube.com/@Teamgosu"), new ButtonBuilder().setLabel("Twitch Channel").setStyle(ButtonStyle.Link).setURL("https://twitch.tv/gosugeneral"), new ButtonBuilder().setLabel("Invite Link").setStyle(ButtonStyle.Link).setURL("https://discord.gg/gosugeneral"));
-        
-        try { await message.channel.send({ files: [BANNERS.WELCOME] }); } catch (e) {}
-
-        const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Discord Server!").setDescription("Greetings, adventurer!\n\nWelcome to the **Gosu General TV** community server.\nHere you can hang out with the community, share plays, ask questions, receive announcements, and join events together.\n\n---\n\n📌 **What you can find here**\n\n• Live stream notifications & announcements\n• Game discussions and guides\n• Clips, highlights, and community content\n• Chill chat with other Gosu viewers\n\n---\nEnjoy your stay and have fun! 💙").addFields({ name: "Official Links", value: "📺 [YouTube](https://youtube.com/@Teamgosu)\n🟣 [Twitch](https://twitch.tv/gosugeneral)", inline: true }, { name: "Discord Invite Link", value: "🔗 [Invite Link](https://discord.gg/gosugeneral)", inline: true });
+    if (cmd === "welcome" && isAdmin(message.member)) {
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("YouTube").setStyle(ButtonStyle.Link).setURL("https://youtube.com/@Teamgosu"));
+        await message.channel.send({ files: [BANNERS.WELCOME] });
+        const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("Welcome!").setDescription("Enjoy your stay at Gosu General TV!");
         message.channel.send({ embeds: [embed], components: [row] });
     }
-
-    // 3. SUBSCRIBER PANEL (!subscriber)
-    if (cmd === "!subscriber") {
-        if (!isAdmin(message.member)) return;
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("subscribe_toggle").setLabel("Subscribe / Unsubscribe").setStyle(ButtonStyle.Primary).setEmoji("🔔"));
-        
-        try { await message.channel.send({ files: [BANNERS.NOTI] }); } catch (e) {}
-
-        const embed = new EmbedBuilder().setColor("#FF0000").setTitle("🔔 Live Notification Subscription").setDescription("Stay updated with **Live Streams** and **New Uploads**!\n\nBy subscribing, you will receive:\n• 🔴 Live stream alerts\n• 🆕 New YouTube upload notifications\n• 📢 Special announcements\n\n---\n\n📌 **How It Works**\n\n• Press once → **Subscribe**\n• Press again → **Unsubscribe**\n\n---\nEnjoy real-time updates and never miss a stream! 💙").setFooter({ text: "Gosu General TV — Notification System" });
-        message.channel.send({ embeds: [embed], components: [row] });
+    if (cmd === "subscriber" && isAdmin(message.member)) {
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("subscribe_toggle").setLabel("Toggle Notifications").setStyle(ButtonStyle.Primary).setEmoji("🔔"));
+        await message.channel.send({ files: [BANNERS.NOTI] });
+        message.channel.send({ embeds: [new EmbedBuilder().setColor("#FF0000").setTitle("🔔 Live Notifications").setDescription("Click below to toggle alerts.")], components: [row] });
     }
-
-    // 4. CREATOR PANEL (!creator) - [Guide Only Mode]
-    if (cmd === "!creator") {
-        if (!isAdmin(message.member)) return;
-        // No button needed as roles are handled by Discord Linked Roles
-        
-        try { await message.channel.send({ files: [BANNERS.CREATOR] }); } catch (e) {}
-
-        const embed = new EmbedBuilder()
-            .setColor("#FFB347")
-            .setTitle("👑 Creator Role – Automatic Verification")
-            .setDescription([
-                "Hello, creators! This panel explains how to obtain the **Creator** role and access exclusive creator-only channels.",
-                "",
-                "Our Creator role is granted through **Discord's automatic verification system**, based on your connected accounts.",
-                "",
-                "--------------------------------------------",
-                "### 1️⃣ Required Conditions",
-                "To receive the Creator role, at least **one** connected account must meet **all** requirements below:",
-                "",
-                "**Supported Platforms:**",
-                "• TikTok / YouTube / Twitch / Facebook",
-                "",
-                "**Requirements:**",
-                "• The account must be **connected** to your Discord profile",
-                "• The account must be **verified** (e.g., phone verification)",
-                "• Minimum **100 followers/subscribers**",
-                "• Must be following **100+ users**",
-                "• At least **10 likes or activity records**",
-                "",
-                "--------------------------------------------",
-                "### 2️⃣ How to Connect Your Account to Discord",
-                "1. Open **User Settings** (gear icon ⚙️ bottom-left)",
-                "2. Select **Connections**",
-                "3. Click **Add Connection**",
-                "4. Choose TikTok / YouTube / Twitch / Facebook, then log in and link your account",
-                "",
-                "--------------------------------------------",
-                "### 3️⃣ Automatic Creator Role Assignment",
-                "• After linking and meeting the requirements, Discord automatically verifies your account.",
-                "• Please wait a moment; syncing account data may take some time.",
-                "• Once approved, the **Creator** role will appear and channels like **#creator-chat** will become available.",
-                "",
-                "--------------------------------------------",
-                "### ⚠️ Troubleshooting",
-                "**Didn't receive the role?**",
-                "• Ensure your linked account meets *all* requirements",
-                "• Refresh Discord with **Ctrl + R** (Windows) or **Cmd + R** (Mac)",
-                "",
-                "**Need help?**",
-                "DM an admin if you're experiencing issues or have questions."
-            ].join("\n"))
-            .setFooter({ text: "Gosu General TV — Creator Role Guide" });
-
+    if (cmd === "creator" && isAdmin(message.member)) {
+        await message.channel.send({ files: [BANNERS.CREATOR] });
+        const embed = new EmbedBuilder().setColor("#FFB347").setTitle("👑 Creator Role").setDescription("To get the Creator role, link your YouTube/Twitch account in Discord settings. 100+ followers required.");
         message.channel.send({ embeds: [embed] });
     }
 
-    // --- LOG CONFIG ---
-    if (cmd.startsWith("!set") && cmd.includes("log")) {
-        if (!isAdmin(message.member)) return;
+    // --- LOG SETTINGS ---
+    if (cmd.startsWith("set") && cmd.includes("log") && isAdmin(message.member)) {
         const ch = message.mentions.channels.first() || message.channel;
-        if (cmd === "!setmodlog") BOT_CONFIG.modLogChannelId = ch.id;
-        if (cmd === "!setmsglog") BOT_CONFIG.msgLogChannelId = ch.id;
-        if (cmd === "!setactionlog") BOT_CONFIG.actionLogChannelId = ch.id;
-        if (cmd === "!setfilterlog") BOT_CONFIG.filterLogChannelId = ch.id;
+        if (cmd === "setmodlog") BOT_CONFIG.modLogChannelId = ch.id;
+        if (cmd === "setmsglog") BOT_CONFIG.msgLogChannelId = ch.id;
+        if (cmd === "setactionlog") BOT_CONFIG.actionLogChannelId = ch.id;
         await saveConfig(); 
         message.reply(`✅ Log set to ${ch}`);
     }
-    
-    if (cmd.startsWith("!clear") && cmd.includes("log")) {
-        if (!isAdmin(message.member)) return;
-        if (cmd === "!clearmodlog") BOT_CONFIG.modLogChannelId = null;
-        if (cmd === "!clearmsglog") BOT_CONFIG.msgLogChannelId = null;
-        if (cmd === "!clearactionlog") BOT_CONFIG.actionLogChannelId = null;
-        if (cmd === "!clearfilterlog") BOT_CONFIG.filterLogChannelId = null;
-        await saveConfig(); 
-        message.reply(`✅ Logs cleared.`);
-    }
-});
+}); // End of messageCreate
 
-// ---------------------------------------------------------------------
-// EVENT LISTENERS (Interactions & Logs)
-// ---------------------------------------------------------------------
-client.on("guildMemberUpdate", async (oldM, newM) => {
-    // Remove temporary verification role if user gets Creator role
-    if (!oldM.roles.cache.has(CREATOR_ROLE) && newM.roles.cache.has(CREATOR_ROLE)) {
-        if (newM.roles.cache.has(VERIFICATION_ROLE)) {
-            await newM.roles.remove(VERIFICATION_ROLE).catch(() => {});
-        }
-    }
-});
-
+// --- EVENTS ---
 client.on("interactionCreate", async (i) => {
     if (!i.isButton()) return;
-    const { customId, member } = i;
     try {
-        if (customId === "agree_rules") {
-            await member.roles.add(GOSU_ROLE);
+        if (i.customId === "agree_rules") {
+            await i.member.roles.add(GOSU_ROLE);
             i.reply({ content: "✅ Welcome!", ephemeral: true });
         }
-        if (customId === "subscribe_toggle") {
-            if (member.roles.cache.has(SUB_ROLE)) {
-                await member.roles.remove(SUB_ROLE);
-                i.reply({ content: "🔕 Unsubscribed.", ephemeral: true });
-            } else {
-                await member.roles.add(SUB_ROLE);
-                i.reply({ content: "🔔 Subscribed!", ephemeral: true });
-            }
+        if (i.customId === "subscribe_toggle") {
+            if (i.member.roles.cache.has(SUB_ROLE)) { await i.member.roles.remove(SUB_ROLE); i.reply({ content: "🔕 Notifications Off", ephemeral: true }); }
+            else { await i.member.roles.add(SUB_ROLE); i.reply({ content: "🔔 Notifications On!", ephemeral: true }); }
         }
-        // [Removed] apply_creator button logic (Handled by auto-integration)
-    } catch (e) {
-        console.error("Interaction Error:", e);
-        if(!i.replied) i.reply({ content: "Error", ephemeral: true });
-    }
+    } catch (e) { i.reply({ content: "Error processing request.", ephemeral: true }); }
 });
 
 client.on("messageDelete", m => {
     if(BOT_CONFIG.msgLogChannelId && m.guild) m.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId)?.send(`🗑️ Deleted: ${m.author?.tag} - ${m.content}`).catch(()=>{});
-});
-
-client.on("guildMemberAdd", m => {
-    if(BOT_CONFIG.actionLogChannelId) m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId)?.send(`✅ ${m.user.tag} Joined`).catch(()=>{});
-});
-
-client.on("guildMemberRemove", m => {
-    if(BOT_CONFIG.actionLogChannelId) m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId)?.send(`🚪 ${m.user.tag} Left`).catch(()=>{});
 });
 
 client.login(process.env.Bot_Token);
