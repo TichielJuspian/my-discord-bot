@@ -1,3 +1,5 @@
+//12-24-25 Log메세지 새로운 디자인, VIP랑 일반 Welcome 메세지 추가
+
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 1)
 // Setup, Config, Database, VIP Roles Corrected
@@ -14,7 +16,10 @@ const {
   ButtonBuilder,
   ActionRowBuilder,
   ChannelType,
-  ActivityType
+  ActivityType,
+  REST,      // [NEW]
+  Routes,    // [NEW]
+  SlashCommandBuilder // [NEW]
 } = require("discord.js");
 const { MongoClient } = require("mongodb");
 
@@ -210,23 +215,88 @@ client.on("voiceStateUpdate", async (oldS, newS) => {
 
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 3)
-// Message Handler, Filters, General Commands
+// Slash Command Registration & XP/Filter Listener
 // =====================================================================
 
 // ---------------------------------------------------------------------
-// 6. MAIN MESSAGE HANDLER
+// 6. SLASH COMMAND REGISTRATION (Runs on Ready)
+// ---------------------------------------------------------------------
+client.once("ready", async () => {
+  console.log(`[BOT] Logged in as ${client.user.tag}`);
+  await connectAndLoad();
+  
+  // Zombie Channel Fix
+  const guilds = client.guilds.cache.map(g => g);
+  for (const guild of guilds) {
+    const channels = await guild.channels.fetch();
+    channels.forEach(ch => {
+      if (ch.type === ChannelType.GuildVoice && ch.name.startsWith("🎧") && ch.members.size === 0) {
+        ch.delete().catch(()=>{});
+      }
+    });
+  }
+  client.user.setActivity("Gosu General TV", { type: ActivityType.Watching });
+
+  // --- DEFINE SLASH COMMANDS ---
+  const commands = [
+    // General
+    new SlashCommandBuilder().setName("help").setDescription("Show all available commands"),
+    new SlashCommandBuilder().setName("rank").setDescription("Check rank & XP").addUserOption(o => o.setName("user").setDescription("Target user")),
+    new SlashCommandBuilder().setName("leaderboard").setDescription("View Top 10 users"),
+    new SlashCommandBuilder().setName("level").setDescription("View level rewards checklist"),
+    new SlashCommandBuilder().setName("invite").setDescription("Get server invite link"),
+    
+    // Admin Panels
+    new SlashCommandBuilder().setName("setupjoin").setDescription("[Admin] Show Rules Panel"),
+    new SlashCommandBuilder().setName("welcome").setDescription("[Admin] Show Welcome Panel"),
+    new SlashCommandBuilder().setName("subscriber").setDescription("[Admin] Show Subscriber Notification Panel"),
+    new SlashCommandBuilder().setName("creator").setDescription("[Admin] Show Creator Verification Panel"),
+    
+    // Moderation
+    new SlashCommandBuilder().setName("kick").setDescription("[Mod] Kick a user").addUserOption(o => o.setName("user").setDescription("Target").setRequired(true)).addStringOption(o => o.setName("reason").setDescription("Reason")),
+    new SlashCommandBuilder().setName("ban").setDescription("[Admin] Ban a user").addUserOption(o => o.setName("user").setDescription("Target").setRequired(true)).addStringOption(o => o.setName("reason").setDescription("Reason")),
+    new SlashCommandBuilder().setName("mute").setDescription("[Mod] Timeout a user").addUserOption(o => o.setName("user").setDescription("Target").setRequired(true)).addIntegerOption(o => o.setName("minutes").setDescription("Duration in minutes (Default: 3)")),
+    new SlashCommandBuilder().setName("unmute").setDescription("[Mod] Remove timeout").addUserOption(o => o.setName("user").setDescription("Target").setRequired(true)),
+    new SlashCommandBuilder().setName("freeze").setDescription("[Mod] Freeze the current channel"),
+    new SlashCommandBuilder().setName("unfreeze").setDescription("[Mod] Unfreeze the current channel"),
+    new SlashCommandBuilder().setName("addword").setDescription("[Mod] Add word to blacklist").addStringOption(o => o.setName("word").setDescription("Word to ban").setRequired(true)),
+    new SlashCommandBuilder().setName("removeword").setDescription("[Mod] Remove word from blacklist").addStringOption(o => o.setName("word").setDescription("Word to unban").setRequired(true)),
+    new SlashCommandBuilder().setName("prune").setDescription("[Mod] Delete messages").addIntegerOption(o => o.setName("amount").setDescription("Number of messages").setRequired(true)),
+    new SlashCommandBuilder().setName("syncrolexp").setDescription("[Admin] Sync XP based on Roles"),
+
+    // Log Config
+    new SlashCommandBuilder().setName("setwelcome").setDescription("[Admin] Set Welcome Channel").addChannelOption(o => o.setName("channel").setDescription("Select channel").setRequired(true)),
+    new SlashCommandBuilder().setName("setmodlog").setDescription("[Admin] Set Mod Log Channel").addChannelOption(o => o.setName("channel").setDescription("Select channel").setRequired(true)),
+    new SlashCommandBuilder().setName("setmsglog").setDescription("[Admin] Set Message Log Channel").addChannelOption(o => o.setName("channel").setDescription("Select channel").setRequired(true)),
+    new SlashCommandBuilder().setName("setactionlog").setDescription("[Admin] Set Action Log Channel").addChannelOption(o => o.setName("channel").setDescription("Select channel").setRequired(true)),
+  ].map(command => command.toJSON());
+
+  const rest = new REST({ version: "10" }).setToken(process.env.Bot_Token);
+
+  try {
+    console.log("[SLASH] Started refreshing application (/) commands.");
+    // Register commands to ALL guilds the bot is in
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+    console.log("[SLASH] Successfully reloaded application (/) commands.");
+  } catch (error) {
+    console.error(error);
+  }
+});
+
+// ---------------------------------------------------------------------
+// 7. MESSAGE LISTENER (XP & FILTERS ONLY)
 // ---------------------------------------------------------------------
 client.on("messageCreate", async (message) => {
   if (!message.guild || message.author.bot) return;
 
-  const content = message.content.trim();
-  const isCommand = content.startsWith("!");
-  const isMod = isModerator(message.member);
+  // We NO LONGER check for "!" commands here.
+  // This listener is ONLY for chatting XP and Filters.
 
-  // 1. FILTERS (Only for non-mods and non-commands)
-  if (!isMod && !isCommand) {
-    const lowerContent = content.toLowerCase();
-    
+  const isMod = isModerator(message.member);
+  const lowerContent = message.content.toLowerCase();
+
+  // 1. FILTERS (Only for non-mods)
+  if (!isMod) {
     // Anti-Scam
     const scams = ["free nitro", "bit.ly/", "steamcommunity.com/gift"];
     if (scams.some(s => lowerContent.includes(s))) {
@@ -246,418 +316,330 @@ client.on("messageCreate", async (message) => {
       if (message.deletable) message.delete().catch(()=>{});
       return message.channel.send(`🚫 **${message.author.username}**, Links require **Silver Rank (Lv 10)**.`).then(m => setTimeout(() => m.delete(), 5000));
     }
-    
-    await handleXpGain(message);
-    return;
   }
 
-  // 2. XP PROCESSING
-  if (!isCommand) {
-    await handleXpGain(message);
-    return;
+  // 2. XP GAIN
+  await handleXpGain(message);
+});
+
+// =====================================================================
+// Gosu Custom Discord Bot (Final Version - Part 4)
+// Slash Command Handler, Events, VIP Logic (Prune Fixed)
+// =====================================================================
+
+// ---------------------------------------------------------------------
+// 8. INTERACTION HANDLER (Execute Slash Commands)
+// ---------------------------------------------------------------------
+client.on("interactionCreate", async (interaction) => {
+  // 1. Handle Buttons (Rules, Subs)
+  if (interaction.isButton()) {
+      try {
+        if (interaction.customId === "agree_rules") { 
+            await interaction.member.roles.add(GOSU_ROLE); 
+            interaction.reply({ content: "✅ Welcome to the server!", ephemeral: true }); 
+        }
+        else if (interaction.customId === "subscribe_toggle") { 
+            const has = interaction.member.roles.cache.has(SUB_ROLE); 
+            if (has) await interaction.member.roles.remove(SUB_ROLE); 
+            else await interaction.member.roles.add(SUB_ROLE); 
+            interaction.reply({ content: has ? "🔕 Unsubscribed." : "🔔 Subscribed!", ephemeral: true }); 
+        }
+      } catch (e) {}
+      return;
   }
 
-  // 3. COMMAND PARSING
-  const args = content.slice(1).split(/ +/);
-  const cmd = args.shift().toLowerCase();
+  // 2. Handle Slash Commands
+  if (!interaction.isChatInputCommand()) return;
 
-  const keepMessages = ["ping", "invite", "rank", "leaderboard", "level", "help"];
-  if (!keepMessages.includes(cmd)) {
-    setTimeout(() => { if (!message.deleted) message.delete().catch(() => {}); }, 1000);
-  }
+  const { commandName, options } = interaction;
+  const isMod = isModerator(interaction.member);
+  const isAdminUser = isAdmin(interaction.member);
 
   // --- GENERAL COMMANDS ---
-
-  if (cmd === "ping") return message.reply("Pong!");
-  if (cmd === "invite") return message.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
-
-  // [UPDATED] !help - Mute Description Changed
-  if (cmd === "help") {
-    const embed = new EmbedBuilder()
-      .setColor("#00FFFF")
-      .setTitle("🤖 Gosu Bot Command List")
-      .setDescription("Here is the full list of available commands.")
-      .addFields(
-        { name: "🌐 General", value: "`!rank` — Check your (or others') rank & XP\n`!leaderboard` — View Top 10 users\n`!level` — View level rewards\n`!invite` — Get server invite link", inline: false },
-        // Updated Mute Line Below: [min] means optional
-        { name: "🛡️ Moderation (Mod Only)", value: "`!kick <@user>` — Kick a user\n`!mute <@user> [min]` — Timeout (Default: 3m)\n`!unmute <@user>` — Remove timeout\n`!freeze` / `!unfreeze` — Lock/Unlock channel\n`!prune <n>` — Delete <n> messages\n`!addword <word>` / `!removeword` — Manage blacklist", inline: false },
-        { name: "⚙️ Admin & Setup (Admin Only)", value: "`!ban <@user>` — Ban a user\n`!syncrolexp` — Sync XP based on roles\n`!reloadblacklist` — Reload bad words from DB\n\n**Panels:**\n`!setupjoin` — Rules Panel\n`!welcome` — Welcome Panel\n`!subscriber` — Notification Panel\n`!creator` — Creator Verify Panel", inline: false },
-        { name: "📝 Log & Welcome", value: "`!setwelcome #ch` — Set Welcome Channel\n`!setmodlog #ch` / `!clearmodlog`\n`!setmsglog #ch` / `!clearmsglog`\n`!setactionlog #ch` / `!clearactionlog`", inline: false }
-      )
-      .setFooter({ text: "Gosu General TV" });
-    return message.channel.send({ embeds: [embed] });
+  
+  if (commandName === "invite") {
+      await interaction.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
   }
 
-  if (cmd === "rank") {
-    let targetMember;
-    if (message.mentions.members.size > 0) targetMember = message.mentions.members.first();
-    else if (args.length > 0) {
-        const search = args.join(" ").toLowerCase();
-        targetMember = message.guild.members.cache.find(m => m.user.username.toLowerCase().includes(search) || (m.nickname && m.nickname.toLowerCase().includes(search)));
-    } else targetMember = message.member;
+  if (commandName === "help") {
+      const embed = new EmbedBuilder().setColor("#00FFFF").setTitle("🤖 Gosu Bot Command List")
+      .setDescription("Use `/` to access commands!")
+      .addFields(
+        { name: "🌐 General", value: "`/rank` `/leaderboard` `/level` `/invite`", inline: false },
+        { name: "🛡️ Moderation", value: "`/kick` `/ban` `/mute` `/unmute` `/freeze` `/prune`", inline: false },
+        { name: "⚙️ Admin", value: "`/setupjoin` `/welcome` `/subscriber` `/creator`", inline: false }
+      );
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+  }
 
-    if (!targetMember) return message.reply("❌ User not found.");
-
-    const data = await xpCollection.findOne({ guildId: message.guild.id, userId: targetMember.id });
-    if (!data) return message.reply(`❌ No XP data for **${targetMember.user.username}**.`);
+  if (commandName === "rank") {
+    const targetUser = options.getUser("user") || interaction.user;
+    const targetMember = interaction.guild.members.cache.get(targetUser.id);
+    
+    const data = await xpCollection.findOne({ guildId: interaction.guild.id, userId: targetUser.id });
+    if (!data) return interaction.reply({ content: `❌ No XP data for **${targetUser.username}**.`, ephemeral: true });
 
     const currentLevel = data.level || 0;
-    const rank = (await xpCollection.countDocuments({ guildId: message.guild.id, xp: { $gt: data.xp } })) + 1;
-    
-    // XP Calculation
+    const rank = (await xpCollection.countDocuments({ guildId: interaction.guild.id, xp: { $gt: data.xp } })) + 1;
     const nextLevelBaseXp = getTotalXpForLevel(currentLevel + 1);
+    const xpLeft = nextLevelBaseXp - data.xp;
+    
     const currentLevelBaseXp = getTotalXpForLevel(currentLevel);
     const xpIntoLevel = data.xp - currentLevelBaseXp;
     const xpNeeded = nextLevelBaseXp - currentLevelBaseXp;
-    
     const percent = Math.min(Math.max(xpIntoLevel / xpNeeded, 0), 1);
     const percentText = Math.floor(percent * 100);
     const bar = "█".repeat(Math.round(percent * 15)) + "░".repeat(15 - Math.round(percent * 15));
 
-    const nextReward = LEVEL_ROLES.find(r => r.level > currentLevel);
-    let rewardText = "🎉 Max Level Reached!";
-    if (nextReward) {
-        const xpLeft = (getTotalXpForLevel(nextReward.level)) - data.xp;
-        rewardText = `**${xpLeft.toLocaleString()} XP** left until **Lv ${nextReward.level}**`;
-    }
-
     const embed = new EmbedBuilder()
-      .setColor(targetMember.displayHexColor === "#000000" ? "#9B59B6" : targetMember.displayHexColor)
-      .setAuthor({ name: `${targetMember.user.username}'s Rank`, iconURL: targetMember.user.displayAvatarURL() })
-      .setThumbnail(targetMember.user.displayAvatarURL({ dynamic: true }))
+      .setColor(targetMember?.displayHexColor || "#9B59B6")
+      .setAuthor({ name: `${targetUser.username}'s Rank`, iconURL: targetUser.displayAvatarURL() })
+      .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
       .addFields(
         { name: "🧬 Level", value: `${currentLevel}`, inline: true },
         { name: "🏆 Rank", value: `#${rank}`, inline: true },
         { name: "⭐ XP", value: `${data.xp.toLocaleString()}`, inline: true },
         { name: "📈 Progress", value: `${bar} **${percentText}%**\n${xpIntoLevel.toLocaleString()} / ${xpNeeded.toLocaleString()} XP`, inline: false },
-        { name: "🎁 Next Reward", value: rewardText, inline: false }
+        { name: "🎁 Next Reward", value: `**${xpLeft.toLocaleString()} XP** left until next level`, inline: false }
       );
-    return message.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
+    await interaction.reply({ embeds: [embed] });
   }
 
-  if (cmd === "leaderboard") {
-    const top = await xpCollection.find({ guildId: message.guild.id }).sort({ xp: -1 }).limit(10).toArray();
-    if (!top.length) return message.reply("📉 No data.");
+  if (commandName === "leaderboard") {
+    await interaction.deferReply(); 
+    const top = await xpCollection.find({ guildId: interaction.guild.id }).sort({ xp: -1 }).limit(10).toArray();
     
-    let topMember;
-    try { topMember = await message.guild.members.fetch(top[0].userId); } catch (e) { topMember = null; }
-
     let list = "";
     for (let i = 0; i < top.length; i++) {
         let prefix = `#${i+1}`;
         if (i===0) prefix="🥇"; if(i===1) prefix="🥈"; if(i===2) prefix="🥉";
-        let member = message.guild.members.cache.get(top[i].userId);
-        if (!member) { try { member = await message.guild.members.fetch(top[i].userId); } catch (e) { member = null; } }
-        const name = member ? member.user.username : "Unknown User";
+        let member = interaction.guild.members.cache.get(top[i].userId);
+        if (!member) { try { member = await interaction.guild.members.fetch(top[i].userId); } catch (e) {} }
+        const name = member ? member.user.username : "Unknown";
         const xpK = (top[i].xp / 1000).toFixed(1) + "k";
         list += `${prefix} **${name}** — Lv ${top[i].level} (${xpK} XP)\n`;
     }
-    const embed = new EmbedBuilder().setColor("#FFD700").setTitle("🏆 Leaderboard").setThumbnail(topMember?.user.displayAvatarURL({ dynamic: true }) || null).setDescription(list);
-    return message.channel.send({ embeds: [embed] });
+    
+    const embed = new EmbedBuilder().setColor("#FFD700").setTitle("🏆 Leaderboard").setDescription(list || "No data yet.");
+    await interaction.editReply({ embeds: [embed] });
   }
 
-  if (cmd === "level") {
-    const d = await xpCollection.findOne({ guildId: message.guild.id, userId: message.author.id });
+  if (commandName === "level") {
+    const d = await xpCollection.findOne({ guildId: interaction.guild.id, userId: interaction.user.id });
     const userLvl = d ? d.level : 0;
     const list = LEVEL_ROLES.map(r => {
         const icon = userLvl >= r.level ? "✅" : "🔒";
-        const roleStr = message.guild.roles.cache.has(r.roleId) ? `<@&${r.roleId}>` : `@${r.name}`;
+        const roleStr = interaction.guild.roles.cache.has(r.roleId) ? `<@&${r.roleId}>` : `@${r.name}`;
         return `${icon} **Lv ${r.level}** — ${roleStr}`;
     }).join("\n");
-    return message.channel.send({ embeds: [new EmbedBuilder().setColor("Green").setTitle("🎯 Level Rewards").setThumbnail(message.author.displayAvatarURL({ dynamic: true })).setDescription(`**Your Level: ${userLvl}**\n\n${list}`)] });
+    await interaction.reply({ embeds: [new EmbedBuilder().setColor("Green").setTitle("🎯 Level Rewards").setDescription(`**Your Level: ${userLvl}**\n\n${list}`)], ephemeral: true });
   }
-// =====================================================================
-// Gosu Custom Discord Bot (Final Version - Part 4)
-// Admin Panels, Moderation, Events, Login (VIP Role Check Corrected)
-// =====================================================================
 
-  // --- ADMIN PANEL COMMANDS ---
-  if (cmd === "setupjoin" && isAdmin(message.member)) {
+  // --- ADMIN PANELS ---
+  if (commandName === "setupjoin") {
+    if(!isAdminUser) return interaction.reply({content: "❌ Admin only.", ephemeral: true});
     const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("agree_rules").setLabel("Agree To Rules").setStyle(ButtonStyle.Success).setEmoji("✅"));
-    await message.channel.send({ files: [BANNERS.RULES] });
-    const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Community!")
-        .setDescription("Here you can join events, get updates, talk with the community, and enjoy the content together.\n\n--------------------------------------------------\n\n📜 **Server Rules**\n\n✨ **1 – Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.\n\n✨ **2 – No Spam**\nAvoid repeated messages, emoji spam, or unnecessary mentions.\n\n✨ **3 – No NSFW or Harmful Content**\nNo adult content, gore, or anything unsafe.\n\n✨ **4 – No Advertising**\nNo links, promos, or self-promotion without staff approval.\n\n✨ **5 – Keep it Clean**\nNo hate speech, slurs, or extreme drama.\n\n✨ **6 – Follow Staff Instructions**\nIf staff gives instructions, please follow them.\n\n--------------------------------------------------\nPress **Agree To Rules** below to enter and enjoy the server! 🎊");
-    message.channel.send({ embeds: [embed], components: [row] });
+    await interaction.channel.send({ files: [BANNERS.RULES] });
+    await interaction.channel.send({ embeds: [new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Community!").setDescription("Here you can join events, get updates, talk with the community, and enjoy the content together.\n\n--------------------------------------------------\n\n📜 **Server Rules**\n\n✨ **1 – Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.\n\n✨ **2 – No Spam**\nAvoid repeated messages, emoji spam, or unnecessary mentions.\n\n✨ **3 – No NSFW or Harmful Content**\nNo adult content, gore, or anything unsafe.\n\n✨ **4 – No Advertising**\nNo links, promos, or self-promotion without staff approval.\n\n✨ **5 – Keep it Clean**\nNo hate speech, slurs, or extreme drama.\n\n✨ **6 – Follow Staff Instructions**\nIf staff gives instructions, please follow them.\n\n--------------------------------------------------\nPress **Agree To Rules** below to enter and enjoy the server! 🎊")], components: [row] });
+    await interaction.reply({ content: "Panel Sent.", ephemeral: true });
   }
 
-  if (cmd === "welcome" && isAdmin(message.member)) {
-    const row = new ActionRowBuilder().addComponents(
+  if (commandName === "welcome") {
+     if(!isAdminUser) return interaction.reply({content: "❌ Admin only.", ephemeral: true});
+     await interaction.channel.send({ files: [BANNERS.WELCOME] });
+     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setLabel("YouTube Channel").setStyle(ButtonStyle.Link).setURL("https://youtube.com/@Teamgosu"),
         new ButtonBuilder().setLabel("Twitch Channel").setStyle(ButtonStyle.Link).setURL("https://twitch.tv/gosugeneral"),
         new ButtonBuilder().setLabel("Invite Link").setStyle(ButtonStyle.Link).setURL("https://discord.gg/gosugeneral")
     );
-    await message.channel.send({ files: [BANNERS.WELCOME] });
-    const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Discord Server!")
-        .setDescription("Greetings, adventurer!\n\nWelcome to the **Gosu General TV** community server.\nHere you can hang out with the community, share plays, ask questions, receive announcements, and join events together.\n\n---\n\n📌 **What you can find here**\n\n• Live stream notifications & announcements\n• Game discussions and guides\n• Clips, highlights, and community content\n• Chill chat with other Gosu viewers\n\n---\nEnjoy your stay and have fun! 💙")
-        .addFields({ name: "Official Links", value: "📺 [YouTube](https://youtube.com/@Teamgosu)\n🟣 [Twitch](https://twitch.tv/gosugeneral)", inline: true }, { name: "Discord Invite Link", value: "🔗 [Invite Link](https://discord.gg/gosugeneral)", inline: true });
-    message.channel.send({ embeds: [embed], components: [row] });
+     await interaction.channel.send({ embeds: [new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Discord Server!").setDescription("Greetings, adventurer!\n\nWelcome to the **Gosu General TV** community server.\nHere you can hang out with the community, share plays, ask questions, receive announcements, and join events together.\n\n---\n\n📌 **What you can find here**\n\n• Live stream notifications & announcements\n• Game discussions and guides\n• Clips, highlights, and community content\n• Chill chat with other Gosu viewers\n\n---\nEnjoy your stay and have fun! 💙").addFields({ name: "Official Links", value: "📺 [YouTube](https://youtube.com/@Teamgosu)\n🟣 [Twitch](https://twitch.tv/gosugeneral)", inline: true }, { name: "Discord Invite Link", value: "🔗 [Invite Link](https://discord.gg/gosugeneral)", inline: true })], components: [row] });
+     await interaction.reply({ content: "Welcome Panel Sent.", ephemeral: true });
   }
 
-  if (cmd === "subscriber" && isAdmin(message.member)) {
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("subscribe_toggle").setLabel("Subscribe / Unsubscribe").setStyle(ButtonStyle.Primary).setEmoji("🔔"));
-    await message.channel.send({ files: [BANNERS.NOTI] });
-    const embed = new EmbedBuilder().setColor("#FF0000").setTitle("🔔 Live Notification Subscription")
-        .setDescription("Stay updated with **Live Streams** and **New Uploads**!\n\nBy subscribing, you will receive:\n• 🔴 Live stream alerts\n• 🆕 New YouTube upload notifications\n• 📢 Special announcements\n\n---\n\n📌 **How It Works**\n\n• Press once → **Subscribe**\n• Press again → **Unsubscribe**\n\n---\nEnjoy real-time updates and never miss a stream! 💙").setFooter({ text: "Gosu General TV — Notification System" });
-    message.channel.send({ embeds: [embed], components: [row] });
+  if (commandName === "subscriber") {
+      if(!isAdminUser) return interaction.reply({content: "❌ Admin only.", ephemeral: true});
+      const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("subscribe_toggle").setLabel("Subscribe / Unsubscribe").setStyle(ButtonStyle.Primary).setEmoji("🔔"));
+      await interaction.channel.send({ files: [BANNERS.NOTI] });
+      await interaction.channel.send({ embeds: [new EmbedBuilder().setColor("#FF0000").setTitle("🔔 Live Notification Subscription").setDescription("Stay updated with **Live Streams** and **New Uploads**!\n\nBy subscribing, you will receive:\n• 🔴 Live stream alerts\n• 🆕 New YouTube upload notifications\n• 📢 Special announcements\n\n---\n\n📌 **How It Works**\n\n• Press once → **Subscribe**\n• Press again → **Unsubscribe**\n\n---\nEnjoy real-time updates and never miss a stream! 💙").setFooter({ text: "Gosu General TV — Notification System" })], components: [row] });
+      await interaction.reply({ content: "Sub Panel Sent.", ephemeral: true });
   }
-
-  if (cmd === "creator" && isAdmin(message.member)) {
-    await message.channel.send({ files: [BANNERS.CREATOR] });
-    const embed = new EmbedBuilder().setColor("#FFB347").setTitle("👑 Creator Role – Automatic Verification")
-        .setDescription("Hello, creators! This panel explains how to obtain the **Creator** role and access exclusive creator-only channels.\n\nOur Creator role is granted through **Discord's automatic verification system**, based on your connected accounts.\n\n--------------------------------------------\n### 1️⃣ Required Conditions\nTo receive the Creator role, at least **one** connected account must meet **all** requirements below:\n\n**Supported Platforms:**\n• TikTok / YouTube / Twitch / Facebook\n\n**Requirements:**\n• The account must be **connected** to your Discord profile\n• The account must be **verified** (e.g., phone verification)\n• Minimum **100 followers/subscribers**\n• Must be following **100+ users**\n• At least **10 likes or activity records**\n\n--------------------------------------------\n### 2️⃣ How to Connect Your Account to Discord\n1. Open **User Settings** (gear icon ⚙️ bottom-left)\n2. Select **Connections**\n3. Click **Add Connection**\n4. Choose TikTok / YouTube / Twitch / Facebook, then log in and link your account\n\n--------------------------------------------\n### 3️⃣ Automatic Creator Role Assignment\n• After linking and meeting the requirements, Discord automatically verifies your account.\n• Please wait a moment; syncing account data may take some time.\n• Once approved, the **Creator** role will appear and channels like **#creator-chat** will become available.\n\n--------------------------------------------\n### ⚠️ Troubleshooting\n**Didn't receive the role?**\n• Ensure your linked account meets *all* requirements\n• Refresh Discord with **Ctrl + R** (Windows) or **Cmd + R** (Mac)\n\n**Need help?**\nDM an admin if you're experiencing issues or have questions.")
-        .setFooter({ text: "Gosu General TV — Creator Role Guide" });
-    message.channel.send({ embeds: [embed] });
+  
+  if (commandName === "creator") {
+      if(!isAdminUser) return interaction.reply({content: "❌ Admin only.", ephemeral: true});
+      await interaction.channel.send({ files: [BANNERS.CREATOR] });
+      await interaction.channel.send({ embeds: [new EmbedBuilder().setColor("#FFB347").setTitle("👑 Creator Role – Automatic Verification").setDescription("Hello, creators! This panel explains how to obtain the **Creator** role and access exclusive creator-only channels.\n\nOur Creator role is granted through **Discord's automatic verification system**, based on your connected accounts.\n\n--------------------------------------------\n### 1️⃣ Required Conditions\nTo receive the Creator role, at least **one** connected account must meet **all** requirements below:\n\n**Supported Platforms:**\n• TikTok / YouTube / Twitch / Facebook\n\n**Requirements:**\n• The account must be **connected** to your Discord profile\n• The account must be **verified** (e.g., phone verification)\n• Minimum **100 followers/subscribers**\n• Must be following **100+ users**\n• At least **10 likes or activity records**\n\n--------------------------------------------\n### 2️⃣ How to Connect Your Account to Discord\n1. Open **User Settings** (gear icon ⚙️ bottom-left)\n2. Select **Connections**\n3. Click **Add Connection**\n4. Choose TikTok / YouTube / Twitch / Facebook, then log in and link your account\n\n--------------------------------------------\n### 3️⃣ Automatic Creator Role Assignment\n• After linking and meeting the requirements, Discord automatically verifies your account.\n• Please wait a moment; syncing account data may take some time.\n• Once approved, the **Creator** role will appear and channels like **#creator-chat** will become available.\n\n--------------------------------------------\n### ⚠️ Troubleshooting\n**Didn't receive the role?**\n• Ensure your linked account meets *all* requirements\n• Refresh Discord with **Ctrl + R** (Windows) or **Cmd + R** (Mac)\n\n**Need help?**\nDM an admin if you're experiencing issues or have questions.").setFooter({ text: "Gosu General TV — Creator Role Guide" })] });
+      await interaction.reply({ content: "Creator Panel Sent.", ephemeral: true });
   }
 
   // --- MODERATION ---
-  if (cmd === "kick" && isMod) { 
-      const t = message.mentions.members.first(); 
-      if(t?.kickable) { 
-          await t.kick(); 
-          message.reply(`👢 Kicked **${t.user.username}**.`); 
-          
-          if(BOT_CONFIG.modLogChannelId) {
-             const ch = message.guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
-             if(ch) {
-                 const embed = new EmbedBuilder()
-                    .setColor("#FF8C00") 
-                    .setAuthor({ name: "Member Kicked", iconURL: t.user.displayAvatarURL() })
-                    .setThumbnail(t.user.displayAvatarURL({ dynamic: true }))
-                    .addFields(
-                        { name: "User", value: `${t.user.tag} (${t.user.id})`, inline: true },
-                        { name: "Moderator", value: `${message.author.tag}`, inline: true },
-                        { name: "Reason", value: args.slice(1).join(" ") || "No reason provided", inline: false }
-                    )
-                    .setTimestamp();
-                 ch.send({ embeds: [embed] });
-             }
-          }
-      } 
+  if (commandName === "kick") {
+      if(!isMod) return interaction.reply({content: "❌ Mod only.", ephemeral: true});
+      const user = options.getUser("user");
+      const reason = options.getString("reason") || "No reason";
+      const member = interaction.guild.members.cache.get(user.id);
+      
+      if(member && member.kickable) {
+          await member.kick(reason);
+          interaction.reply(`👢 Kicked **${user.tag}**.`);
+          if(BOT_CONFIG.modLogChannelId) interaction.guild.channels.cache.get(BOT_CONFIG.modLogChannelId)?.send({ embeds: [new EmbedBuilder().setColor("Orange").setTitle("Member Kicked").setDescription(`Target: ${user.tag}\nMod: ${interaction.user.tag}\nReason: ${reason}`).setThumbnail(user.displayAvatarURL({dynamic:true}))] });
+      } else {
+          interaction.reply({ content: "❌ Cannot kick this user.", ephemeral: true });
+      }
   }
 
-  if (cmd === "ban" && isAdmin(message.member)) { 
-      const t = message.mentions.members.first(); 
-      if(t?.bannable) { 
-          await t.ban(); 
-          message.reply(`🔨 Banned **${t.user.username}**.`); 
-          
-          if(BOT_CONFIG.modLogChannelId) {
-             const ch = message.guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
-             if(ch) {
-                 const embed = new EmbedBuilder()
-                    .setColor("#8B0000") 
-                    .setAuthor({ name: "Member Banned", iconURL: t.user.displayAvatarURL() })
-                    .setThumbnail(t.user.displayAvatarURL({ dynamic: true }))
-                    .addFields(
-                        { name: "User", value: `${t.user.tag} (${t.user.id})`, inline: true },
-                        { name: "Moderator", value: `${message.author.tag}`, inline: true },
-                        { name: "Reason", value: args.slice(1).join(" ") || "No reason provided", inline: false }
-                    )
-                    .setTimestamp();
-                 ch.send({ embeds: [embed] });
-             }
-          }
-      } 
-  }
-  
-  if (cmd === "mute" && isMod) { 
-      const t = message.mentions.members.first(); 
-      const m = parseInt(args[1]) || 3; 
-      if(t) { 
-          await t.timeout(m*60000); 
-          message.reply(`🔇 Muted **${t.user.username}** for ${m}m.`); 
-          
-          if(BOT_CONFIG.modLogChannelId) {
-             const ch = message.guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
-             if(ch) {
-                 const embed = new EmbedBuilder()
-                    .setColor("#FFD700") 
-                    .setAuthor({ name: "Member Muted", iconURL: t.user.displayAvatarURL() })
-                    .setThumbnail(t.user.displayAvatarURL({ dynamic: true })) 
-                    .addFields(
-                        { name: "User", value: `${t.user.tag} (${t.user.id})`, inline: true },
-                        { name: "Duration", value: `${m} minutes`, inline: true },
-                        { name: "Moderator", value: `${message.author.tag}`, inline: true }
-                    )
-                    .setTimestamp();
-                 ch.send({ embeds: [embed] });
-             }
-          }
-      } 
-  }
-  
-  if (cmd === "unmute" && isMod) { 
-      const t = message.mentions.members.first(); 
-      if(t) { 
-          await t.timeout(null); 
-          message.reply(`🔊 Unmuted **${t.user.username}**.`); 
-      } 
-  }
-  
-  if (cmd === "freeze" && isMod) { 
-      message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false }); 
-      message.channel.send("❄️ **The chat has been frozen.** Everyone, please cool down for a moment."); 
-  }
-  if (cmd === "unfreeze" && isMod) { 
-      message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: null }); 
-      message.channel.send("♨️ **The freeze has been lifted.**"); 
+  if (commandName === "ban") {
+      if(!isAdminUser) return interaction.reply({content: "❌ Admin only.", ephemeral: true});
+      const user = options.getUser("user");
+      const reason = options.getString("reason") || "No reason";
+      const member = interaction.guild.members.cache.get(user.id);
+      
+      if(member && member.bannable) {
+          await member.ban({ reason });
+          interaction.reply(`🔨 Banned **${user.tag}**.`);
+          if(BOT_CONFIG.modLogChannelId) interaction.guild.channels.cache.get(BOT_CONFIG.modLogChannelId)?.send({ embeds: [new EmbedBuilder().setColor("DarkRed").setTitle("Member Banned").setDescription(`Target: ${user.tag}\nMod: ${interaction.user.tag}\nReason: ${reason}`).setThumbnail(user.displayAvatarURL({dynamic:true}))] });
+      } else {
+          interaction.reply({ content: "❌ Cannot ban this user.", ephemeral: true });
+      }
   }
 
-  if (cmd === "addword" && isMod) { 
-      const w = args.join(" ").toLowerCase(); 
-      if(w) { 
-          BLACKLISTED_WORDS.push(w); 
-          await saveBlacklist(); 
-          message.reply("Added to Blacklist."); 
-      } 
-  }
-  
-  if (cmd === "removeword" && isMod) { 
-      const w = args.join(" ").toLowerCase(); 
-      BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(x => x !== w); 
-      await saveBlacklist(); 
-      message.reply("Removed from Blacklist."); 
+  if (commandName === "mute") {
+      if(!isMod) return interaction.reply({content: "❌ Mod only.", ephemeral: true});
+      const user = options.getUser("user");
+      const mins = options.getInteger("minutes") || 3;
+      const member = interaction.guild.members.cache.get(user.id);
+      
+      if(member) {
+          await member.timeout(mins * 60000);
+          interaction.reply(`🔇 Muted **${user.tag}** for ${mins}m.`);
+          if(BOT_CONFIG.modLogChannelId) interaction.guild.channels.cache.get(BOT_CONFIG.modLogChannelId)?.send({ embeds: [new EmbedBuilder().setColor("Gold").setTitle("Member Muted").setDescription(`Target: ${user.tag}\nDuration: ${mins}m\nMod: ${interaction.user.tag}`).setThumbnail(user.displayAvatarURL({dynamic:true}))] });
+      } else {
+          interaction.reply({ content: "❌ Cannot mute user.", ephemeral: true });
+      }
   }
 
-  if (cmd === "syncrolexp" && isAdmin(message.member)) {
-    message.reply("🔄 Syncing..."); 
-    let c = 0;
-    for (const r of LEVEL_ROLES) { 
-        const role = message.guild.roles.cache.get(r.roleId); 
+  if (commandName === "unmute") {
+      if(!isMod) return interaction.reply({content: "❌ Mod only.", ephemeral: true});
+      const user = options.getUser("user");
+      const member = interaction.guild.members.cache.get(user.id);
+      if(member) {
+          await member.timeout(null);
+          interaction.reply(`🔊 Unmuted **${user.tag}**.`);
+      }
+  }
+
+  if (commandName === "freeze") {
+      if(!isMod) return interaction.reply({content: "❌ Mod only.", ephemeral: true});
+      interaction.channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: false }); 
+      interaction.reply("❄️ **The chat has been frozen.** Everyone, please cool down for a moment.");
+  }
+
+  if (commandName === "unfreeze") {
+      if(!isMod) return interaction.reply({content: "❌ Mod only.", ephemeral: true});
+      interaction.channel.permissionOverwrites.edit(interaction.guild.id, { SendMessages: null }); 
+      interaction.reply("♨️ **The freeze has been lifted.**");
+  }
+  
+  // [FIXED] PRUNE COMMAND
+  if (commandName === "prune") {
+      if(!isMod) return interaction.reply({content: "❌ Mod only.", ephemeral: true});
+      const amount = options.getInteger("amount");
+      
+      // 1. Check Amount Limit (Standard: 1 to 100)
+      if (amount < 1 || amount > 100) {
+          return interaction.reply({ content: "❌ Amount must be between 1 and 100.", ephemeral: true });
+      }
+
+      await interaction.deferReply({ ephemeral: true }); // Wait for deletion
+
+      try {
+          const deleted = await interaction.channel.bulkDelete(amount, true);
+          interaction.editReply({ content: `✅ Deleted **${deleted.size}** messages.` });
+      } catch (error) {
+          console.error(error);
+          interaction.editReply({ content: "❌ Failed to delete messages.\n(Check Bot Permissions or messages older than 14 days cannot be deleted)" });
+      }
+  }
+
+  if (commandName === "addword") {
+      if(!isMod) return interaction.reply({content: "❌ Mod only.", ephemeral: true});
+      const word = options.getString("word").toLowerCase();
+      BLACKLISTED_WORDS.push(word);
+      await saveBlacklist();
+      interaction.reply(`🚫 Added **${word}** to blacklist.`);
+  }
+
+  if (commandName === "removeword") {
+      if(!isMod) return interaction.reply({content: "❌ Mod only.", ephemeral: true});
+      const word = options.getString("word").toLowerCase();
+      BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(w => w !== word);
+      await saveBlacklist();
+      interaction.reply(`✅ Removed **${word}** from blacklist.`);
+  }
+  
+  if (commandName === "syncrolexp") {
+      if(!isAdminUser) return interaction.reply({content: "❌ Admin only.", ephemeral: true});
+      await interaction.deferReply();
+      let c = 0;
+      for (const r of LEVEL_ROLES) { 
+        const role = interaction.guild.roles.cache.get(r.roleId); 
         if (!role) continue; 
         for (const [id, m] of role.members) { 
-            await xpCollection.updateOne({ guildId: message.guild.id, userId: id }, { $set: { level: r.level, xp: getTotalXpForLevel(r.level) } }, { upsert: true }); 
+            await xpCollection.updateOne({ guildId: interaction.guild.id, userId: id }, { $set: { level: r.level, xp: getTotalXpForLevel(r.level) } }, { upsert: true }); 
             c++; 
         } 
-    }
-    message.channel.send(`✅ Synced **${c}** users.`);
+      }
+      interaction.editReply(`✅ Synced XP for **${c}** users.`);
   }
 
-  // --- LOG & WELCOME CONFIG ---
-  if (cmd.startsWith("set") && isAdmin(message.member)) {
-    const ch = message.mentions.channels.first() || message.channel;
-    
-    if (cmd === "setwelcome") { 
-        BOT_CONFIG.welcomeChannelId = ch.id; 
-        await saveConfig(); 
-        message.reply(`✅ Welcome messages set to ${ch}`); 
-    }
-    if (cmd === "setmodlog") { 
-        BOT_CONFIG.modLogChannelId = ch.id; 
-        await saveConfig(); 
-        message.reply(`✅ Mod Log set to ${ch}`); 
-    }
-    if (cmd === "setmsglog") { 
-        BOT_CONFIG.msgLogChannelId = ch.id; 
-        await saveConfig(); 
-        message.reply(`✅ Msg Log set to ${ch}`); 
-    }
-    if (cmd === "setactionlog") { 
-        BOT_CONFIG.actionLogChannelId = ch.id; 
-        await saveConfig(); 
-        message.reply(`✅ Action Log set to ${ch}`); 
-    }
+  // --- CONFIG ---
+  if (["setwelcome", "setmodlog", "setmsglog", "setactionlog"].includes(commandName)) {
+      if(!isAdminUser) return interaction.reply({content: "❌ Admin only.", ephemeral: true});
+      const ch = options.getChannel("channel");
+      if (commandName === "setwelcome") BOT_CONFIG.welcomeChannelId = ch.id;
+      if (commandName === "setmodlog") BOT_CONFIG.modLogChannelId = ch.id;
+      if (commandName === "setmsglog") BOT_CONFIG.msgLogChannelId = ch.id;
+      if (commandName === "setactionlog") BOT_CONFIG.actionLogChannelId = ch.id;
+      await saveConfig();
+      interaction.reply(`✅ Config updated: **${commandName}** -> ${ch}`);
   }
 
-}); // Closes Part 3's messageCreate
-
-// ---------------------------------------------------------------------
-// 7. EVENTS & LOGIN
-// ---------------------------------------------------------------------
-client.on("interactionCreate", async (i) => {
-  if (!i.isButton()) return;
-  try {
-    if (i.customId === "agree_rules") { 
-        await i.member.roles.add(GOSU_ROLE); 
-        i.reply({ content: "✅ Welcome to the server!", ephemeral: true }); 
-    }
-    else if (i.customId === "subscribe_toggle") { 
-        const has = i.member.roles.cache.has(SUB_ROLE); 
-        if (has) await i.member.roles.remove(SUB_ROLE); 
-        else await i.member.roles.add(SUB_ROLE); 
-        i.reply({ content: has ? "🔕 Unsubscribed." : "🔔 Subscribed!", ephemeral: true }); 
-    }
-  } catch (e) {}
 });
 
+// ---------------------------------------------------------------------
+// 9. OTHER EVENTS
+// ---------------------------------------------------------------------
+
 client.on("messageDelete", async (m) => {
-    if (!m.guild || m.author.bot) return;
-    if (!BOT_CONFIG.msgLogChannelId) return;
-
+    if (!m.guild || m.author?.bot || !BOT_CONFIG.msgLogChannelId) return;
     const ch = m.guild.channels.cache.get(BOT_CONFIG.msgLogChannelId);
-    if (!ch) return;
-
-    const embed = new EmbedBuilder()
-        .setColor("#FF4500") 
-        .setAuthor({ name: "Message Deleted", iconURL: "https://cdn-icons-png.flaticon.com/512/3405/3405244.png" }) 
-        .setThumbnail(m.author.displayAvatarURL({ dynamic: true })) 
-        .addFields(
-            { name: "User", value: `${m.author.username} (${m.author.id})`, inline: false },
-            { name: "Channel", value: `${m.channel}`, inline: false },
-            { name: "Content", value: m.content || "*[Image/No Text]*", inline: false }
-        )
-        .setFooter({ text: "Message Deleted" })
-        .setTimestamp();
-
-    ch.send({ embeds: [embed] }).catch(() => {});
+    if (ch) ch.send({ embeds: [new EmbedBuilder().setColor("#FF4500").setAuthor({ name: "Message Deleted", iconURL: "https://cdn-icons-png.flaticon.com/512/3405/3405244.png" }).setThumbnail(m.author.displayAvatarURL({dynamic:true})).addFields({ name: "User", value: `${m.author.username} (${m.author.id})` }, { name: "Channel", value: `${m.channel}` }, { name: "Content", value: m.content || "*[Image]*" }).setTimestamp()] }).catch(()=>{});
 });
 
 client.on("guildMemberRemove", async (m) => {
     if(!BOT_CONFIG.actionLogChannelId) return;
     const ch = m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId);
-    
-    if(ch) {
-        const embed = new EmbedBuilder()
-            .setColor("#FF4500") 
-            .setAuthor({ name: "Member Left", iconURL: m.user.displayAvatarURL() })
-            .setThumbnail(m.user.displayAvatarURL({ dynamic: true }))
-            .setDescription(`${m} ${m.user.username}`)
-            .setFooter({ text: `ID: ${m.id}` })
-            .setTimestamp();
-        
-        ch.send({ embeds: [embed] }).catch(()=>{});
-    }
+    if(ch) ch.send({ embeds: [new EmbedBuilder().setColor("#FF4500").setAuthor({ name: "Member Left", iconURL: m.user.displayAvatarURL() }).setThumbnail(m.user.displayAvatarURL({dynamic:true})).setDescription(`${m} ${m.user.username}`).setFooter({ text: `ID: ${m.id}` }).setTimestamp()] }).catch(()=>{});
 });
 
 client.on("guildMemberAdd", async (m) => {
     // 1. Action Log
     if(BOT_CONFIG.actionLogChannelId) {
         const ch = m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId);
-        if(ch) {
-            const embed = new EmbedBuilder()
-                .setColor("#00FF00")
-                .setAuthor({ name: "Member Joined", iconURL: m.user.displayAvatarURL() })
-                .setThumbnail(m.user.displayAvatarURL({ dynamic: true })) 
-                .setDescription(`${m} ${m.user.username}`)
-                .setFooter({ text: `ID: ${m.id}` })
-                .setTimestamp();
-            ch.send({ embeds: [embed] }).catch(()=>{});
-        }
+        if(ch) ch.send({ embeds: [new EmbedBuilder().setColor("#00FF00").setAuthor({ name: "Member Joined", iconURL: m.user.displayAvatarURL() }).setThumbnail(m.user.displayAvatarURL({dynamic:true})).setDescription(`${m} ${m.user.username}`).setFooter({ text: `ID: ${m.id}` }).setTimestamp()] }).catch(()=>{});
     }
-
     // 2. Welcome Card
     if(BOT_CONFIG.welcomeChannelId) {
         const ch = m.guild.channels.cache.get(BOT_CONFIG.welcomeChannelId);
         if(ch) {
-            const embed = new EmbedBuilder()
-                .setColor("#2f3136") 
-                .setAuthor({ name: "Welcome to the server!" })
-                .setDescription(`Let's all welcome ${m} !`)
-                .setThumbnail(m.user.displayAvatarURL({ dynamic: true, size: 256 }))
-                .setImage(BANNERS.WELCOME)
-                .setFooter({ text: `${m.guild.name} • Member #${m.guild.memberCount}` })
-                .setTimestamp();
-            
+            const embed = new EmbedBuilder().setColor("#2f3136").setAuthor({ name: "Welcome to the server!" }).setDescription(`Let's all welcome ${m} !`).setThumbnail(m.user.displayAvatarURL({ dynamic: true, size: 256 })).setImage(BANNERS.WELCOME).setFooter({ text: `${m.guild.name} • Member #${m.guild.memberCount}` }).setTimestamp();
             await ch.send({ content: `Welcome to the server, ${m}!`, embeds: [embed] }).catch(()=>{});
         }
     }
 });
 
-// [UPDATED] VIP WELCOME MESSAGE (Using IDs from Part 1)
+// VIP WELCOME
 client.on("guildMemberUpdate", (oldMember, newMember) => {
     const addedRoles = newMember.roles.cache.filter(role => !oldMember.roles.cache.has(role.id));
-    
-    // Check if Twitch or Youtube VIP role was added
     if (addedRoles.has(TWITCH_VIP_ROLE_ID) || addedRoles.has(YOUTUBE_VIP_ROLE_ID)) {
         if (VIP_CHAT_CHANNEL_ID) {
             const ch = newMember.guild.channels.cache.get(VIP_CHAT_CHANNEL_ID);
