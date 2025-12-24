@@ -1,5 +1,5 @@
 // =====================================================================
-// Gosu Custom Discord Bot (Final Fixed Version - Part 1)
+// Gosu Custom Discord Bot (Final English Version - Part 1)
 // Setup, Configuration, MongoDB Connection, Helper Functions
 // =====================================================================
 require("dotenv").config();
@@ -29,14 +29,14 @@ const DATA_DIR = "./Data";
 const BLACKLIST_FILE_PATH = path.join(DATA_DIR, "blacklist.json");
 const CONFIG_FILE_PATH = path.join(DATA_DIR, "config.json");
 
-// Create Data directory if not exists
+// Create Data directory if it doesn't exist
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   console.log(`[INIT] Created directory: ${DATA_DIR}`);
 }
 
 // ---------------------------------------------------------------------
-// 2. ROLE & CHANNEL IDs (Please verify your server IDs)
+// 2. ROLE & CHANNEL IDs (Verify your server IDs)
 // ---------------------------------------------------------------------
 const GOSU_ROLE = "496717793388134410";
 const MOD_ROLE = "495727371140202506";
@@ -184,7 +184,7 @@ client.once("ready", async () => {
     await connectMongo();
 });
 // =====================================================================
-// Gosu Custom Discord Bot (Final Fixed Version - Part 2)
+// Gosu Custom Discord Bot (Final English Version - Part 2)
 // Leveling Logic (Fixed), Logging, Voice Creator
 // =====================================================================
 
@@ -337,92 +337,97 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 });
 
 // =====================================================================
-// Gosu Custom Discord Bot (Final Fixed Version - Part 3)
+// Gosu Custom Discord Bot (Final English Version - Part 3)
 // Filters, General/Mod Commands, !syncrolexp
 // =====================================================================
 
 client.on("messageCreate", async (message) => {
     if (!message.guild || message.author.bot) return;
 
+    // [FIXED] Parse Command First
     const content = message.content.trim();
+    const args = content.slice(1).split(/ +/);
+    const cmd = args.shift().toLowerCase(); // "!ping" becomes "ping"
+    const isCommand = content.startsWith("!");
+
     const lowerContent = content.toLowerCase();
     const isMod = isModerator(message.member);
     const isSilver = message.member.roles.cache.has(SILVER_ROLE_ID);
 
     // ---------------------------------------------------
-    // A. SCAM PATTERNS (Priority Block)
+    // 1. FILTER LOGIC (Skip if it's a command)
     // ---------------------------------------------------
-    const scamPatterns = [
-        "free nitro", "steamcommunity.com/gift", "airdrop", "discord.gg/invite", 
-        "dlscord.gg", "bit.ly/", "tinyurl.com", "hacked", "gift free"
-    ];
+    if (!isMod && !isCommand) {
+        // A. Scam Patterns
+        const scamPatterns = [
+            "free nitro", "steamcommunity.com/gift", "airdrop", "discord.gg/invite", 
+            "dlscord.gg", "bit.ly/", "tinyurl.com", "hacked", "gift free"
+        ];
 
-    if (!isMod && scamPatterns.some(p => lowerContent.includes(p))) {
-        if (message.deletable) message.delete().catch(() => {});
-        const msg = await message.channel.send(`🚨 **${message.author}** Malicious/Scam link detected and blocked.`);
-        setTimeout(() => msg.delete().catch(() => {}), 5000);
-        
-        // Log scam attempt
-        if(BOT_CONFIG.filterLogChannelId) {
-            const ch = message.guild.channels.cache.get(BOT_CONFIG.filterLogChannelId);
-            if(ch) ch.send(`🚨 **Scam Blocked**\nUser: ${message.author.tag}\nContent: ||${content}||`);
-        }
-        return; 
-    }
-
-    // ---------------------------------------------------
-    // B. LINK & GIF FILTER
-    // ---------------------------------------------------
-    const hasLink = /(https?:\/\/[^\s]+)/.test(lowerContent);
-    const hasDiscordInvite = /discord\.gg\//.test(lowerContent) && !lowerContent.includes("gosugeneral");
-    const hasOnlyFans = lowerContent.includes("onlyfans") || lowerContent.includes("only fans");
-
-    if (!isMod && (hasLink || hasDiscordInvite || hasOnlyFans)) {
-        let allow = false;
-
-        // ★ Silver Role: Allow general links
-        if (isSilver) allow = true;
-
-        // ★ Strict: Invites and NSFW are always blocked
-        if (hasDiscordInvite || hasOnlyFans) allow = false;
-
-        if (!allow) {
+        if (scamPatterns.some(p => lowerContent.includes(p))) {
             if (message.deletable) message.delete().catch(() => {});
-            const msg = await message.channel.send(`🚫 **${message.author}** Links/GIFs are restricted to **Silver Rank (Level 10+)**.`);
+            const msg = await message.channel.send(`🚨 **${message.author}** Malicious/Scam link detected and blocked.`);
+            setTimeout(() => msg.delete().catch(() => {}), 5000);
+            
+            // Log
+            if(BOT_CONFIG.filterLogChannelId) {
+                const ch = message.guild.channels.cache.get(BOT_CONFIG.filterLogChannelId);
+                if(ch) ch.send(`🚨 **Scam Blocked**\nUser: ${message.author.tag}\nContent: ||${content}||`);
+            }
+            return; 
+        }
+
+        // B. Link & GIF Filter
+        const hasLink = /(https?:\/\/[^\s]+)/.test(lowerContent);
+        const hasDiscordInvite = /discord\.gg\//.test(lowerContent) && !lowerContent.includes("gosugeneral");
+        const hasOnlyFans = lowerContent.includes("onlyfans") || lowerContent.includes("only fans");
+
+        if (hasLink || hasDiscordInvite || hasOnlyFans) {
+            let allow = false;
+
+            // ★ Silver Role: Allow general links
+            if (isSilver) allow = true;
+
+            // ★ Strict: Invites and NSFW are always blocked
+            if (hasDiscordInvite || hasOnlyFans) allow = false;
+
+            if (!allow) {
+                if (message.deletable) message.delete().catch(() => {});
+                const msg = await message.channel.send(`🚫 **${message.author}** Links/GIFs are restricted to **Silver Rank (Level 10+)**.`);
+                setTimeout(() => msg.delete().catch(() => {}), 5000);
+                return; 
+            }
+        }
+
+        // C. Blacklist Filter
+        if (BLACKLISTED_WORDS.some(w => lowerContent.includes(w))) {
+            if (message.deletable) message.delete().catch(() => {});
+            const msg = await message.channel.send(`🚫 **${message.author}** Forbidden word detected.`);
             setTimeout(() => msg.delete().catch(() => {}), 5000);
             return; 
         }
     }
 
-    // ---------------------------------------------------
-    // C. BLACKLIST WORD FILTER
-    // ---------------------------------------------------
-    if (!isMod && BLACKLISTED_WORDS.some(w => lowerContent.includes(w))) {
-        if (message.deletable) message.delete().catch(() => {});
-        const msg = await message.channel.send(`🚫 **${message.author}** Forbidden word detected.`);
-        setTimeout(() => msg.delete().catch(() => {}), 5000);
+    // XP Gain (Only if not a command)
+    if (!isCommand) {
+        await handleXpGain(message);
         return; 
     }
 
-    await handleXpGain(message);
-
     // ---------------------------------------------------
-    // D. COMMAND HANDLER
+    // 2. COMMAND LOGIC
     // ---------------------------------------------------
-    if (!content.startsWith("!")) return;
-
-    const args = content.slice(1).split(/ +/);
-    const cmd = args.shift().toLowerCase();
-
+    
+    // Auto-delete command message after 1 sec
     if (!["ping", "invite", "rank", "leaderboard", "level"].includes(cmd)) {
         setTimeout(() => { if (!message.deleted) message.delete().catch(() => {}); }, 1000);
     }
 
     // [GENERAL]
-    if (cmd === "!ping") return message.reply("Pong!");
-    if (cmd === "!invite") return message.reply("📨 https://discord.gg/gosugeneral");
+    if (cmd === "ping") return message.reply("Pong!");
+    if (cmd === "invite") return message.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
     
-    if (cmd === "!help") {
+    if (cmd === "help") {
         const embed = new EmbedBuilder().setColor("#00FFFF").setTitle("🤖 Bot Commands")
             .setDescription(
                 "**General**: `!ping`, `!invite`, `!rank`, `!leaderboard`, `!level`\n" +
@@ -433,7 +438,7 @@ client.on("messageCreate", async (message) => {
     }
 
     // [LEVELING]
-    if (cmd === "!rank") {
+    if (cmd === "rank") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
         const target = message.mentions.users.first() || message.author;
         const data = await xpCollection.findOne({ guildId: message.guild.id, userId: target.id });
@@ -450,7 +455,7 @@ client.on("messageCreate", async (message) => {
         return message.channel.send({ embeds: [embed] });
     }
 
-    if (cmd === "!leaderboard") {
+    if (cmd === "leaderboard") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
         const top = await xpCollection.find({ guildId: message.guild.id }).sort({ xp: -1 }).limit(10).toArray();
         const description = top.map((u, i) => `${i + 1}. <@${u.userId}> — Level ${u.level} (${u.xp} XP)`).join("\n");
@@ -458,14 +463,14 @@ client.on("messageCreate", async (message) => {
         return message.channel.send({ embeds: [embed] });
     }
 
-    if (cmd === "!level") {
+    if (cmd === "level") {
         const embed = new EmbedBuilder().setColor("Green").setTitle("🎯 Level Rewards")
             .setDescription(LEVEL_ROLES.map(r => `**Lv ${r.level}**: <@&${r.roleId}>`).join("\n"));
         return message.channel.send({ embeds: [embed] });
     }
 
-    // [ADMIN - SYNC] ★ !syncrolexp (Added)
-    if (cmd === "!syncrolexp") {
+    // [ADMIN - SYNC] ★ !syncrolexp
+    if (cmd === "syncrolexp") {
         if(!isAdmin(message.member)) return message.reply("⛔ Admin only.");
         message.reply("🔄 Syncing roles to DB... This might take a moment.");
         
@@ -477,10 +482,9 @@ client.on("messageCreate", async (message) => {
             for (const [memberId, member] of role.members) {
                 const minXp = getTotalXpForLevel(reward.level);
                 
-                // Update or Insert based on role
+                // Update or Insert
                 const userDoc = await xpCollection.findOne({ guildId: message.guild.id, userId: memberId });
                 
-                // Only update if DB level is lower than actual role level
                 if (!userDoc || userDoc.level < reward.level) {
                     await xpCollection.updateOne(
                         { guildId: message.guild.id, userId: memberId },
@@ -495,29 +499,29 @@ client.on("messageCreate", async (message) => {
     }
 
     // [MODERATION]
-    if (cmd === "!kick") {
+    if (cmd === "kick") {
         if (!isModerator(message.member)) return;
         const target = message.mentions.members.first();
         const reason = args.slice(1).join(" ") || "No reason";
         if (target && target.kickable) {
             await target.kick(reason);
             message.reply(`👢 Kicked ${target.user.tag}`);
-            sendModLog(message.guild, target.user, "KICK", message.author, reason);
+            sendModLog(message.guild, target.user, "KICK", message.author, args.slice(1).join(" "));
         } else message.reply("❌ Cannot kick.");
     }
 
-    if (cmd === "!ban") {
+    if (cmd === "ban") {
         if (!isAdmin(message.member)) return;
         const target = message.mentions.members.first();
         const reason = args.slice(1).join(" ") || "No reason";
         if (target && target.bannable) {
             await target.ban({ reason });
             message.reply(`🔨 Banned ${target.user.tag}`);
-            sendModLog(message.guild, target.user, "BAN", message.author, reason);
+            sendModLog(message.guild, target.user, "BAN", message.author, args.slice(1).join(" "));
         } else message.reply("❌ Cannot ban.");
     }
 
-    if (cmd === "!mute") {
+    if (cmd === "mute") {
         if (!isModerator(message.member)) return;
         const target = message.mentions.members.first();
         const mins = parseInt(args[1]);
@@ -529,7 +533,7 @@ client.on("messageCreate", async (message) => {
         } else message.reply("Usage: `!mute @user [min]`");
     }
 
-    if (cmd === "!unmute") {
+    if (cmd === "unmute") {
         if (!isModerator(message.member)) return;
         const target = message.mentions.members.first();
         if (target) {
@@ -538,19 +542,21 @@ client.on("messageCreate", async (message) => {
         }
     }
 
-    if (cmd === "!freeze") {
+    if (cmd === "freeze") {
         if (!isModerator(message.member)) return;
-        message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false });
+        const channel = message.mentions.channels.first() || message.channel;
+        await channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false });
         message.channel.send("❄️ Channel Frozen");
     }
 
-    if (cmd === "!unfreeze") {
+    if (cmd === "unfreeze") {
         if (!isModerator(message.member)) return;
-        message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: null });
+        const channel = message.mentions.channels.first() || message.channel;
+        await channel.permissionOverwrites.edit(message.guild.id, { SendMessages: null });
         message.channel.send("♨️ Channel Thawed");
     }
 
-    if (cmd === "!prune") {
+    if (cmd === "prune") {
         if (!isModerator(message.member)) return;
         const amount = parseInt(args[0]);
         if (amount && amount <= 100) {
@@ -560,31 +566,31 @@ client.on("messageCreate", async (message) => {
         }
     }
 
-    if (cmd === "!addword") {
+    if (cmd === "addword") {
         if (!isModerator(message.member)) return;
         const w = args.join(" ").toLowerCase();
-        if(w) { BLACKLISTED_WORDS.push(w); saveBlacklist(); message.reply(`Added "${w}"`); }
+        if(w) { BLACKLISTED_WORDS.push(w); saveBlacklist(); message.reply(`✅ Added "${w}" to blacklist.`); }
     }
 
-    if (cmd === "!removeword") {
+    if (cmd === "removeword") {
         if (!isModerator(message.member)) return;
         const w = args.join(" ").toLowerCase();
         BLACKLISTED_WORDS = BLACKLISTED_WORDS.filter(x => x !== w);
         saveBlacklist();
-        message.reply(`Removed "${w}"`);
+        message.reply(`✅ Removed "${w}" from blacklist.`);
     }
 
-    if (cmd === "!listwords") {
+    if (cmd === "listwords") {
         if (!isModerator(message.member)) return;
-        message.reply(`Words: ${BLACKLISTED_WORDS.join(", ")}`);
+        message.reply(`🚫 **Blacklist:** ${BLACKLISTED_WORDS.join(", ")}`);
     }
 
 // =====================================================================
-// Gosu Custom Discord Bot (Final Fixed Version - Part 4)
-// Panels, Button Interaction (English), Event Listeners, Login
+// Gosu Custom Discord Bot (Final English Version - Part 4)
+// Panels, Button Logic (English), Login
 // =====================================================================
 
-    if (cmd === "!reloadblacklist") {
+    if (cmd === "reloadblacklist") {
         if (!isAdmin(message.member)) return;
         loadLocalFiles();
         message.reply("✅ Blacklist reloaded from file.");
@@ -596,7 +602,7 @@ client.on("messageCreate", async (message) => {
     const NOTI_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png";
     const CREATOR_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1441312962903015576/verification.png";
 
-    if (cmd === "!setupjoin") {
+    if (cmd === "setupjoin") {
         if (!isAdmin(message.member)) return;
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("agree_rules").setLabel("Agree To Rules").setStyle(ButtonStyle.Success).setEmoji("✅")
@@ -606,7 +612,7 @@ client.on("messageCreate", async (message) => {
         message.channel.send({ embeds: [embed], components: [row] });
     }
 
-    if (cmd === "!welcome") {
+    if (cmd === "welcome") {
         if (!isAdmin(message.member)) return;
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setLabel("YouTube").setStyle(ButtonStyle.Link).setURL("https://youtube.com/@Teamgosu")
@@ -616,7 +622,7 @@ client.on("messageCreate", async (message) => {
         message.channel.send({ embeds: [embed], components: [row] });
     }
 
-    if (cmd === "!subscriber") {
+    if (cmd === "subscriber") {
         if (!isAdmin(message.member)) return;
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("subscribe_toggle").setLabel("Subscribe").setStyle(ButtonStyle.Primary).setEmoji("🔔")
@@ -626,7 +632,7 @@ client.on("messageCreate", async (message) => {
         message.channel.send({ embeds: [embed], components: [row] });
     }
 
-    if (cmd === "!creator") {
+    if (cmd === "creator") {
         if (!isAdmin(message.member)) return;
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("apply_creator").setLabel("Apply").setStyle(ButtonStyle.Secondary)
@@ -637,17 +643,30 @@ client.on("messageCreate", async (message) => {
     }
 
     // --- LOG CONFIG ---
-    if (cmd.startsWith("!set") && cmd.includes("log")) {
+    if (cmd.startsWith("set") && cmd.includes("log")) {
         if (!isAdmin(message.member)) return;
         const ch = message.mentions.channels.first() || message.channel;
         
-        if (cmd === "!setmodlog") BOT_CONFIG.modLogChannelId = ch.id;
-        if (cmd === "!setmsglog") BOT_CONFIG.msgLogChannelId = ch.id;
-        if (cmd === "!setactionlog") BOT_CONFIG.actionLogChannelId = ch.id;
-        if (cmd === "!setfilterlog") BOT_CONFIG.filterLogChannelId = ch.id;
+        if (cmd === "setmodlog") BOT_CONFIG.modLogChannelId = ch.id;
+        if (cmd === "setmsglog") BOT_CONFIG.msgLogChannelId = ch.id;
+        if (cmd === "setactionlog") BOT_CONFIG.actionLogChannelId = ch.id;
+        if (cmd === "setfilterlog") BOT_CONFIG.filterLogChannelId = ch.id;
         
         saveConfig();
-        message.reply(`✅ **${cmd.replace("!set", "").toUpperCase()}** set to ${ch}.`);
+        message.reply(`✅ **${cmd.replace("set", "").toUpperCase()}** set to ${ch}.`);
+    }
+    
+    // --- CLEAR LOG CONFIG ---
+    if (cmd.startsWith("clear") && cmd.includes("log")) {
+        if (!isAdmin(message.member)) return;
+        
+        if (cmd === "clearmodlog") BOT_CONFIG.modLogChannelId = null;
+        if (cmd === "clearmsglog") BOT_CONFIG.msgLogChannelId = null;
+        if (cmd === "clearactionlog") BOT_CONFIG.actionLogChannelId = null;
+        if (cmd === "clearfilterlog") BOT_CONFIG.filterLogChannelId = null;
+        
+        saveConfig();
+        message.reply(`✅ Log channel setting cleared.`);
     }
 });
 
@@ -739,7 +758,7 @@ client.on("interactionCreate", async (i) => {
         }
     } catch (e) {
         console.error("Interaction Error:", e);
-        if (!i.replied) i.reply({ content: "❌ An error occurred.", ephemeral: true });
+        if (!i.replied) i.reply({ content: "❌ Error.", ephemeral: true });
     }
 });
 
