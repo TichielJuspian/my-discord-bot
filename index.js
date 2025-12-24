@@ -249,7 +249,7 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // 2. XP PROCESSING (For normal messages)
+  // 2. XP PROCESSING
   if (!isCommand) {
     await handleXpGain(message);
     return;
@@ -259,7 +259,6 @@ client.on("messageCreate", async (message) => {
   const args = content.slice(1).split(/ +/);
   const cmd = args.shift().toLowerCase();
 
-  // Auto-delete command messages (Clean chat)
   const keepMessages = ["ping", "invite", "rank", "leaderboard", "level", "help"];
   if (!keepMessages.includes(cmd)) {
     setTimeout(() => { if (!message.deleted) message.delete().catch(() => {}); }, 1000);
@@ -270,7 +269,6 @@ client.on("messageCreate", async (message) => {
   if (cmd === "ping") return message.reply("Pong!");
   if (cmd === "invite") return message.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
 
-  // !help (Full List Restored)
   if (cmd === "help") {
     const embed = new EmbedBuilder()
       .setColor("#00FFFF")
@@ -286,7 +284,7 @@ client.on("messageCreate", async (message) => {
     return message.channel.send({ embeds: [embed] });
   }
 
-  // !rank (Premium Design)
+  // [RESTORED] !rank - Matches Screenshot Exactly
   if (cmd === "rank") {
     let targetMember;
     if (message.mentions.members.size > 0) targetMember = message.mentions.members.first();
@@ -302,21 +300,23 @@ client.on("messageCreate", async (message) => {
 
     const currentLevel = data.level || 0;
     const rank = (await xpCollection.countDocuments({ guildId: message.guild.id, xp: { $gt: data.xp } })) + 1;
-    const totalUsers = await xpCollection.countDocuments({ guildId: message.guild.id });
     
+    // XP Calculation
     const nextLevelBaseXp = getTotalXpForLevel(currentLevel + 1);
     const currentLevelBaseXp = getTotalXpForLevel(currentLevel);
     const xpIntoLevel = data.xp - currentLevelBaseXp;
     const xpNeeded = nextLevelBaseXp - currentLevelBaseXp;
     
     const percent = Math.min(Math.max(xpIntoLevel / xpNeeded, 0), 1);
+    const percentText = Math.floor(percent * 100);
     const bar = "█".repeat(Math.round(percent * 15)) + "░".repeat(15 - Math.round(percent * 15));
 
+    // Next Reward Calculation
     const nextReward = LEVEL_ROLES.find(r => r.level > currentLevel);
     let rewardText = "🎉 Max Level Reached!";
     if (nextReward) {
-        const role = message.guild.roles.cache.get(nextReward.roleId);
-        rewardText = `At **Level ${nextReward.level}** you will earn role: **${role ? role.name : nextReward.name}**`;
+        const xpLeft = (getTotalXpForLevel(nextReward.level)) - data.xp;
+        rewardText = `**${xpLeft.toLocaleString()} XP** left until **Lv ${nextReward.level}**`;
     }
 
     const embed = new EmbedBuilder()
@@ -325,44 +325,61 @@ client.on("messageCreate", async (message) => {
       .setThumbnail(targetMember.user.displayAvatarURL({ dynamic: true }))
       .addFields(
         { name: "🧬 Level", value: `${currentLevel}`, inline: true },
-        { name: "🏆 Rank", value: `#${rank} of ${totalUsers}`, inline: true },
-        { name: "⭐ XP", value: `${data.xp.toLocaleString()} / ${nextLevelBaseXp.toLocaleString()}`, inline: true },
-        { name: "📈 Progress to Next Level", value: `${bar}\n${xpIntoLevel.toLocaleString()} / ${xpNeeded.toLocaleString()} XP`, inline: false },
+        { name: "🏆 Rank", value: `#${rank}`, inline: true },
+        { name: "⭐ XP", value: `${data.xp.toLocaleString()}`, inline: true },
+        { name: "📈 Progress", value: `${bar} **${percentText}%**\n${xpIntoLevel.toLocaleString()} / ${xpNeeded.toLocaleString()} XP`, inline: false },
         { name: "🎁 Next Reward", value: rewardText, inline: false }
-      )
-      .setFooter({ text: "Gosu General TV — Rank System", iconURL: message.guild.iconURL() })
-      .setTimestamp();
+      );
+      // Footer removed to match screenshot style
     return message.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
   }
 
-  // !leaderboard
+  // [RESTORED] !leaderboard - Matches Screenshot Exactly
   if (cmd === "leaderboard") {
     const top = await xpCollection.find({ guildId: message.guild.id }).sort({ xp: -1 }).limit(10).toArray();
     if (!top.length) return message.reply("📉 No data.");
     
     const topMember = message.guild.members.cache.get(top[0].userId);
     let list = top.map((u, i) => {
-        let medal = `#${i+1}`;
-        if (i===0) medal="🥇"; if(i===1) medal="🥈"; if(i===2) medal="🥉";
-        const name = message.guild.members.cache.get(u.userId)?.user.username || "Unknown";
-        return `${medal} **${name}** — Lv ${u.level} (${(u.xp / 1000).toFixed(1)}k XP)`;
+        let prefix = `#${i+1}`;
+        if (i===0) prefix="🥇"; if(i===1) prefix="🥈"; if(i===2) prefix="🥉";
+        
+        const member = message.guild.members.cache.get(u.userId);
+        const name = member ? member.user.username : "Unknown";
+        const xpK = (u.xp / 1000).toFixed(1) + "k"; // 644.2k style
+        
+        return `${prefix} **${name}** — Lv ${u.level} (${xpK} XP)`;
     }).join("\n");
 
-    const embed = new EmbedBuilder().setColor("#FFD700").setTitle("🏆 Server Leaderboard")
+    const embed = new EmbedBuilder()
+        .setColor("#FFD700")
+        .setTitle("🏆 Leaderboard")
         .setThumbnail(topMember?.user.displayAvatarURL() || null)
-        .setDescription(list)
-        .setFooter({ text: "Keep chatting to climb the ranks!" });
+        .setDescription(list);
+        
     return message.channel.send({ embeds: [embed] });
   }
 
-  // !level
+  // [RESTORED] !level - Matches Screenshot Exactly
   if (cmd === "level") {
     const d = await xpCollection.findOne({ guildId: message.guild.id, userId: message.author.id });
     const userLvl = d ? d.level : 0;
-    const list = LEVEL_ROLES.map(r => `${userLvl >= r.level ? "✅" : "🔒"} **Lv ${r.level}** : ${r.name}`).join("\n");
-    return message.channel.send({ embeds: [new EmbedBuilder().setColor("Green").setTitle("🎯 Level Rewards").setThumbnail(message.author.displayAvatarURL()).setDescription(`**Current Level: ${userLvl}**\n\n${list}`)] });
-  }
+    
+    const list = LEVEL_ROLES.map(r => {
+        const icon = userLvl >= r.level ? "✅" : "🔒";
+        // Use Role Mention <@&ID> to get the color, or plain text if role missing
+        const roleStr = message.guild.roles.cache.has(r.roleId) ? `<@&${r.roleId}>` : `@${r.name}`;
+        return `${icon} **Lv ${r.level}** — ${roleStr}`;
+    }).join("\n");
 
+    const embed = new EmbedBuilder()
+        .setColor("Green") // Green side bar
+        .setTitle("🎯 Level Rewards")
+        .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+        .setDescription(`**Your Level: ${userLvl}**\n\n${list}`);
+
+    return message.channel.send({ embeds: [embed] });
+  }
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 4)
 // Admin Panels (Restored Texts), Moderation, Events, Login
@@ -471,7 +488,7 @@ client.on("messageCreate", async (message) => {
     message.reply(`✅ Log set to ${ch}`);
   }
 
-});
+}); // ⚠️ Closes "messageCreate" listener
 
 // ---------------------------------------------------------------------
 // 7. EVENTS & LOGIN
