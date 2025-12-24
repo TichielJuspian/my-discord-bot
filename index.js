@@ -248,7 +248,7 @@ client.on("voiceStateUpdate", async (oldS, newS) => {
 
 // =====================================================================
 // Gosu Custom Discord Bot (Final Split Version - Part 3)
-// Filters & Commands (Premium Design Updated)
+// Filters & Commands (Rich Help + Premium Rank + No Ping)
 // =====================================================================
 
 client.on("messageCreate", async (message) => {
@@ -262,7 +262,7 @@ client.on("messageCreate", async (message) => {
     const isMod = isModerator(message.member);
     const isSilver = message.member.roles.cache.has(SILVER_ROLE_ID);
 
-    // FILTERS
+    // 1. FILTER LOGIC
     if (!isMod && !isCommand) {
         const scams = ["free nitro", "steamcommunity.com", "discord.gg/invite", "dlscord.gg", "bit.ly/"];
         if (scams.some(s => lowerContent.includes(s))) {
@@ -287,56 +287,106 @@ client.on("messageCreate", async (message) => {
         return; 
     }
 
-    // COMMANDS
-    if (!["ping", "invite", "rank", "leaderboard", "level"].includes(cmd)) {
+    // 2. COMMAND LOGIC
+    if (!["ping", "invite", "rank", "leaderboard", "level", "help"].includes(cmd)) {
         setTimeout(() => { if (!message.deleted) message.delete().catch(() => {}); }, 1000);
     }
 
     if (cmd === "ping") return message.reply("Pong!");
     if (cmd === "invite") return message.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
     
+    // [RESTORED RICH HELP COMMAND]
     if (cmd === "help") {
-        const embed = new EmbedBuilder().setColor("#00FFFF").setTitle("🤖 Bot Commands")
-            .setDescription("**General**: `!ping`, `!rank`, `!leaderboard`, `!level`\n**Mod**: `!kick`, `!mute`, `!freeze`\n**Admin**: `!setupjoin`, `!syncrolexp`");
+        const embed = new EmbedBuilder()
+            .setColor("#00FFFF")
+            .setTitle("🤖 Gosu Bot Command List")
+            .setDescription("Here is the full list of available commands.")
+            .addFields(
+                { 
+                    name: "🌐 General", 
+                    value: "`!rank` — Check your (or others') rank & XP\n`!leaderboard` — View Top 10 users\n`!level` — View level rewards\n`!invite` — Get server invite link", 
+                    inline: false 
+                },
+                { 
+                    name: "🛡️ Moderation (Mod Only)", 
+                    value: "`!kick <@user>` — Kick a user\n`!mute <@user> <min>` — Timeout a user\n`!unmute <@user>` — Remove timeout\n`!freeze` / `!unfreeze` — Lock/Unlock channel\n`!prune <n>` — Delete <n> messages\n`!addword <word>` / `!removeword` — Manage blacklist", 
+                    inline: false 
+                },
+                { 
+                    name: "⚙️ Admin & Setup (Admin Only)", 
+                    value: "`!ban <@user>` — Ban a user\n`!syncrolexp` — Sync XP based on roles\n`!reloadblacklist` — Reload bad words from DB\n\n**Panels:**\n`!setupjoin` — Rules Panel\n`!welcome` — Welcome Panel\n`!subscriber` — Notification Panel\n`!creator` — Creator Verify Panel", 
+                    inline: false 
+                },
+                {
+                    name: "📝 Log Configuration",
+                    value: "`!setmodlog #ch` / `!clearmodlog`\n`!setmsglog #ch` / `!clearmsglog`\n`!setactionlog #ch` / `!clearactionlog`",
+                    inline: false
+                }
+            )
+            .setFooter({ text: "Gosu General TV", iconURL: message.guild.iconURL() });
+
         return message.channel.send({ embeds: [embed] });
     }
 
-    // PREMIUM RANK CARD (Fixed: Defaults to Self)
+    // [PREMIUM RANK CARD - NO PING & SEARCH]
     if (cmd === "rank") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
+        
         let targetMember;
-        if (message.mentions.members.size > 0) targetMember = message.mentions.members.first();
+        // 1. Check for Mention (@User)
+        if (message.mentions.members.size > 0) {
+            targetMember = message.mentions.members.first();
+        } 
+        // 2. Check for Name/ID Search (e.g. !rank gosu)
         else if (args.length > 0) {
-            const searchStr = args.join(" ").toLowerCase();
-            targetMember = message.guild.members.cache.find(m => m.user.username.toLowerCase().includes(searchStr));
-        } else targetMember = message.member;
+            const search = args.join(" ").toLowerCase();
+            targetMember = message.guild.members.cache.find(m => 
+                m.user.username.toLowerCase().includes(search) || 
+                (m.nickname && m.nickname.toLowerCase().includes(search)) ||
+                m.user.id === search
+            );
+        } 
+        // 3. Default to Self
+        else {
+            targetMember = message.member;
+        }
 
         if (!targetMember) return message.reply("❌ User not found.");
+
         const targetUser = targetMember.user;
         const data = await xpCollection.findOne({ guildId: message.guild.id, userId: targetUser.id });
         
         if (!data) {
             if (targetUser.id === message.author.id) return message.reply("📊 You don't have any XP yet.");
-            return message.reply(`❌ No XP data for **${targetUser.username}**.`);
+            return message.reply(`❌ No XP data found for **${targetUser.username}**.`);
         }
 
         const rank = (await xpCollection.countDocuments({ guildId: message.guild.id, xp: { $gt: data.xp } })) + 1;
         const currentLevel = data.level || 0;
         const nextXp = getTotalXpForLevel(currentLevel + 1);
-        const percent = Math.min(Math.max((data.xp - getTotalXpForLevel(currentLevel)) / (nextXp - getTotalXpForLevel(currentLevel)), 0), 1);
+        
+        const xpIntoLevel = data.xp - getTotalXpForLevel(currentLevel);
+        const xpToNextLevel = nextXp - getTotalXpForLevel(currentLevel);
+        
+        const percent = Math.min(Math.max(xpIntoLevel / xpToNextLevel, 0), 1);
         const bar = "█".repeat(Math.floor(percent * 15)) + "░".repeat(15 - Math.floor(percent * 15));
 
-        const embed = new EmbedBuilder().setColor(targetMember.displayHexColor).setAuthor({ name: `${targetUser.username}'s Rank`, iconURL: targetUser.displayAvatarURL() })
-            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true })).addFields(
+        const embed = new EmbedBuilder()
+            .setColor(targetMember.displayHexColor === "#000000" ? "#9B59B6" : targetMember.displayHexColor)
+            .setAuthor({ name: `${targetUser.username}'s Rank`, iconURL: targetUser.displayAvatarURL() })
+            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+            .addFields(
                 { name: "🧬 Level", value: `\`${currentLevel}\``, inline: true },
                 { name: "🏆 Rank", value: `\`#${rank}\``, inline: true },
                 { name: "⭐ XP", value: `\`${data.xp.toLocaleString()} / ${nextXp.toLocaleString()}\``, inline: true },
                 { name: "📈 Progress", value: `\`${bar}\` **${Math.floor(percent * 100)}%**`, inline: false }
-            ).setFooter({ text: "Gosu General TV", iconURL: message.guild.iconURL() });
+            )
+            .setFooter({ text: "Gosu General TV", iconURL: message.guild.iconURL() });
+
         return message.channel.send({ embeds: [embed] });
     }
 
-    // PREMIUM LEADERBOARD (Medals + Image)
+    // [PREMIUM LEADERBOARD - MEDALS & TOP IMAGE]
     if (cmd === "leaderboard") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
         const top = await xpCollection.find({ guildId: message.guild.id }).sort({ xp: -1 }).limit(10).toArray();
@@ -350,8 +400,10 @@ client.on("messageCreate", async (message) => {
             const u = top[i];
             const member = message.guild.members.cache.get(u.userId);
             const name = member ? `**${member.user.username}**` : "Unknown";
+            
             let rankEmoji = `#${i + 1}`;
             if (i === 0) rankEmoji = "🥇"; if (i === 1) rankEmoji = "🥈"; if (i === 2) rankEmoji = "🥉";
+            
             description += `${rankEmoji} ${name} — Lv ${u.level} (${(u.xp / 1000).toFixed(1)}k XP)\n`;
         }
 
@@ -359,7 +411,7 @@ client.on("messageCreate", async (message) => {
         return message.channel.send({ embeds: [embed] });
     }
 
-    // LEVEL CHECKLIST (Clickable Roles)
+    // [LEVEL CHECKLIST - CLICKABLE ROLES]
     if (cmd === "level") {
         let userLevel = 0;
         if (xpCollection) {
@@ -450,7 +502,6 @@ client.on("messageCreate", async (message) => {
         await connectAndLoad();
         message.reply("✅ Blacklist refreshed from DB.");
     }
-
 // =====================================================================
 // Gosu Custom Discord Bot (Final Split Version - Part 4)
 // Admin Panels, Logs, Login (DB Integrated & Premium UI)
