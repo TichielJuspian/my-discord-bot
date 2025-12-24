@@ -1,6 +1,6 @@
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 1)
-// Setup, Config, MongoDB Connection, Zombie Channel Fix
+// Setup, Config, Database, VIP Roles Corrected
 // =====================================================================
 
 require("dotenv").config();
@@ -27,16 +27,21 @@ const ADMIN_ROLE = "495718851288236032";
 const SUB_ROLE = "497654614729031681";
 const CREATOR_ROLE = "1441214177128743017";
 const VERIFICATION_ROLE = "1441311763806031893";
+const SILVER_ROLE_ID = "497491254838427674"; 
+
+// [CORRECTED] VIP CONFIGURATION
+const TWITCH_VIP_ROLE_ID = "832458135544266752";  // Twitch Role
+const YOUTUBE_VIP_ROLE_ID = "797932385429487676"; // Youtube Role
+const VIP_CHAT_CHANNEL_ID = "651240006811385886"; // Target Channel
 
 const CREATE_CHANNEL_IDS = ["720658789832851487", "1441159364298936340"];
 const TEMP_VOICE_CHANNEL_IDS = new Set();
 
 const XP_CONFIG = { minXP: 5, maxXP: 15, cooldownMs: 30000 };
 
-// Full Level Roles with Names (Required for !rank Next Reward display)
 const LEVEL_ROLES = [
   { level: 5, roleId: "497843968151781378", name: "Bronze" },
-  { level: 10, roleId: "497491254838427674", name: "Silver" },
+  { level: 10, roleId: SILVER_ROLE_ID, name: "Silver" },
   { level: 20, roleId: "687470373331402752", name: "Gold" },
   { level: 30, roleId: "497578834376392724", name: "Platinum" },
   { level: 40, roleId: "1441513975161294889", name: "Epic" },
@@ -47,7 +52,6 @@ const LEVEL_ROLES = [
   { level: 150, roleId: "1441518689290817646", name: "Mythical Immortal" },
 ];
 
-// Permanent Image Links (GitHub Raw)
 const BANNERS = {
   RULES: "https://github.com/TichielJuspian/images/blob/main/must%20read.png?raw=true",
   WELCOME: "https://github.com/TichielJuspian/images/blob/main/welcome.png?raw=true",
@@ -108,7 +112,6 @@ client.once("ready", async () => {
   console.log(`[BOT] Logged in as ${client.user.tag}`);
   await connectAndLoad();
   
-  // Zombie Channel Fix (Deletes empty "🎧 ..." channels on boot)
   const guilds = client.guilds.cache.map(g => g);
   for (const guild of guilds) {
     const channels = await guild.channels.fetch();
@@ -365,7 +368,7 @@ client.on("messageCreate", async (message) => {
   }
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 4)
-// Admin Panels, Moderation, Events, Login 
+// Admin Panels, Moderation, Events, Login (VIP Role Check Corrected)
 // =====================================================================
 
   // --- ADMIN PANEL COMMANDS ---
@@ -413,13 +416,13 @@ client.on("messageCreate", async (message) => {
           await t.kick(); 
           message.reply(`👢 Kicked **${t.user.username}**.`); 
           
-          // PREMIUM MOD LOG (KICK)
           if(BOT_CONFIG.modLogChannelId) {
              const ch = message.guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
              if(ch) {
                  const embed = new EmbedBuilder()
-                    .setColor("#FF8C00") // Orange
+                    .setColor("#FF8C00") 
                     .setAuthor({ name: "Member Kicked", iconURL: t.user.displayAvatarURL() })
+                    .setThumbnail(t.user.displayAvatarURL({ dynamic: true }))
                     .addFields(
                         { name: "User", value: `${t.user.tag} (${t.user.id})`, inline: true },
                         { name: "Moderator", value: `${message.author.tag}`, inline: true },
@@ -438,13 +441,13 @@ client.on("messageCreate", async (message) => {
           await t.ban(); 
           message.reply(`🔨 Banned **${t.user.username}**.`); 
           
-          // PREMIUM MOD LOG (BAN)
           if(BOT_CONFIG.modLogChannelId) {
              const ch = message.guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
              if(ch) {
                  const embed = new EmbedBuilder()
-                    .setColor("#8B0000") // Dark Red
+                    .setColor("#8B0000") 
                     .setAuthor({ name: "Member Banned", iconURL: t.user.displayAvatarURL() })
+                    .setThumbnail(t.user.displayAvatarURL({ dynamic: true }))
                     .addFields(
                         { name: "User", value: `${t.user.tag} (${t.user.id})`, inline: true },
                         { name: "Moderator", value: `${message.author.tag}`, inline: true },
@@ -459,18 +462,18 @@ client.on("messageCreate", async (message) => {
   
   if (cmd === "mute" && isMod) { 
       const t = message.mentions.members.first(); 
-      const m = parseInt(args[1]) || 3; // Default 3 mins
+      const m = parseInt(args[1]) || 3; 
       if(t) { 
           await t.timeout(m*60000); 
           message.reply(`🔇 Muted **${t.user.username}** for ${m}m.`); 
           
-          // PREMIUM MOD LOG (MUTE)
           if(BOT_CONFIG.modLogChannelId) {
              const ch = message.guild.channels.cache.get(BOT_CONFIG.modLogChannelId);
              if(ch) {
                  const embed = new EmbedBuilder()
-                    .setColor("#FFD700") // Gold
+                    .setColor("#FFD700") 
                     .setAuthor({ name: "Member Muted", iconURL: t.user.displayAvatarURL() })
+                    .setThumbnail(t.user.displayAvatarURL({ dynamic: true })) 
                     .addFields(
                         { name: "User", value: `${t.user.tag} (${t.user.id})`, inline: true },
                         { name: "Duration", value: `${m} minutes`, inline: true },
@@ -491,7 +494,6 @@ client.on("messageCreate", async (message) => {
       } 
   }
   
-  // [UPDATED] Freeze Messages (English)
   if (cmd === "freeze" && isMod) { 
       message.channel.permissionOverwrites.edit(message.guild.id, { SendMessages: false }); 
       message.channel.send("❄️ **The chat has been frozen.** Everyone, please cool down for a moment."); 
@@ -578,7 +580,6 @@ client.on("interactionCreate", async (i) => {
   } catch (e) {}
 });
 
-// [UPDATED] Message Delete Log (Premium Style)
 client.on("messageDelete", async (m) => {
     if (!m.guild || m.author.bot) return;
     if (!BOT_CONFIG.msgLogChannelId) return;
@@ -587,8 +588,9 @@ client.on("messageDelete", async (m) => {
     if (!ch) return;
 
     const embed = new EmbedBuilder()
-        .setColor("#FF4500") // Red Sidebar
-        .setAuthor({ name: "Message Deleted", iconURL: "https://cdn-icons-png.flaticon.com/512/3405/3405244.png" }) // Trash Icon
+        .setColor("#FF4500") 
+        .setAuthor({ name: "Message Deleted", iconURL: "https://cdn-icons-png.flaticon.com/512/3405/3405244.png" }) 
+        .setThumbnail(m.author.displayAvatarURL({ dynamic: true })) 
         .addFields(
             { name: "User", value: `${m.author.username} (${m.author.id})`, inline: false },
             { name: "Channel", value: `${m.channel}`, inline: false },
@@ -600,15 +602,15 @@ client.on("messageDelete", async (m) => {
     ch.send({ embeds: [embed] }).catch(() => {});
 });
 
-// [UPDATED] Member Left Log (Dyno Style)
 client.on("guildMemberRemove", async (m) => {
     if(!BOT_CONFIG.actionLogChannelId) return;
     const ch = m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId);
     
     if(ch) {
         const embed = new EmbedBuilder()
-            .setColor("#FF4500") // Red/Orange
+            .setColor("#FF4500") 
             .setAuthor({ name: "Member Left", iconURL: m.user.displayAvatarURL() })
+            .setThumbnail(m.user.displayAvatarURL({ dynamic: true }))
             .setDescription(`${m} ${m.user.username}`)
             .setFooter({ text: `ID: ${m.id}` })
             .setTimestamp();
@@ -617,15 +619,15 @@ client.on("guildMemberRemove", async (m) => {
     }
 });
 
-// [UPDATED] Member Join Log (Dyno Style + Welcome Card)
 client.on("guildMemberAdd", async (m) => {
-    // 1. Action Log (Green Style)
+    // 1. Action Log
     if(BOT_CONFIG.actionLogChannelId) {
         const ch = m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId);
         if(ch) {
             const embed = new EmbedBuilder()
-                .setColor("#00FF00") // Green
+                .setColor("#00FF00")
                 .setAuthor({ name: "Member Joined", iconURL: m.user.displayAvatarURL() })
+                .setThumbnail(m.user.displayAvatarURL({ dynamic: true })) 
                 .setDescription(`${m} ${m.user.username}`)
                 .setFooter({ text: `ID: ${m.id}` })
                 .setTimestamp();
@@ -633,7 +635,7 @@ client.on("guildMemberAdd", async (m) => {
         }
     }
 
-    // 2. Welcome Card (Channel Message)
+    // 2. Welcome Card
     if(BOT_CONFIG.welcomeChannelId) {
         const ch = m.guild.channels.cache.get(BOT_CONFIG.welcomeChannelId);
         if(ch) {
@@ -647,6 +649,19 @@ client.on("guildMemberAdd", async (m) => {
                 .setTimestamp();
             
             await ch.send({ content: `Welcome to the server, ${m}!`, embeds: [embed] }).catch(()=>{});
+        }
+    }
+});
+
+// [UPDATED] VIP WELCOME MESSAGE (Using IDs from Part 1)
+client.on("guildMemberUpdate", (oldMember, newMember) => {
+    const addedRoles = newMember.roles.cache.filter(role => !oldMember.roles.cache.has(role.id));
+    
+    // Check if Twitch or Youtube VIP role was added
+    if (addedRoles.has(TWITCH_VIP_ROLE_ID) || addedRoles.has(YOUTUBE_VIP_ROLE_ID)) {
+        if (VIP_CHAT_CHANNEL_ID) {
+            const ch = newMember.guild.channels.cache.get(VIP_CHAT_CHANNEL_ID);
+            if (ch) ch.send(`New VIP here! ${newMember}`);
         }
     }
 });
