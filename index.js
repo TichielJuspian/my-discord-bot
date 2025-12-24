@@ -1,6 +1,6 @@
 // =====================================================================
-// Gosu Custom Discord Bot (FINAL INTEGRATED VERSION)
-// Features: MongoDB, Zombie Fix, Premium UI, English Only
+// Gosu Custom Discord Bot (Final Split Version - Part 1)
+// Setup, Config, MongoDB (Cloud Safe), Zombie Fix
 // =====================================================================
 require("dotenv").config();
 
@@ -67,7 +67,7 @@ let BOT_CONFIG = {
 let BLACKLISTED_WORDS = [];
 const xpCooldowns = new Map();
 
-// MongoDB
+// MongoDB Clients
 const mongoClient = new MongoClient(process.env.MONGODB_URI);
 let xpCollection = null;
 let configCollection = null;
@@ -138,17 +138,6 @@ async function saveBlacklist() {
     if (blacklistCollection) await blacklistCollection.updateOne({ _id: "global_blacklist" }, { $set: { words: BLACKLISTED_WORDS } }, { upsert: true });
 }
 
-// XP Formulas
-function getTotalXpForLevel(level) {
-    if (level <= 0) return 0;
-    return 100 * level * level - 100;
-}
-function getLevelFromTotalXp(totalXp) {
-    let level = 0;
-    while (totalXp >= getTotalXpForLevel(level + 1)) level++;
-    return level;
-}
-
 // ---------------------------------------------------------------------
 // 4. BOT READY (Zombie Fix Included)
 // ---------------------------------------------------------------------
@@ -176,10 +165,21 @@ client.once("ready", async () => {
     
     client.user.setActivity("Gosu General TV", { type: ActivityType.Watching });
 });
+// =====================================================================
+// Gosu Custom Discord Bot (Final Split Version - Part 2)
+// XP Logic, Logging, Voice Creator
+// =====================================================================
 
-// ---------------------------------------------------------------------
-// 5. EVENT HANDLERS (XP, Voice, Commands)
-// ---------------------------------------------------------------------
+// XP Formulas
+function getTotalXpForLevel(level) {
+    if (level <= 0) return 0;
+    return 100 * level * level - 100;
+}
+function getLevelFromTotalXp(totalXp) {
+    let level = 0;
+    while (totalXp >= getTotalXpForLevel(level + 1)) level++;
+    return level;
+}
 
 // XP Handler
 async function handleXpGain(message) {
@@ -246,7 +246,11 @@ client.on("voiceStateUpdate", async (oldS, newS) => {
     }
 });
 
-// MESSAGE HANDLER
+// =====================================================================
+// Gosu Custom Discord Bot (Final Split Version - Part 3)
+// Filters & Commands (Premium Design Updated)
+// =====================================================================
+
 client.on("messageCreate", async (message) => {
     if (!message.guild || message.author.bot) return;
 
@@ -297,13 +301,24 @@ client.on("messageCreate", async (message) => {
         return message.channel.send({ embeds: [embed] });
     }
 
-    // PREMIUM RANK CARD
+    // PREMIUM RANK CARD (Fixed: Defaults to Self)
     if (cmd === "rank") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
-        let targetMember = message.mentions.members.first() || message.guild.members.cache.find(m => m.user.username.toLowerCase().includes(args.join(" ").toLowerCase())) || message.member;
+        let targetMember;
+        if (message.mentions.members.size > 0) targetMember = message.mentions.members.first();
+        else if (args.length > 0) {
+            const searchStr = args.join(" ").toLowerCase();
+            targetMember = message.guild.members.cache.find(m => m.user.username.toLowerCase().includes(searchStr));
+        } else targetMember = message.member;
+
+        if (!targetMember) return message.reply("❌ User not found.");
         const targetUser = targetMember.user;
         const data = await xpCollection.findOne({ guildId: message.guild.id, userId: targetUser.id });
-        if (!data) return message.reply(`❌ No XP data for **${targetUser.username}**.`);
+        
+        if (!data) {
+            if (targetUser.id === message.author.id) return message.reply("📊 You don't have any XP yet.");
+            return message.reply(`❌ No XP data for **${targetUser.username}**.`);
+        }
 
         const rank = (await xpCollection.countDocuments({ guildId: message.guild.id, xp: { $gt: data.xp } })) + 1;
         const currentLevel = data.level || 0;
@@ -312,33 +327,39 @@ client.on("messageCreate", async (message) => {
         const bar = "█".repeat(Math.floor(percent * 15)) + "░".repeat(15 - Math.floor(percent * 15));
 
         const embed = new EmbedBuilder().setColor(targetMember.displayHexColor).setAuthor({ name: `${targetUser.username}'s Rank`, iconURL: targetUser.displayAvatarURL() })
-            .setThumbnail(targetUser.displayAvatarURL()).addFields(
+            .setThumbnail(targetUser.displayAvatarURL({ dynamic: true })).addFields(
                 { name: "🧬 Level", value: `\`${currentLevel}\``, inline: true },
                 { name: "🏆 Rank", value: `\`#${rank}\``, inline: true },
                 { name: "⭐ XP", value: `\`${data.xp.toLocaleString()} / ${nextXp.toLocaleString()}\``, inline: true },
                 { name: "📈 Progress", value: `\`${bar}\` **${Math.floor(percent * 100)}%**`, inline: false }
-            ).setFooter({ text: "Gosu General TV" });
+            ).setFooter({ text: "Gosu General TV", iconURL: message.guild.iconURL() });
         return message.channel.send({ embeds: [embed] });
     }
 
-    // PREMIUM LEADERBOARD
+    // PREMIUM LEADERBOARD (Medals + Image)
     if (cmd === "leaderboard") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
         const top = await xpCollection.find({ guildId: message.guild.id }).sort({ xp: -1 }).limit(10).toArray();
         if (!top.length) return message.reply("📉 No data.");
         
-        let table = "RANK | LEVEL | XP       | USERNAME\n--------------------------------------\n";
+        const topMember = message.guild.members.cache.get(top[0].userId);
+        const topAvatar = topMember ? topMember.user.displayAvatarURL({ dynamic: true }) : message.guild.iconURL();
+
+        let description = "";
         for (let i = 0; i < top.length; i++) {
             const u = top[i];
             const member = message.guild.members.cache.get(u.userId);
-            const name = member ? member.user.username : "Unknown";
-            table += `#${(i + 1).toString().padStart(2, '0')} | ${u.level.toString().padEnd(5, ' ')} | ${(u.xp / 1000).toFixed(1)}k   | ${name}\n`;
+            const name = member ? `**${member.user.username}**` : "Unknown";
+            let rankEmoji = `#${i + 1}`;
+            if (i === 0) rankEmoji = "🥇"; if (i === 1) rankEmoji = "🥈"; if (i === 2) rankEmoji = "🥉";
+            description += `${rankEmoji} ${name} — Lv ${u.level} (${(u.xp / 1000).toFixed(1)}k XP)\n`;
         }
-        const embed = new EmbedBuilder().setColor("#FFD700").setTitle("🏆 Server Leaderboard").setDescription(`\`\`\`ml\n${table}\`\`\``);
+
+        const embed = new EmbedBuilder().setColor("#FFD700").setTitle("🏆 Server Leaderboard").setThumbnail(topAvatar).setDescription(description).setFooter({ text: "Keep chatting to climb the ranks!" });
         return message.channel.send({ embeds: [embed] });
     }
 
-    // LEVEL CHECKLIST
+    // LEVEL CHECKLIST (Clickable Roles)
     if (cmd === "level") {
         let userLevel = 0;
         if (xpCollection) {
@@ -347,9 +368,10 @@ client.on("messageCreate", async (message) => {
         }
         const list = LEVEL_ROLES.map(r => {
             const role = message.guild.roles.cache.get(r.roleId);
-            return `${userLevel >= r.level ? "✅" : "🔒"} **Lv ${r.level}** : ${role ? role.name : "Unknown"}`;
+            const roleName = role ? role.toString() : "Unknown Role";
+            return `${userLevel >= r.level ? "✅" : "🔒"} **Lv ${r.level}** — ${roleName}`;
         }).join("\n");
-        const embed = new EmbedBuilder().setColor("Green").setTitle("🎯 Level Rewards").setDescription(`**Current Level: ${userLevel}**\n\n${list}`);
+        const embed = new EmbedBuilder().setColor("Green").setTitle("🎯 Level Rewards").setThumbnail(message.author.displayAvatarURL({ dynamic: true })).setDescription(`**Current Level: ${userLevel}**\n\n${list}`);
         return message.channel.send({ embeds: [embed] });
     }
 
@@ -429,7 +451,12 @@ client.on("messageCreate", async (message) => {
         message.reply("✅ Blacklist refreshed from DB.");
     }
 
-    // PANELS
+// =====================================================================
+// Gosu Custom Discord Bot (Final Split Version - Part 4)
+// Admin Panels, Logs, Login (DB Integrated & Premium UI)
+// =====================================================================
+
+    // PANELS (Premium Design)
     const RULES_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440992642761752656/must_read.png";
     const WELCOME_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440988230492225646/welcome.png";
     const NOTI_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png";
@@ -437,27 +464,31 @@ client.on("messageCreate", async (message) => {
 
     if (cmd === "setupjoin") {
         if (!isAdmin(message.member)) return;
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("agree_rules").setLabel("Agree").setStyle(ButtonStyle.Success).setEmoji("✅"));
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("agree_rules").setLabel("Agree To Rules").setStyle(ButtonStyle.Success).setEmoji("✅"));
         await message.channel.send({ files: [RULES_BANNER] });
-        message.channel.send({ embeds: [new EmbedBuilder().setColor("#1e90ff").setTitle("📜 Server Rules").setDescription("Accept rules to join.")], components: [row] });
+        const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Community!").setDescription("Here you can join events, get updates, talk with the community, and enjoy the content together.\n\n--------------------------------------------------\n\n📜 **Server Rules**\n\n✨ **1 – Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.\n\n✨ **2 – No Spam**\nAvoid repeated messages, emoji spam, or unnecessary mentions.\n\n✨ **3 – No NSFW or Harmful Content**\nNo adult content, gore, or anything unsafe.\n\n✨ **4 – No Advertising**\nNo links, promos, or self-promotion without staff approval.\n\n✨ **5 – Keep it Clean**\nNo hate speech, slurs, or extreme drama.\n\n✨ **6 – Follow Staff Instructions**\nIf staff gives instructions, please follow them.\n\n--------------------------------------------------\nPress **Agree To Rules** below to enter and enjoy the server! 🎊");
+        message.channel.send({ embeds: [embed], components: [row] });
     }
     if (cmd === "welcome") {
         if (!isAdmin(message.member)) return;
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("YouTube").setStyle(ButtonStyle.Link).setURL("https://youtube.com/@Teamgosu"));
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("YouTube Channel").setStyle(ButtonStyle.Link).setURL("https://youtube.com/@Teamgosu"), new ButtonBuilder().setLabel("Twitch Channel").setStyle(ButtonStyle.Link).setURL("https://twitch.tv/gosugeneral"), new ButtonBuilder().setLabel("Invite Link").setStyle(ButtonStyle.Link).setURL("https://discord.gg/gosugeneral"));
         if (WELCOME_BANNER) await message.channel.send({ files: [WELCOME_BANNER] });
-        message.channel.send({ embeds: [new EmbedBuilder().setColor("#1e90ff").setTitle("Welcome!").setDescription("Enjoy your stay.")], components: [row] });
+        const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Discord Server!").setDescription("Greetings, adventurer!\n\nWelcome to the **Gosu General TV** community server.\nHere you can hang out with the community, share plays, ask questions, receive announcements, and join events together.\n\n---\n\n📌 **What you can find here**\n\n• Live stream notifications & announcements\n• Game discussions and guides\n• Clips, highlights, and community content\n• Chill chat with other Gosu viewers\n\n---\nEnjoy your stay and have fun! 💙").addFields({ name: "Official Links", value: "📺 [YouTube](https://youtube.com/@Teamgosu)\n🟣 [Twitch](https://twitch.tv/gosugeneral)", inline: true }, { name: "Discord Invite Link", value: "🔗 [Invite Link](https://discord.gg/gosugeneral)", inline: true });
+        message.channel.send({ embeds: [embed], components: [row] });
     }
     if (cmd === "subscriber") {
         if (!isAdmin(message.member)) return;
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("subscribe_toggle").setLabel("Subscribe").setStyle(ButtonStyle.Primary).setEmoji("🔔"));
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("subscribe_toggle").setLabel("Subscribe / Unsubscribe").setStyle(ButtonStyle.Primary).setEmoji("🔔"));
         if (NOTI_BANNER) await message.channel.send({ files: [NOTI_BANNER] });
-        message.channel.send({ embeds: [new EmbedBuilder().setColor("#FF0000").setTitle("🔴 Live Notifications").setDescription("Toggle alerts.")], components: [row] });
+        const embed = new EmbedBuilder().setColor("#FF0000").setTitle("🔔 Live Notification Subscription").setDescription("Stay updated with **Live Streams** and **New Uploads**!\n\nBy subscribing, you will receive:\n• 🔴 Live stream alerts\n• 🆕 New YouTube upload notifications\n• 📢 Special announcements\n\n---\n\n📌 **How It Works**\n\n• Press once → **Subscribe**\n• Press again → **Unsubscribe**\n\n---\nEnjoy real-time updates and never miss a stream! 💙").setFooter({ text: "Gosu General TV — Notification System" });
+        message.channel.send({ embeds: [embed], components: [row] });
     }
     if (cmd === "creator") {
         if (!isAdmin(message.member)) return;
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("apply_creator").setLabel("Apply").setStyle(ButtonStyle.Secondary));
+        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("apply_creator").setLabel("Apply for Creator").setStyle(ButtonStyle.Secondary).setEmoji("👑"));
         if (CREATOR_BANNER) await message.channel.send({ files: [CREATOR_BANNER] });
-        message.channel.send({ embeds: [new EmbedBuilder().setColor("#FFB347").setTitle("👑 Creator Role").setDescription("Apply here.")], components: [row] });
+        const embed = new EmbedBuilder().setColor("#FFB347").setTitle("👑 Content Creator Verification").setDescription("Are you a content creator? Join our Creator program!\n\n**Benefits:**\n• Unique **Creator Role**\n• Access to creator-only channels\n• Promotion opportunities\n\n---\nClick the button below to verify your identity and get the role.");
+        message.channel.send({ embeds: [embed], components: [row] });
     }
 
     if (cmd.startsWith("set") && cmd.includes("log")) {
