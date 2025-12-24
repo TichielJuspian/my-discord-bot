@@ -328,62 +328,81 @@ client.on("messageCreate", async (message) => {
         return message.channel.send({ embeds: [embed] });
     }
 
-    // [PREMIUM RANK CARD - NO PING & SEARCH]
-    if (cmd === "rank") {
+   // [PREMIUM RANK CARD - MENTION SUPPORT RESTORED]
+    if (cmd === "!rank") {
         if (!xpCollection) return message.reply("⚠ XP System Offline.");
         
-        let targetMember;
-        // 1. Check for Mention (@User)
-        if (message.mentions.members.size > 0) {
-            targetMember = message.mentions.members.first();
-        } 
-        // 2. Check for Name/ID Search (e.g. !rank gosu)
-        else if (args.length > 0) {
-            const search = args.join(" ").toLowerCase();
-            targetMember = message.guild.members.cache.find(m => 
-                m.user.username.toLowerCase().includes(search) || 
-                (m.nickname && m.nickname.toLowerCase().includes(search)) ||
-                m.user.id === search
-            );
-        } 
-        // 3. Default to Self
-        else {
-            targetMember = message.member;
-        }
-
-        if (!targetMember) return message.reply("❌ User not found.");
-
+        // 1. Determine Target: Mentioned User OR Self
+        // If user typed "!rank @Gosu", target is Gosu.
+        // If user typed "!rank", target is Self.
+        const targetMember = message.mentions.members.first() || message.member;
         const targetUser = targetMember.user;
-        const data = await xpCollection.findOne({ guildId: message.guild.id, userId: targetUser.id });
+        const guildId = message.guild.id;
+
+        // 2. Fetch Data
+        const data = await xpCollection.findOne({ guildId, userId: targetUser.id });
         
         if (!data) {
-            if (targetUser.id === message.author.id) return message.reply("📊 You don't have any XP yet.");
-            return message.reply(`❌ No XP data found for **${targetUser.username}**.`);
+            if (targetUser.id === message.author.id) {
+                return message.reply("📊 You don't have any XP yet. Start chatting to earn some!");
+            } else {
+                return message.reply(`❌ **${targetUser.username}** has no XP data yet.`);
+            }
         }
 
-        const rank = (await xpCollection.countDocuments({ guildId: message.guild.id, xp: { $gt: data.xp } })) + 1;
+        // 3. Calculate Stats
         const currentLevel = data.level || 0;
-        const nextXp = getTotalXpForLevel(currentLevel + 1);
         
-        const xpIntoLevel = data.xp - getTotalXpForLevel(currentLevel);
-        const xpToNextLevel = nextXp - getTotalXpForLevel(currentLevel);
+        // XP Calculation (Quadratic Formula)
+        const currentLevelBaseXp = currentLevel === 0 ? 0 : (100 * currentLevel * currentLevel);
+        const nextLevelBaseXp = 100 * (currentLevel + 1) * (currentLevel + 1);
         
-        const percent = Math.min(Math.max(xpIntoLevel / xpToNextLevel, 0), 1);
-        const bar = "█".repeat(Math.floor(percent * 15)) + "░".repeat(15 - Math.floor(percent * 15));
+        const xpNeededForNextLevel = nextLevelBaseXp - currentLevelBaseXp;
+        const xpCurrentProgress = data.xp - currentLevelBaseXp;
 
-        const embed = new EmbedBuilder()
+        // Rank Calculation
+        const rank = (await xpCollection.countDocuments({ guildId, xp: { $gt: data.xp } })) + 1;
+        const totalUsers = await xpCollection.countDocuments({ guildId });
+
+        // 4. Progress Bar & Percent
+        const percentRaw = Math.min(Math.max(xpCurrentProgress / xpNeededForNextLevel, 0), 1);
+        const percentText = Math.floor(percentRaw * 100);
+        
+        const totalBars = 15;
+        const filledBars = Math.round(percentRaw * totalBars);
+        const emptyBars = totalBars - filledBars;
+        const progressBar = "█".repeat(filledBars) + "░".repeat(emptyBars);
+
+        // 5. Next Reward Info
+        const nextRewardEntry = LEVEL_ROLES.find(r => r.level > currentLevel);
+        let nextRewardText = "🎉 You have unlocked all rewards!";
+        
+        if (nextRewardEntry) {
+            const role = message.guild.roles.cache.get(nextRewardEntry.roleId);
+            const roleName = role ? role.name : `Level ${nextRewardEntry.level} Role`;
+            
+            const rewardTotalXp = 100 * nextRewardEntry.level * nextRewardEntry.level;
+            const xpRemaining = rewardTotalXp - data.xp;
+            
+            nextRewardText = `**${xpRemaining.toLocaleString()} XP** left until **${roleName}** (Lv ${nextRewardEntry.level})`;
+        }
+
+        // 6. Build Embed
+        const rankEmbed = new EmbedBuilder()
             .setColor(targetMember.displayHexColor === "#000000" ? "#9B59B6" : targetMember.displayHexColor)
             .setAuthor({ name: `${targetUser.username}'s Rank`, iconURL: targetUser.displayAvatarURL() })
             .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
             .addFields(
-                { name: "🧬 Level", value: `\`${currentLevel}\``, inline: true },
-                { name: "🏆 Rank", value: `\`#${rank}\``, inline: true },
-                { name: "⭐ XP", value: `\`${data.xp.toLocaleString()} / ${nextXp.toLocaleString()}\``, inline: true },
-                { name: "📈 Progress", value: `\`${bar}\` **${Math.floor(percent * 100)}%**`, inline: false }
+                { name: "🧬 Level", value: `${currentLevel}`, inline: true },
+                { name: "🏆 Rank", value: `#${rank} / ${totalUsers}`, inline: true },
+                { name: "⭐ XP", value: `${data.xp.toLocaleString()}`, inline: true },
+                { name: "📈 Progress", value: `${progressBar} **${percentText}%**\n${xpCurrentProgress.toLocaleString()} / ${xpNeededForNextLevel.toLocaleString()} XP`, inline: false },
+                { name: "🎁 Next Reward", value: nextRewardText, inline: false }
             )
-            .setFooter({ text: "Gosu General TV", iconURL: message.guild.iconURL() });
+            .setFooter({ text: "Gosu General TV — Rank System", iconURL: message.guild.iconURL() })
+            .setTimestamp();
 
-        return message.channel.send({ embeds: [embed] });
+        return message.channel.send({ embeds: [rankEmbed] });
     }
 
     // [PREMIUM LEADERBOARD - MEDALS & TOP IMAGE]
@@ -502,72 +521,145 @@ client.on("messageCreate", async (message) => {
         await connectAndLoad();
         message.reply("✅ Blacklist refreshed from DB.");
     }
+
 // =====================================================================
 // Gosu Custom Discord Bot (Final Split Version - Part 4)
-// Admin Panels, Logs, Login (DB Integrated & Premium UI)
+// Admin Panels, Logs, Login (Creator Guide Updated)
 // =====================================================================
 
-    // PANELS (Premium Design)
-    const RULES_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440992642761752656/must_read.png";
-    const WELCOME_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440988230492225646/welcome.png";
-    const NOTI_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1440988216118480936/NOTIFICATION.png";
-    const CREATOR_BANNER = "https://cdn.discordapp.com/attachments/495719121686626323/1441312962903015576/verification.png";
+    // -------------------------------------------------------------
+    // [Image Banner Setup] GitHub Permanent Links
+    // -------------------------------------------------------------
+    const BANNERS = {
+        RULES: "https://github.com/TichielJuspian/images/blob/main/must%20read.png?raw=true", 
+        WELCOME: "https://github.com/TichielJuspian/images/blob/main/welcome.png?raw=true", 
+        NOTI: "https://github.com/TichielJuspian/images/blob/main/NOTIFICATION.png?raw=true", 
+        CREATOR: "https://github.com/TichielJuspian/images/blob/main/verification.png?raw=true" 
+    };
 
-    if (cmd === "setupjoin") {
+    if (cmd === "reloadblacklist") {
+        if (!isAdmin(message.member)) return;
+        await connectAndLoad();
+        message.reply("✅ Blacklist refreshed from Database.");
+    }
+
+    // 1. RULES PANEL (!setupjoin)
+    if (cmd === "!setupjoin") {
         if (!isAdmin(message.member)) return;
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("agree_rules").setLabel("Agree To Rules").setStyle(ButtonStyle.Success).setEmoji("✅"));
-        await message.channel.send({ files: [RULES_BANNER] });
+        
+        try { await message.channel.send({ files: [BANNERS.RULES] }); } catch (e) {}
+
         const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Community!").setDescription("Here you can join events, get updates, talk with the community, and enjoy the content together.\n\n--------------------------------------------------\n\n📜 **Server Rules**\n\n✨ **1 – Be Respectful**\nTreat everyone kindly. No harassment, bullying, or toxicity.\n\n✨ **2 – No Spam**\nAvoid repeated messages, emoji spam, or unnecessary mentions.\n\n✨ **3 – No NSFW or Harmful Content**\nNo adult content, gore, or anything unsafe.\n\n✨ **4 – No Advertising**\nNo links, promos, or self-promotion without staff approval.\n\n✨ **5 – Keep it Clean**\nNo hate speech, slurs, or extreme drama.\n\n✨ **6 – Follow Staff Instructions**\nIf staff gives instructions, please follow them.\n\n--------------------------------------------------\nPress **Agree To Rules** below to enter and enjoy the server! 🎊");
         message.channel.send({ embeds: [embed], components: [row] });
     }
-    if (cmd === "welcome") {
+
+    // 2. WELCOME PANEL (!welcome)
+    if (cmd === "!welcome") {
         if (!isAdmin(message.member)) return;
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel("YouTube Channel").setStyle(ButtonStyle.Link).setURL("https://youtube.com/@Teamgosu"), new ButtonBuilder().setLabel("Twitch Channel").setStyle(ButtonStyle.Link).setURL("https://twitch.tv/gosugeneral"), new ButtonBuilder().setLabel("Invite Link").setStyle(ButtonStyle.Link).setURL("https://discord.gg/gosugeneral"));
-        if (WELCOME_BANNER) await message.channel.send({ files: [WELCOME_BANNER] });
+        
+        try { await message.channel.send({ files: [BANNERS.WELCOME] }); } catch (e) {}
+
         const embed = new EmbedBuilder().setColor("#1e90ff").setTitle("✨ Welcome to the Gosu General TV Discord Server!").setDescription("Greetings, adventurer!\n\nWelcome to the **Gosu General TV** community server.\nHere you can hang out with the community, share plays, ask questions, receive announcements, and join events together.\n\n---\n\n📌 **What you can find here**\n\n• Live stream notifications & announcements\n• Game discussions and guides\n• Clips, highlights, and community content\n• Chill chat with other Gosu viewers\n\n---\nEnjoy your stay and have fun! 💙").addFields({ name: "Official Links", value: "📺 [YouTube](https://youtube.com/@Teamgosu)\n🟣 [Twitch](https://twitch.tv/gosugeneral)", inline: true }, { name: "Discord Invite Link", value: "🔗 [Invite Link](https://discord.gg/gosugeneral)", inline: true });
         message.channel.send({ embeds: [embed], components: [row] });
     }
-    if (cmd === "subscriber") {
+
+    // 3. SUBSCRIBER PANEL (!subscriber)
+    if (cmd === "!subscriber") {
         if (!isAdmin(message.member)) return;
         const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("subscribe_toggle").setLabel("Subscribe / Unsubscribe").setStyle(ButtonStyle.Primary).setEmoji("🔔"));
-        if (NOTI_BANNER) await message.channel.send({ files: [NOTI_BANNER] });
+        
+        try { await message.channel.send({ files: [BANNERS.NOTI] }); } catch (e) {}
+
         const embed = new EmbedBuilder().setColor("#FF0000").setTitle("🔔 Live Notification Subscription").setDescription("Stay updated with **Live Streams** and **New Uploads**!\n\nBy subscribing, you will receive:\n• 🔴 Live stream alerts\n• 🆕 New YouTube upload notifications\n• 📢 Special announcements\n\n---\n\n📌 **How It Works**\n\n• Press once → **Subscribe**\n• Press again → **Unsubscribe**\n\n---\nEnjoy real-time updates and never miss a stream! 💙").setFooter({ text: "Gosu General TV — Notification System" });
         message.channel.send({ embeds: [embed], components: [row] });
     }
-    if (cmd === "creator") {
+
+    // 4. CREATOR PANEL (!creator) - [Guide Only Mode]
+    if (cmd === "!creator") {
         if (!isAdmin(message.member)) return;
-        const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("apply_creator").setLabel("Apply for Creator").setStyle(ButtonStyle.Secondary).setEmoji("👑"));
-        if (CREATOR_BANNER) await message.channel.send({ files: [CREATOR_BANNER] });
-        const embed = new EmbedBuilder().setColor("#FFB347").setTitle("👑 Content Creator Verification").setDescription("Are you a content creator? Join our Creator program!\n\n**Benefits:**\n• Unique **Creator Role**\n• Access to creator-only channels\n• Promotion opportunities\n\n---\nClick the button below to verify your identity and get the role.");
-        message.channel.send({ embeds: [embed], components: [row] });
+        // No button needed as roles are handled by Discord Linked Roles
+        
+        try { await message.channel.send({ files: [BANNERS.CREATOR] }); } catch (e) {}
+
+        const embed = new EmbedBuilder()
+            .setColor("#FFB347")
+            .setTitle("👑 Creator Role – Automatic Verification")
+            .setDescription([
+                "Hello, creators! This panel explains how to obtain the **Creator** role and access exclusive creator-only channels.",
+                "",
+                "Our Creator role is granted through **Discord's automatic verification system**, based on your connected accounts.",
+                "",
+                "--------------------------------------------",
+                "### 1️⃣ Required Conditions",
+                "To receive the Creator role, at least **one** connected account must meet **all** requirements below:",
+                "",
+                "**Supported Platforms:**",
+                "• TikTok / YouTube / Twitch / Facebook",
+                "",
+                "**Requirements:**",
+                "• The account must be **connected** to your Discord profile",
+                "• The account must be **verified** (e.g., phone verification)",
+                "• Minimum **100 followers/subscribers**",
+                "• Must be following **100+ users**",
+                "• At least **10 likes or activity records**",
+                "",
+                "--------------------------------------------",
+                "### 2️⃣ How to Connect Your Account to Discord",
+                "1. Open **User Settings** (gear icon ⚙️ bottom-left)",
+                "2. Select **Connections**",
+                "3. Click **Add Connection**",
+                "4. Choose TikTok / YouTube / Twitch / Facebook, then log in and link your account",
+                "",
+                "--------------------------------------------",
+                "### 3️⃣ Automatic Creator Role Assignment",
+                "• After linking and meeting the requirements, Discord automatically verifies your account.",
+                "• Please wait a moment; syncing account data may take some time.",
+                "• Once approved, the **Creator** role will appear and channels like **#creator-chat** will become available.",
+                "",
+                "--------------------------------------------",
+                "### ⚠️ Troubleshooting",
+                "**Didn't receive the role?**",
+                "• Ensure your linked account meets *all* requirements",
+                "• Refresh Discord with **Ctrl + R** (Windows) or **Cmd + R** (Mac)",
+                "",
+                "**Need help?**",
+                "DM an admin if you're experiencing issues or have questions."
+            ].join("\n"))
+            .setFooter({ text: "Gosu General TV — Creator Role Guide" });
+
+        message.channel.send({ embeds: [embed] });
     }
 
-    if (cmd.startsWith("set") && cmd.includes("log")) {
+    // --- LOG CONFIG ---
+    if (cmd.startsWith("!set") && cmd.includes("log")) {
         if (!isAdmin(message.member)) return;
         const ch = message.mentions.channels.first() || message.channel;
-        if (cmd === "setmodlog") BOT_CONFIG.modLogChannelId = ch.id;
-        if (cmd === "setmsglog") BOT_CONFIG.msgLogChannelId = ch.id;
-        if (cmd === "setactionlog") BOT_CONFIG.actionLogChannelId = ch.id;
-        if (cmd === "setfilterlog") BOT_CONFIG.filterLogChannelId = ch.id;
+        if (cmd === "!setmodlog") BOT_CONFIG.modLogChannelId = ch.id;
+        if (cmd === "!setmsglog") BOT_CONFIG.msgLogChannelId = ch.id;
+        if (cmd === "!setactionlog") BOT_CONFIG.actionLogChannelId = ch.id;
+        if (cmd === "!setfilterlog") BOT_CONFIG.filterLogChannelId = ch.id;
         await saveConfig(); 
         message.reply(`✅ Log set to ${ch}`);
     }
     
-    if (cmd.startsWith("clear") && cmd.includes("log")) {
+    if (cmd.startsWith("!clear") && cmd.includes("log")) {
         if (!isAdmin(message.member)) return;
-        if (cmd === "clearmodlog") BOT_CONFIG.modLogChannelId = null;
-        if (cmd === "clearmsglog") BOT_CONFIG.msgLogChannelId = null;
-        if (cmd === "clearactionlog") BOT_CONFIG.actionLogChannelId = null;
-        if (cmd === "clearfilterlog") BOT_CONFIG.filterLogChannelId = null;
+        if (cmd === "!clearmodlog") BOT_CONFIG.modLogChannelId = null;
+        if (cmd === "!clearmsglog") BOT_CONFIG.msgLogChannelId = null;
+        if (cmd === "!clearactionlog") BOT_CONFIG.actionLogChannelId = null;
+        if (cmd === "!clearfilterlog") BOT_CONFIG.filterLogChannelId = null;
         await saveConfig(); 
-        message.reply("✅ Logs cleared.");
+        message.reply(`✅ Logs cleared.`);
     }
 });
 
 // ---------------------------------------------------------------------
-// 6. INTERACTIONS & LOGS
+// EVENT LISTENERS (Interactions & Logs)
 // ---------------------------------------------------------------------
 client.on("guildMemberUpdate", async (oldM, newM) => {
+    // Remove temporary verification role if user gets Creator role
     if (!oldM.roles.cache.has(CREATOR_ROLE) && newM.roles.cache.has(CREATOR_ROLE)) {
         if (newM.roles.cache.has(VERIFICATION_ROLE)) {
             await newM.roles.remove(VERIFICATION_ROLE).catch(() => {});
@@ -592,11 +684,7 @@ client.on("interactionCreate", async (i) => {
                 i.reply({ content: "🔔 Subscribed!", ephemeral: true });
             }
         }
-        if (customId === "apply_creator") {
-            await member.roles.add(CREATOR_ROLE);
-            if (member.roles.cache.has(VERIFICATION_ROLE)) await member.roles.remove(VERIFICATION_ROLE);
-            i.reply({ content: "✅ Verified as Creator.", ephemeral: true });
-        }
+        // [Removed] apply_creator button logic (Handled by auto-integration)
     } catch (e) {
         console.error("Interaction Error:", e);
         if(!i.replied) i.reply({ content: "Error", ephemeral: true });
