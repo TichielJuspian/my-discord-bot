@@ -27,7 +27,6 @@ const ADMIN_ROLE = "495718851288236032";
 const SUB_ROLE = "497654614729031681";
 const CREATOR_ROLE = "1441214177128743017";
 const VERIFICATION_ROLE = "1441311763806031893";
-const SILVER_ROLE_ID = "497491254838427674"; 
 
 const CREATE_CHANNEL_IDS = ["720658789832851487", "1441159364298936340"];
 const TEMP_VOICE_CHANNEL_IDS = new Set();
@@ -37,7 +36,7 @@ const XP_CONFIG = { minXP: 5, maxXP: 15, cooldownMs: 30000 };
 // Full Level Roles with Names (Required for !rank Next Reward display)
 const LEVEL_ROLES = [
   { level: 5, roleId: "497843968151781378", name: "Bronze" },
-  { level: 10, roleId: SILVER_ROLE_ID, name: "Silver" },
+  { level: 10, roleId: "497491254838427674", name: "Silver" },
   { level: 20, roleId: "687470373331402752", name: "Gold" },
   { level: 30, roleId: "497578834376392724", name: "Platinum" },
   { level: 40, roleId: "1441513975161294889", name: "Epic" },
@@ -208,7 +207,7 @@ client.on("voiceStateUpdate", async (oldS, newS) => {
 
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 3)
-// Message Handler start, Filters, General Commands (Full Text Restored)
+// Message Handler, Filters, General Commands (Leaderboard Fix)
 // =====================================================================
 
 // ---------------------------------------------------------------------
@@ -284,7 +283,6 @@ client.on("messageCreate", async (message) => {
     return message.channel.send({ embeds: [embed] });
   }
 
-  // [RESTORED] !rank - Matches Screenshot Exactly
   if (cmd === "rank") {
     let targetMember;
     if (message.mentions.members.size > 0) targetMember = message.mentions.members.first();
@@ -330,56 +328,67 @@ client.on("messageCreate", async (message) => {
         { name: "📈 Progress", value: `${bar} **${percentText}%**\n${xpIntoLevel.toLocaleString()} / ${xpNeeded.toLocaleString()} XP`, inline: false },
         { name: "🎁 Next Reward", value: rewardText, inline: false }
       );
-      // Footer removed to match screenshot style
     return message.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
   }
 
-  // [RESTORED] !leaderboard - Matches Screenshot Exactly
+  // [UPDATED] !leaderboard - Fix "Unknown"
   if (cmd === "leaderboard") {
     const top = await xpCollection.find({ guildId: message.guild.id }).sort({ xp: -1 }).limit(10).toArray();
     if (!top.length) return message.reply("📉 No data.");
     
-    const topMember = message.guild.members.cache.get(top[0].userId);
-    let list = top.map((u, i) => {
+    // 1. Fetch Top Member (for Thumbnail)
+    let topMember;
+    try {
+        topMember = await message.guild.members.fetch(top[0].userId);
+    } catch (e) { topMember = null; }
+
+    // 2. Build List (Fetching members if missing from cache)
+    let list = "";
+    for (let i = 0; i < top.length; i++) {
         let prefix = `#${i+1}`;
         if (i===0) prefix="🥇"; if(i===1) prefix="🥈"; if(i===2) prefix="🥉";
         
-        const member = message.guild.members.cache.get(u.userId);
-        const name = member ? member.user.username : "Unknown";
-        const xpK = (u.xp / 1000).toFixed(1) + "k"; // 644.2k style
+        // Try Fetching Member if not in cache
+        let member = message.guild.members.cache.get(top[i].userId);
+        if (!member) {
+            try { member = await message.guild.members.fetch(top[i].userId); } 
+            catch (e) { member = null; }
+        }
+
+        const name = member ? member.user.username : "Unknown User";
+        const xpK = (top[i].xp / 1000).toFixed(1) + "k";
         
-        return `${prefix} **${name}** — Lv ${u.level} (${xpK} XP)`;
-    }).join("\n");
+        list += `${prefix} **${name}** — Lv ${top[i].level} (${xpK} XP)\n`;
+    }
 
     const embed = new EmbedBuilder()
         .setColor("#FFD700")
         .setTitle("🏆 Leaderboard")
-        .setThumbnail(topMember?.user.displayAvatarURL() || null)
+        .setThumbnail(topMember?.user.displayAvatarURL({ dynamic: true }) || null)
         .setDescription(list);
         
     return message.channel.send({ embeds: [embed] });
   }
 
-  // [RESTORED] !level - Matches Screenshot Exactly
   if (cmd === "level") {
     const d = await xpCollection.findOne({ guildId: message.guild.id, userId: message.author.id });
     const userLvl = d ? d.level : 0;
     
     const list = LEVEL_ROLES.map(r => {
         const icon = userLvl >= r.level ? "✅" : "🔒";
-        // Use Role Mention <@&ID> to get the color, or plain text if role missing
         const roleStr = message.guild.roles.cache.has(r.roleId) ? `<@&${r.roleId}>` : `@${r.name}`;
         return `${icon} **Lv ${r.level}** — ${roleStr}`;
     }).join("\n");
 
     const embed = new EmbedBuilder()
-        .setColor("Green") // Green side bar
+        .setColor("Green")
         .setTitle("🎯 Level Rewards")
         .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
         .setDescription(`**Your Level: ${userLvl}**\n\n${list}`);
 
     return message.channel.send({ embeds: [embed] });
   }
+
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 4)
 // Admin Panels (Restored Texts), Moderation, Events, Login
