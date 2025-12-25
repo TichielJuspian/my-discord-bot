@@ -1,3 +1,7 @@
+//12-24-25 Log메세지 새로운 디자인, VIP랑 일반 Welcome 메세지 추가, /command로 바꿈
+
+
+
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 1)
 // Setup, Config, Database, VIP Roles Corrected
@@ -367,22 +371,22 @@ if (commandName === "help") {
         .addFields(
             { 
                 name: "🌐 General", 
-                value: "`!rank` — Check your (or others') rank & XP\n`!leaderboard` — View Top 10 users\n`!level` — View level rewards\n`!invite` — Get server invite link", 
+                value: "`/rank` — Check your (or others') rank & XP\n`!leaderboard` — View Top 10 users\n`!level` — View level rewards\n`!invite` — Get server invite link", 
                 inline: false 
             },
             { 
                 name: "🛡️ Moderation (Mod Only)", 
-                value: "`!kick <@user>` — Kick a user\n`!mute <@user> [min]` — Timeout (Default: 3m)\n`!unmute <@user>` — Remove timeout\n`!freeze` / `!unfreeze` — Lock/Unlock channel\n`!prune <n>` — Delete <n> messages\n`!addword <word>` / `!removeword` — Manage blacklist", 
+                value: "`/kick <@user>` — Kick a user\n`/mute <@user> [min]` — Timeout (Default: 3m)\n`/unmute <@user>` — Remove timeout\n`/freeze` / `/unfreeze` — Lock/Unlock channel\n`/prune <n>` — Delete <n> messages\n`/addword <word>` / `/removeword` — Manage blacklist", 
                 inline: false 
             },
             { 
                 name: "⚙️ Admin & Setup (Admin Only)", 
-                value: "`!ban <@user>` — Ban a user\n`!syncrolexp` — Sync XP based on roles\n`!reloadblacklist` — Reload bad words from DB\n\n**Panels:**\n`!setupjoin` — Rules Panel\n`!welcome` — Welcome Panel\n`!subscriber` — Notification Panel\n`!creator` — Creator Verify Panel", 
+                value: "`/ban <@user>` — Ban a user\n`/syncrolexp` — Sync XP based on roles\n`!reloadblacklist` — Reload bad words from DB\n\n**Panels:**\n`/setupjoin` — Rules Panel\n`/welcome` — Welcome Panel\n`/subscriber` — Notification Panel\n`/creator` — Creator Verify Panel", 
                 inline: false 
             },
             { 
                 name: "📝 Log & Welcome", 
-                value: "`!setwelcome #ch` — Set Welcome Channel\n`!setmodlog #ch` / `!clearmodlog`\n`!setmsglog #ch` / `!clearmsglog`\n`!setactionlog #ch` / `!clearactionlog`", 
+                value: "`/setwelcome #ch` — Set Welcome Channel\n`/setmodlog #ch` / `/clearmodlog`\n`/setmsglog #ch` / `/clearmsglog`\n`/setactionlog #ch` / `/clearactionlog`", 
                 inline: false 
             }
         )
