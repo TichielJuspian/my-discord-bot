@@ -1,5 +1,3 @@
-//12-24-25 Log메세지 새로운 디자인, VIP랑 일반 Welcome 메세지 추가
-
 // =====================================================================
 // Gosu Custom Discord Bot (Final Version - Part 1)
 // Setup, Config, Database, VIP Roles Corrected
@@ -361,17 +359,39 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply("📨 **Official Invite:** https://discord.gg/gosugeneral");
   }
 
-  if (commandName === "help") {
-      const embed = new EmbedBuilder().setColor("#00FFFF").setTitle("🤖 Gosu Bot Command List")
-      .setDescription("Use `/` to access commands!")
-      .addFields(
-        { name: "🌐 General", value: "`/rank` `/leaderboard` `/level` `/invite`", inline: false },
-        { name: "🛡️ Moderation", value: "`/kick` `/ban` `/mute` `/unmute` `/freeze` `/prune`", inline: false },
-        { name: "⚙️ Admin", value: "`/setupjoin` `/welcome` `/subscriber` `/creator`", inline: false }
-      );
+if (commandName === "help") {
+      const embed = new EmbedBuilder()
+        .setColor("#00FFFF") // Cyan Color
+        .setTitle("🤖 Gosu Bot Command List")
+        .setDescription("Here is the full list of available commands.")
+        .addFields(
+            { 
+                name: "🌐 General", 
+                value: "`!rank` — Check your (or others') rank & XP\n`!leaderboard` — View Top 10 users\n`!level` — View level rewards\n`!invite` — Get server invite link", 
+                inline: false 
+            },
+            { 
+                name: "🛡️ Moderation (Mod Only)", 
+                value: "`!kick <@user>` — Kick a user\n`!mute <@user> [min]` — Timeout (Default: 3m)\n`!unmute <@user>` — Remove timeout\n`!freeze` / `!unfreeze` — Lock/Unlock channel\n`!prune <n>` — Delete <n> messages\n`!addword <word>` / `!removeword` — Manage blacklist", 
+                inline: false 
+            },
+            { 
+                name: "⚙️ Admin & Setup (Admin Only)", 
+                value: "`!ban <@user>` — Ban a user\n`!syncrolexp` — Sync XP based on roles\n`!reloadblacklist` — Reload bad words from DB\n\n**Panels:**\n`!setupjoin` — Rules Panel\n`!welcome` — Welcome Panel\n`!subscriber` — Notification Panel\n`!creator` — Creator Verify Panel", 
+                inline: false 
+            },
+            { 
+                name: "📝 Log & Welcome", 
+                value: "`!setwelcome #ch` — Set Welcome Channel\n`!setmodlog #ch` / `!clearmodlog`\n`!setmsglog #ch` / `!clearmsglog`\n`!setactionlog #ch` / `!clearactionlog`", 
+                inline: false 
+            }
+        )
+        .setFooter({ text: "Gosu General TV" });
+
+      // Note: The actual commands are now Slash Commands (/), but the text above 
+      // preserves your original Screenshot design exactly as requested.
       await interaction.reply({ embeds: [embed], ephemeral: true });
   }
-
   if (commandName === "rank") {
     const targetUser = options.getUser("user") || interaction.user;
     const targetMember = interaction.guild.members.cache.get(targetUser.id);
