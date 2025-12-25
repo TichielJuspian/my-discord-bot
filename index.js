@@ -647,16 +647,22 @@ client.on("guildMemberAdd", async (m) => {
         const ch = m.guild.channels.cache.get(BOT_CONFIG.actionLogChannelId);
         if(ch) ch.send({ embeds: [new EmbedBuilder().setColor("#00FF00").setAuthor({ name: "Member Joined", iconURL: m.user.displayAvatarURL() }).setThumbnail(m.user.displayAvatarURL({dynamic:true})).setDescription(`${m} ${m.user.username}`).setFooter({ text: `ID: ${m.id}` }).setTimestamp()] }).catch(()=>{});
     }
-    // 2. Welcome Card
-    if(BOT_CONFIG.welcomeChannelId) {
-        const ch = m.guild.channels.cache.get(BOT_CONFIG.welcomeChannelId);
-        if(ch) {
-            const embed = new EmbedBuilder().setColor("#2f3136").setAuthor({ name: "Welcome to the server!" }).setDescription(`Let's all welcome ${m} !`).setThumbnail(m.user.displayAvatarURL({ dynamic: true, size: 256 })).setImage(BANNERS.WELCOME).setFooter({ text: `${m.guild.name} • Member #${m.guild.memberCount}` }).setTimestamp();
-            await ch.send({ content: `Welcome to the server, ${m}!`, embeds: [embed] }).catch(()=>{});
-        }
-    }
-});
+// 2. Welcome Card
+if (BOT_CONFIG.welcomeChannelId) {
+  const ch = m.guild.channels.cache.get(BOT_CONFIG.welcomeChannelId);
+  if (ch) {
+    const embed = new EmbedBuilder()
+      .setColor("#2f3136")
+      .setAuthor({ name: "NEW MEMBER HERE" })
+      .setDescription(`Let's all welcome ${m} and ${m}, Say "HI" to all`)
+      .setThumbnail(m.user.displayAvatarURL({ dynamic: true, size: 256 }))
+      .setImage(BANNERS.WELCOME)
+      .setFooter({ text: `${m.guild.name} • Member #${m.guild.memberCount}` })
+      .setTimestamp();
 
+    await ch.send({ embeds: [embed] }).catch(()=>{});
+  }
+}
 // VIP WELCOME
 client.on("guildMemberUpdate", (oldMember, newMember) => {
     const addedRoles = newMember.roles.cache.filter(role => !oldMember.roles.cache.has(role.id));
@@ -669,3 +675,4 @@ client.on("guildMemberUpdate", (oldMember, newMember) => {
 });
 
 client.login(process.env.Bot_Token);
+
