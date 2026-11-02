@@ -110,3 +110,14 @@ Deleting XP may affect levels and rankings. There is currently no automated per-
 
 
 Bot and database credentials are managed as secret settings rather than public source code, and data access is limited to operational needs. This policy does not certify unverified database encryption-at-rest settings or security certifications. The policy will be updated when processing changes, with material changes announced through suitable server notices. Contact: Discord **@gosugeneral**.
+
+
+## VVIP 스킨 신청과 비공개 티켓 / VVIP skin requests and private tickets
+
+VVIP 신청 기능은 Discord·YouTube 채널 ID와 MLBB 게임 ID·Zone ID를 연결하고, 신청한 상품·입력한 다이아 가격·확인된 멤버십 이용 기간·회원이 제공해 확인한 다음 갱신 예정일·운영자의 확인 및 지급 기록을 저장합니다. 결제 참조는 중복 확인을 위한 해시만 저장하며, 카드정보나 비밀번호를 요구하지 않습니다. 정확한 결제일을 자동 조회하지 않으며, 갱신 예정일만으로 새 신청 기회를 부여하지 않습니다.
+
+신청 채널과 개인별 비공개 티켓을 운영하며 티켓 ID, 역할·채널 설정, 추가 지급 내역과 사유, 처리한 운영자 ID, 환영 알림 삭제 예정 시각 등을 저장합니다. 티켓과 검토 기록은 신청자에게 허용된 범위 및 설정된 운영진·관리자·봇 권한에 따라 Discord에 표시됩니다. 티켓 메시지·첨부한 확인 자료는 Discord에 남으며 MongoDB에 일반 티켓 본문이나 원본 결제 증빙을 복사하는 기능은 없습니다. 신청 기록은 지급 누락·중복 방지와 이용자 요청 처리를 위해 보관하며 고정 자동 만료는 없습니다. 삭제·정정 요청 시 데이터베이스 기록뿐 아니라 Discord 티켓 및 검토 메시지의 삭제 가능 범위도 함께 확인합니다. 계정·지급 이력의 변경은 중복 지급 방지 기록과 대조해 처리합니다.
+
+The VVIP feature links Discord and YouTube channel IDs to an MLBB account/Zone ID and stores requested items, quoted diamond prices, verified membership periods, a member-supplied and confirmed expected renewal date when available, and staff verification/delivery records. Only a hash of the payment reference is stored for duplicate prevention; passwords and card details are not requested. The feature does not automatically retrieve exact billing dates or grant another claim solely because an expected date arrives.
+
+It also stores ticket channel IDs, role/channel settings, discretionary extra-delivery records and reasons, processing staff IDs, and welcome-message deletion jobs. Ticket and review visibility follows applicant, configured staff, administrator and bot permissions. Ticket messages and submitted evidence remain on Discord; the feature does not copy ordinary ticket message bodies or original payment evidence into MongoDB. Records are retained for fulfillment, duplicate prevention and user requests, with no fixed automatic expiry. Access/correction/deletion requests can be sent to @gosugeneral or relayed through server moderators. Requests cover applicable database and Discord ticket/review records and are reconciled with duplicate-prevention history. Infrastructure backup limitations described above still apply.
