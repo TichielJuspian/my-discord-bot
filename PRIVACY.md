@@ -32,7 +32,7 @@ MongoDB에는 서버 ID, 사용자 ID, 경험치와 레벨, 로그·환영 채�
 ## 4. 저장 위치와 접근
 
 
-봇은 Quaxly에서 실행되며, 지속 데이터는 운영자가 설정한 MongoDB 서비스에 저장합니다. Discord, 호스팅 및 데이터베이스 제공자는 서비스 제공에 필요한 범위에서 관련 데이터를 처리할 수 있습니다. 운영자는 봇 유지관리와 이용자 요청 처리에 필요한 범위에서 저장 데이터에 접근합니다. 각 제공자의 인프라와 설정에 따라 데이터가 이용자 거주 국가 외에서 처리될 수 있습니다.
+봇 실행 호스팅에는 Botkeep을 사용하며, 이전 호스팅 Quaxly에 전환 전 코드·설정 사본이 남아 있을 수 있습니다. 지속 데이터는 운영자가 설정한 MongoDB 서비스에 저장합니다. Discord, 호스팅 및 데이터베이스 제공자는 서비스 제공에 필요한 범위에서 관련 데이터를 처리할 수 있습니다. 운영자는 봇 유지관리와 이용자 요청 처리에 필요한 범위에서 저장 데이터에 접근합니다. 각 제공자의 인프라와 설정에 따라 데이터가 이용자 거주 국가 외에서 처리될 수 있습니다.
 
 
 ## 5. 보관과 삭제
@@ -91,7 +91,7 @@ When a message-log channel is configured, available deleted-message text, author
 ## Storage, access and retention
 
 
-The bot runs on Quaxly and persistent data is stored in the operator-configured MongoDB service. Discord and infrastructure providers may process data to provide their services. The operator accesses stored data as needed for maintenance and user requests. Depending on provider infrastructure and configuration, processing may take place outside a user's country.
+Botkeep is used for bot hosting; the previous host Quaxly may retain pre-migration code and configuration copies. Persistent data is stored in the operator-configured MongoDB service. Discord and infrastructure providers may process data to provide their services. The operator accesses stored data as needed for maintenance and user requests. Depending on provider infrastructure and configuration, processing may take place outside a user's country.
 
 
 XP and level records are retained while needed for the service and deleted on request or when no longer needed. Current code has no fixed automatic expiration or automatic deletion when a member leaves; deletion within 30 days is not guaranteed. Discord log copies and provider backups may persist separately. Available deletion scope and limitations will be explained when handling a request.
