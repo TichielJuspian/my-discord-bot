@@ -128,3 +128,14 @@ It also stores ticket channel IDs, role/channel settings, discretionary extra-de
 출석·상점 기능은 서버 및 Discord 사용자 ID, 포인트 잔액·누적 적립 및 사용 합계, 마지막 출석 날짜와 시각(서부시간 기준), 출석 횟수·연속 출석, 보유한 꾸미기 상품과 장착 상태, 최근 구매 상품·가격·시각, 신청 패널의 채널·메시지 ID를 MongoDB에 저장합니다. 서버 회원은 /profile로 다른 회원의 포인트 잔액·출석 횟수·꾸미기 상태 및 기존 레벨·XP를 조회할 수 있습니다. 포인트는 출석과 봇 프로필 꾸미기에만 사용되며 양도·현금화·스킨 교환을 지원하지 않습니다. 보관에 고정 자동 만료는 없으며 Discord @gosugeneral에게 확인·정정·삭제를 요청할 수 있습니다. 관련 기록 삭제 시 잔액·출석·보유 상품이 사라지고 다시 사용하면 빈 기록이 생성됩니다. 앞서 설명한 제공자 및 백업의 제한은 동일하게 적용됩니다.
 
 The attendance/shop feature stores server and Discord user IDs, point balance and lifetime earned/spent totals, last check-in date/time (Pacific calendar day), visit count and streak, owned and equipped cosmetic items, most recent purchase item/price/time, and panel channel/message IDs in MongoDB. Server members can use /profile to view another member's balance, check-in count, selected cosmetics and existing XP/level. Points support check-ins and bot-profile cosmetics only; transfers, cash redemption and skin exchanges are not supported. There is no fixed automatic expiry. Contact Discord @gosugeneral for access, correction or deletion. Deleting these records removes the balance, attendance and owned cosmetics; later use creates an empty wallet. The provider and backup limitations above still apply.
+
+
+## 카드 이미지 및 완료 티켓 보관 / Card images and completed-ticket archives
+
+레벨·랭킹·프로필 카드는 사용자 이름·아바타·기존 XP와 레벨·순위·포인트 및 선택한 꾸미기를 봇 서버에서 이미지로 생성해 Discord에 게시합니다. 별도 외부 이미지 생성 서비스로 전송하지 않습니다.
+
+운영자가 실제 지급과 티켓 삭제를 확인하면, 봇은 티켓 대화·임베드 내용·작성자 ID·작성 시각을 HTML 파일로 만들고 첨부파일을 복사해 기존 비공개 스킨 검토 채널에 저장합니다. 저장과 접근 권한 확인에 실패하면 원본 티켓은 삭제하지 않습니다. 저장된 사본은 원본 채널 삭제 후에도 남고, 원본 삭제만으로 사본이 삭제되지는 않습니다. 신청 및 지급 기록과 누적 신청·지급 횟수는 MongoDB에 남으며, 대화 원문과 첨부 원본은 MongoDB에 저장하지 않습니다. 기존 접근·보관·삭제 요청 및 제공자 백업 제한이 사본에도 적용됩니다. 삭제 요청 시 보관 파일과 복사한 첨부파일을 함께 지정할 수 있습니다.
+
+Level, leaderboard and profile cards are rendered on the bot server using usernames, avatars, existing XP/levels, rank, points and selected cosmetics, then posted to Discord. No separate third-party image-generation service receives this data.
+
+After the operator confirms actual delivery and ticket deletion, the bot exports ticket messages, embeds, author IDs and timestamps into an HTML transcript and copies attachments to the existing private skin-review channel. It retains the source ticket if archiving or privacy verification fails. Archive copies remain after source-channel deletion and are not removed merely by deleting the source. MongoDB retains request/delivery records, cumulative counts and archive references, but not transcript bodies or original attachment bytes. The existing access, retention, deletion-request and provider-backup limitations apply to these copies. A deletion request may include archived transcripts and copied attachments.
