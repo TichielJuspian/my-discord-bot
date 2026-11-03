@@ -1,7 +1,7 @@
 # Gen Bot 개인정보처리방침
 
 
-작성 기준일: 2026년 11월 1일 · 대상: Gen Bot#5885 (애플리케이션 ID 978897570522869800)
+작성 기준일: 2026년 11월 3일 · 대상: Gen Bot#5885 (애플리케이션 ID 978897570522869800)
 운영 및 개인정보 문의: Discord **@gosugeneral**
 
 
@@ -66,7 +66,7 @@ MongoDB에는 서버 ID, 사용자 ID, 경험치와 레벨, 로그·환영 채�
 # Gen Bot Privacy Policy
 
 
-Prepared: November 1, 2026 · Gen Bot#5885 · Application ID: 978897570522869800
+Prepared: November 3, 2026 · Gen Bot#5885 · Application ID: 978897570522869800
 Operator and privacy contact: Discord **@gosugeneral**
 
 
@@ -114,14 +114,21 @@ Bot and database credentials are managed as secret settings rather than public s
 
 ## VVIP 스킨 신청과 비공개 티켓 / VVIP skin requests and private tickets
 
-VVIP 신청 기능은 Discord·YouTube 채널 ID와 MLBB 게임 ID·Zone ID를 연결하고, 신청한 상품·입력한 다이아 가격·확인된 멤버십 이용 기간·회원이 제공해 확인한 다음 갱신 예정일·운영자의 확인 및 지급 기록을 저장합니다. 결제 참조는 중복 확인을 위한 해시만 저장하며, 카드정보나 비밀번호를 요구하지 않습니다. 정확한 결제일을 자동 조회하지 않으며, 갱신 예정일만으로 새 신청 기회를 부여하지 않습니다.
+현재 신청은 활성 YouTube VVIP Discord 역할을 확인하고, Discord 계정별 정상 신청 접수 시각부터 30일의 쿨타임을 적용합니다. 같은 MLBB 계정을 여러 Discord 계정에서 신청하는 것은 허용합니다. 갱신일·결제 증빙·YouTube 채널 ID를 새 신청의 필수 입력으로 요구하지 않습니다. 과거 갱신일 확인 방식의 신청·지급·결제 참조 해시는 기존 이력으로 남아 있을 수 있습니다.
 
-신청 채널과 개인별 비공개 티켓을 운영하며 티켓 ID, 역할·채널 설정, 추가 지급 내역과 사유, 처리한 운영자 ID, 환영 알림 삭제 예정 시각 등을 저장합니다. 티켓과 검토 기록은 신청자에게 허용된 범위 및 설정된 운영진·관리자·봇 권한에 따라 Discord에 표시됩니다. 티켓 메시지·첨부한 확인 자료는 Discord에 남으며 MongoDB에 일반 티켓 본문이나 원본 결제 증빙을 복사하는 기능은 없습니다. 신청 기록은 지급 누락·중복 방지와 이용자 요청 처리를 위해 보관하며 고정 자동 만료는 없습니다. 삭제·정정 요청 시 데이터베이스 기록뿐 아니라 Discord 티켓 및 검토 메시지의 삭제 가능 범위도 함께 확인합니다. 계정·지급 이력의 변경은 중복 지급 방지 기록과 대조해 처리합니다.
+MongoDB에는 Discord 서버·사용자 ID, MLBB 게임 ID·Zone/server ID, 신청 스킨·영웅 이름, 신청·수정·지급 시각과 상태, 다음 신청 가능 시각, 운영자 ID, 누적 신청·지급 기록, 중복 접수 방지용 접수 기록과 게임 계정 참조 해시, 티켓·보관 채널과 메시지 ID, 환영 알림 삭제 작업을 저장합니다. 신청 수정은 최초 쿨타임을 다시 시작하지 않습니다. 원본 비밀번호나 로그인 코드는 요구하지 않습니다.
 
-The VVIP feature links Discord and YouTube channel IDs to an MLBB account/Zone ID and stores requested items, quoted diamond prices, verified membership periods, a member-supplied and confirmed expected renewal date when available, and staff verification/delivery records. Only a hash of the payment reference is stored for duplicate prevention; passwords and card details are not requested. The feature does not automatically retrieve exact billing dates or grant another claim solely because an expected date arrives.
+VVIP 신청 채널은 VVIP 역할과 운영진에게 보이며, 개인 티켓은 신청자·운영자·설정된 서버 모더레이터·봇이 접근합니다. Discord 관리자 권한은 별도로 적용됩니다. 티켓 생성은 신청자에게, 신청서 제출은 운영자에게, 지급 완료는 신청자에게만 멘션 알림을 보냅니다. 모더레이터 역할은 멘션하지 않습니다. VVIP 역할이 새로 부여되면 VIP room과 신청 채널에 해당 회원을 멘션하는 환영 안내를 게시할 수 있으며 약 6시간 후 삭제를 재시도합니다. 재시작 시 기존 VVIP 전체에게 다시 환영을 보내지 않도록 역할을 확인합니다.
 
-It also stores ticket channel IDs, role/channel settings, discretionary extra-delivery records and reasons, processing staff IDs, and welcome-message deletion jobs. Ticket and review visibility follows applicant, configured staff, administrator and bot permissions. Ticket messages and submitted evidence remain on Discord; the feature does not copy ordinary ticket message bodies or original payment evidence into MongoDB. Records are retained for fulfillment, duplicate prevention and user requests, with no fixed automatic expiry. Access/correction/deletion requests can be sent to @gosugeneral or relayed through server moderators. Requests cover applicable database and Discord ticket/review records and are reconciled with duplicate-prevention history. Infrastructure backup limitations described above still apply.
+지급 완료 확인 12시간 후, 티켓 대화와 첨부파일을 비공개 운영진 보관 채널에 저장·검증한 뒤 원본 티켓을 삭제합니다. 메시지를 온전히 읽지 못하거나 저장·접근 권한 검증이 실패하면 원본 티켓을 유지합니다. MongoDB에는 대화 본문이나 원본 첨부파일을 저장하지 않습니다. 신청 및 지급 이력·보관 참조에는 고정 자동 만료가 없으며, 원본 티켓 삭제가 보관 사본 삭제를 뜻하지 않습니다. 확인·정정·삭제는 Discord @gosugeneral에게 요청할 수 있고 제공자 백업의 제한은 동일하게 적용됩니다.
 
+Current requests check the active YouTube-managed VVIP Discord role and apply a 30-day cooldown from accepted submission per Discord account. The same MLBB account is allowed across multiple Discord accounts. New requests do not require a billing date, payment evidence or YouTube channel ID. Historical verified-period, payment-reference hash and delivery records may remain from the earlier workflow.
+
+MongoDB stores server/user IDs, MLBB game and Zone/server IDs, requested skin/hero, submission/edit/delivery times and status, next eligible request time, operator IDs, request/delivery counts, duplicate-submission receipts and a hashed game-account reference, ticket/archive channel and message IDs, and welcome-deletion jobs. Editing does not restart the original cooldown. Passwords and login codes are not requested.
+
+The request channel is restricted to VVIP members and staff. Individual tickets are accessible to the applicant, operator, configured server moderators and bot, subject also to Discord administrator access. Ticket creation mentions the applicant; form submission mentions the operator; delivery mentions the applicant. Moderator roles are not pinged. A newly granted VVIP role may trigger personal welcome mentions in VIP room and the request channel, scheduled for deletion after about six hours. Existing roles are checked to prevent mass restart welcomes.
+
+Twelve hours after confirmed delivery, ticket messages and attachments are saved and verified in a private staff archive before deleting the source channel. Unreadable conversations or failed archive/privacy checks retain the source ticket. Transcript bodies and original attachment bytes are not stored in MongoDB. Request/delivery records and archive references have no fixed automatic expiry. Deleting the source ticket does not delete the archive copy. Contact Discord @gosugeneral for access, correction or deletion; provider backup limitations still apply.
 
 ## 출석 포인트·프로필 상점 / Community points and profile shop
 
@@ -134,23 +141,30 @@ The attendance/shop feature stores server and Discord user IDs, point balance an
 
 레벨·랭킹·프로필 카드는 사용자 이름·아바타·기존 XP와 레벨·순위·포인트 및 선택한 꾸미기를 봇 서버에서 이미지로 생성해 Discord에 게시합니다. 별도 외부 이미지 생성 서비스로 전송하지 않습니다.
 
-운영자가 실제 지급을 확인하면 8시간 이후, 봇은 티켓 대화·임베드 내용·작성자 ID·작성 시각을 HTML 파일로 만들고 첨부파일을 복사해 기존 비공개 스킨 검토 채널에 저장합니다. 저장과 접근 권한 확인에 실패하면 원본 티켓은 삭제하지 않습니다. 저장된 사본은 원본 채널 삭제 후에도 남고, 원본 삭제만으로 사본이 삭제되지는 않습니다. 신청 및 지급 기록과 누적 신청·지급 횟수는 MongoDB에 남으며, 대화 원문과 첨부 원본은 MongoDB에 저장하지 않습니다. 기존 접근·보관·삭제 요청 및 제공자 백업 제한이 사본에도 적용됩니다. 삭제 요청 시 보관 파일과 복사한 첨부파일을 함께 지정할 수 있습니다.
+운영자가 실제 지급을 확인하면 12시간 이후, 봇은 티켓 대화·임베드 내용·작성자 ID·작성 시각을 HTML 파일로 만들고 첨부파일을 복사해 비공개 운영진 보관 채널에 저장합니다. 저장과 접근 권한 확인에 실패하면 원본 티켓은 삭제하지 않습니다. 저장된 사본은 원본 채널 삭제 후에도 남고, 원본 삭제만으로 사본이 삭제되지는 않습니다. 신청 및 지급 기록과 누적 신청·지급 횟수는 MongoDB에 남으며, 대화 원문과 첨부 원본은 MongoDB에 저장하지 않습니다. 기존 접근·보관·삭제 요청 및 제공자 백업 제한이 사본에도 적용됩니다. 삭제 요청 시 보관 파일과 복사한 첨부파일을 함께 지정할 수 있습니다.
 
 Level, leaderboard and profile cards are rendered on the bot server using usernames, avatars, existing XP/levels, rank, points and selected cosmetics, then posted to Discord. No separate third-party image-generation service receives this data.
 
-Eight hours after the operator confirms actual delivery, the bot exports ticket messages, embeds, author IDs and timestamps into an HTML transcript and copies attachments to the existing private skin-review channel. It retains the source ticket if archiving or privacy verification fails. Archive copies remain after source-channel deletion and are not removed merely by deleting the source. MongoDB retains request/delivery records, cumulative counts and archive references, but not transcript bodies or original attachment bytes. The existing access, retention, deletion-request and provider-backup limitations apply to these copies. A deletion request may include archived transcripts and copied attachments.
+Twelve hours after the operator confirms actual delivery, the bot exports ticket messages, embeds, author IDs and timestamps into an HTML transcript and copies attachments to the private staff archive channel. It retains the source ticket if archiving or privacy verification fails. Archive copies remain after source-channel deletion and are not removed merely by deleting the source. MongoDB retains request/delivery records, cumulative counts and archive references, but not transcript bodies or original attachment bytes. The existing access, retention, deletion-request and provider-backup limitations apply to these copies. A deletion request may include archived transcripts and copied attachments.
 
 
 ## 2026-11-02 업데이트 / November 2, 2026 update
 
-/share 명령으로 제출한 사진·영상은 사용자가 명령을 실행한 허용된 메인 채팅에 공개 게시됩니다. 보상은 비공개로 확인하며, 사진·영상 파일 자체는 중복 확인을 위해 봇 서버 메모리에서 일시적으로 읽고 SHA-256 해시를 계산합니다. MongoDB에는 파일 해시, 마지막 보상 날짜·종류와 포인트 기록을 저장하며 원본 파일은 저장하지 않습니다. 같은 파일 및 같은 서부시간 날짜의 중복 보상을 막는 용도입니다. Discord에 게시된 사본에는 Discord 및 해당 채널의 접근 권한과 보관 규칙이 적용됩니다. 일반 채팅 업로드는 현재 자동 보상하지 않습니다.
+/share 명령으로 제출한 사진·영상은 사용자가 명령을 실행한 with-pictures 또는 wish-salt 채널에 공개 게시됩니다. 보상은 비공개로 확인하며, 사진·영상 파일 자체는 중복 확인을 위해 봇 서버 메모리에서 일시적으로 읽고 SHA-256 해시를 계산합니다. MongoDB에는 파일 해시, 마지막 보상 날짜·종류와 포인트 기록을 저장하며 원본 파일은 저장하지 않습니다. 같은 파일 및 같은 서부시간 날짜의 중복 보상을 막는 용도입니다. Discord에 게시된 사본에는 Discord 및 해당 채널의 접근 권한과 보관 규칙이 적용됩니다. 일반 채팅 업로드는 현재 자동 보상하지 않습니다.
 
 어디서나 /shop을 실행하면 비공개 이동 안내를 반환할 수 있으며, 상점 채널에서 실행자만 멘션하는 안내 메시지가 잠시 게시될 수 있습니다. 해당 메시지 ID·채널 ID와 약 30초 후 삭제 예정 시각을 저장하고 삭제 실패나 재시작 시 재시도합니다. 알림 멘션은 다른 회원에게도 상점 채널에서 잠시 보일 수 있지만 잔액과 구매 내역은 비공개입니다.
 
-VVIP 티켓은 신청자·운영자·설정된 모더레이터·봇이 접근하며 서버 관리자 권한은 Discord 특성상 별도로 적용됩니다. 티켓을 만들 때 운영자와 신청자에게만 멘션 알림을 보내고 모더레이터 역할은 멘션하지 않습니다. 지급 완료 8시간 후 대화 저장과 접근 권한 확인을 거쳐 채널을 삭제하며, 메시지 내용을 읽거나 보관을 검증할 수 없으면 삭제하지 않고 원본을 유지합니다. 데이터 확인·정정·삭제는 Discord @gosugeneral에게 요청할 수 있습니다.
+VVIP 티켓은 신청자·운영자·설정된 모더레이터·봇이 접근하며 서버 관리자 권한은 Discord 특성상 별도로 적용됩니다. 티켓 생성 시 신청자, 신청서 제출 시 운영자, 지급 완료 시 신청자에게만 멘션 알림을 보내고 모더레이터 역할은 멘션하지 않습니다. 지급 완료 12시간 후 대화 저장과 접근 권한 확인을 거쳐 채널을 삭제하며, 메시지 내용을 읽거나 보관을 검증할 수 없으면 삭제하지 않고 원본을 유지합니다. 데이터 확인·정정·삭제는 Discord @gosugeneral에게 요청할 수 있습니다.
 
-Photos/videos submitted with /share are published in the permitted main chat where the member invokes the command. Reward confirmations are private. The bot temporarily reads the submitted file in host memory and computes a SHA-256 hash; MongoDB stores that hash, the last rewarded Pacific date/type and point records, not original file bytes. These prevent rewards for repeated files or multiple contributions on the same Pacific day. Published Discord copies follow Discord's and the channel's access/retention rules. Ordinary chat uploads are not currently rewarded automatically.
+Photos/videos submitted with /share are published in the permitted with-pictures or wish-salt channel where the member invokes the command. Reward confirmations are private. The bot temporarily reads the submitted file in host memory and computes a SHA-256 hash; MongoDB stores that hash, the last rewarded Pacific date/type and point records, not original file bytes. These prevent rewards for repeated files or multiple contributions on the same Pacific day. Published Discord copies follow Discord's and the channel's access/retention rules. Ordinary chat uploads are not currently rewarded automatically.
 
 Invoking /shop anywhere may return a private navigation link and briefly post a shop-channel notice mentioning only the invoker. Message/channel IDs and an approximately 30-second deletion deadline are stored for deletion and restart recovery. That temporary mention may be visible to other shop-channel members; balances and purchase details remain private.
 
-VVIP tickets are accessible to the applicant, operator, configured moderators and bot, subject also to Discord administrator access. Creation pings only the operator and applicant, not the moderator role. Eight hours after delivery confirmation, the channel is deleted only after transcript storage and access verification; if message content cannot be read or archival cannot be confirmed, the original ticket is retained. Contact Discord @gosugeneral for access, correction or deletion requests.
+VVIP tickets are accessible to the applicant, operator, configured moderators and bot, subject also to Discord administrator access. Creation pings the applicant, submission pings the operator, and delivery pings the applicant; moderator roles are never pinged. Twelve hours after delivery confirmation, the channel is deleted only after transcript storage and access verification; if message content cannot be read or archival cannot be confirmed, the original ticket is retained. Contact Discord @gosugeneral for access, correction or deletion requests.
+
+
+## 2026-11-03 프로필 조합 / November 3 profile customization
+
+상점은 디자인·글로우·프레임·배지를 각각 보유·장착하는 방식이며 기존 소유권과 잔액을 유지합니다. 미리보기와 구매 확인은 비공개이며, 공개 /profile 카드에는 선택한 조합이 표시됩니다. XP 상위 50명은 페이지별로 공개 표시할 수 있습니다. 전체 상품을 사는 순서나 포인트 사용은 XP 레벨을 낮추지 않습니다.
+
+The shop stores independent design, glow, frame and badge ownership/equipment while preserving existing ownership and balances. Try-ons and purchase confirmations are private; public /profile cards show the selected combination. The top 50 XP members may be displayed on public pages. Cosmetic purchases do not lower XP levels.
