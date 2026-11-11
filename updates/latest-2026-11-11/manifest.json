@@ -1,0 +1,80 @@
+{
+  "version": "latest-work-2026-11-11",
+  "status": "latest-approved-work-not-deployed",
+  "completeRuntime": false,
+  "baseCommit": "3be59700db2324dbb0108eeed6453ceaa14184fb",
+  "source": "Seven existing source modules were compared with the BotKeep editor before preparing this update; one report module is new.",
+  "deployment": "Price and pointtop changes have not been saved to production or verified after a restart.",
+  "files": [
+    {
+      "path": "files/atelier-shop.js",
+      "bytes": 7534,
+      "sha256": "322616ca36f6458da215ec338f258e0695076aeb6e9aa649e52c7ed3a31222b1",
+      "baselineSha256": "efe0c75a7969f22a666682c791455dc046c17d8f2818508604c115484fe938fc"
+    },
+    {
+      "path": "files/gift-entry.js",
+      "bytes": 10241,
+      "sha256": "7a1cbe3055da07540c3b1c388a82900f9244943e7a0c80d7e439270caab27354",
+      "baselineSha256": "e2ba8c9933f7839f877995e7444ebcb71f5c3aea5d0a7779da58b0235756e1d4"
+    },
+    {
+      "path": "files/point-balance-report.js",
+      "bytes": 5800,
+      "sha256": "58d24e8089a458e8cdd48d16b213bc49e35670d13b7837bd1a2566584008bf51",
+      "baselineSha256": null
+    },
+    {
+      "path": "files/point-skin-store.js",
+      "bytes": 7091,
+      "sha256": "8fbd4aad80a1a7e547198db66f8b2746bada0fac7016fc0e68178586a9b0793f",
+      "baselineSha256": "7acb3f51d474ccc48affe7dacbcab3bba0134be288bbc5aacd0f309caabd8d1e"
+    },
+    {
+      "path": "files/point-skin-system.js",
+      "bytes": 17140,
+      "sha256": "ce3355c3c60cde3a5932bcd9ed2bf1d8e7a68cb9a0b42cf88907f9693c7004d4",
+      "baselineSha256": "66bd9e2fe70022f57e2d8329bd0b8056084047dac4f685deee4954c2ef3ac908"
+    },
+    {
+      "path": "files/points-store.js",
+      "bytes": 16246,
+      "sha256": "bd33125029d6ccb02cf78455fb06bed061984fbb99f92bd745093777ad0900bc",
+      "baselineSha256": "aa7b15e1c3c6cb755489644d0b359e9d26ccb139d3a8c61d1fb3072ecf8bc5e3"
+    },
+    {
+      "path": "files/points-system.js",
+      "bytes": 16057,
+      "sha256": "d41985173eff1cbef575094bca4e7b23b7b30723e1972d9fc69a9c3dbf9a8468",
+      "baselineSha256": "11f96241b761d98d8b45da83bb80dd0f90442740b96e38bff98444d9ba1f9baf"
+    },
+    {
+      "path": "files/profile-sets.js",
+      "bytes": 4138,
+      "sha256": "f1ea2e9ea44a93c97e3e55b8369326f8db30c61fded1ded95936e1988f54f07f",
+      "baselineSha256": "f355cd3617574b525c689e4fa15670af4b14918f861ac8fba339659a8813ec24"
+    }
+  ],
+  "verification": {
+    "syntaxFiles": 8,
+    "priceAndCatalogTests": 23,
+    "pointtopTests": 8,
+    "failures": 0,
+    "type": "offline mocked tests; no live Discord or MongoDB validation",
+    "allPublishedSourcesMatchTestedCopies": true
+  },
+  "privacy": {
+    "included": "source code and validation metadata only",
+    "excluded": [
+      "environment files",
+      "credentials",
+      "database exports",
+      "member balances",
+      "member records",
+      "runtime state",
+      "logs",
+      "caches",
+      "backups"
+    ]
+  }
+}
