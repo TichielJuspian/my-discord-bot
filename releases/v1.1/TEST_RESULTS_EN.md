@@ -1,10 +1,9 @@
 # Offline Test Summary (English)
 
-- Baseline SafePatch v1: 36 / 36 PASS.
-- After boss registry integration: 46 / 46 PASS.
-- Syntax checks: all changed JS/CJS files PASS.
-- Existing 54 deterministic combat traces: UNCHANGED.
-- Four generated existing boss lobby/rules images: SHA-256 IDENTICAL to their previous-stage baselines.
-- 241 existing source images: SHA-256 IDENTICAL.
-- Discord and MongoDB: MOCKS ONLY; real network/API integration pending.
-- Live BotKeep and public GitHub: NOT ALTERED.
+- Baseline tests before operations cleanup: 46/46 PASS.
+- After operations cleanup: **56/56 PASS** (46 existing + 10 new tests).
+- New tests cover registered slash commands, protected admin operations, profile-panel text, legacy rank button, 10% booster diagnostics, concurrent VVIP panel publishing, panel reuse, stale-ID recovery, Discord history failure, and channel restriction.
+- All updated JS/CJS source and test files pass `node --check`.
+- Combat trace regression tests continue to pass with the original fixed seed/snapshots.
+- Source images and other media assets were not changed or included in the source-only overlay.
+- **Important:** Discord actions and MongoDB behavior were mocked; live API, real database and production deployment remain untested.

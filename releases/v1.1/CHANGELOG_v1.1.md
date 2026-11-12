@@ -1,8 +1,21 @@
 # Gosu General TV Discord Bot — v1.1 (Staging Review Release)
 
-**Release date:** November 11, 2026  
+**Release baseline:** November 11, 2026 BotKeep backup  
 **Status:** Code published for review; **NOT deployed to BotKeep**. Live Discord API and isolated real MongoDB integration tests are still pending.  
 **Source of truth:** The operator-provided BotKeep backup dated November 11, 2026, **not** the repository's legacy `main/index.js`.
+
+## Operations cleanup (replaces the previously published v1.1 files)
+
+| Feature | Previous bot / previous v1.1 | Updated v1.1 |
+| --- | --- | --- |
+| `/gift` | Member slash command opened a ticket / checked status | **Removed** from slash registration. Members use `Open my skin ticket` in the VVIP channel. `gift:open` and `gift:status` buttons remain valid. |
+| `/rank` | Duplicate public command rendered the same card as `/profile` | **Removed** from slash registration. `/profile` continues showing level, XP, rank, points and cosmetics; existing `community:rank` buttons continue to work. |
+| `/giftpreview` | Admin command called the member-status function and could open a real ticket | **Removed**. It was not a safe read-only preview. |
+| `/giftsetup`, `/giftpanel`, `/giftqueue` | Admin-only setup, manual panel post, pending-request replay | **Retained as administrator recovery commands.** `giftpanel` now updates an existing bot-authored panel or safely restores it once; concurrent calls cannot post duplicates; channel mismatch/Discord history failure stops the operation. |
+| `/boostinfo`, `/setboost`, `/clearboost` | Administrator diagnostic text still advertised 20% attack per stack | **Retained**; all text reads a single 10% constant shared with battle calculations. |
+| Community guide and profile panel | Showed duplicate `/rank` advice and an extra `My rank` button | Only `/profile` and `/leaderboard` are promoted. Existing old button interactions are backward-compatible. |
+
+No previously saved VVIP tickets, claim ledgers, shop points, role configuration, raid records, images or battle damage formulas are deleted or migrated by this code-only change. Removing slash commands takes effect only after deployment restarts and Discord guild command registration completes.
 
 ## What changed compared with the original BotKeep backup?
 
@@ -33,13 +46,13 @@ Positive recorded damage qualifies for ranking. Ties share rank. The spectator C
 
 ## Source files included
 
-The cumulative patch contains **21 source modules** (19 replacements and 2 new files) relative to the November 11 BotKeep baseline. New modules: `raid-scheduler.js`, `raid-boss-registry.js`. It also includes regression tests, SHA-256 compatibility manifest, a read-only target verifier, English documentation, and onboarding guide.
+The cumulative patch contains **28 source modules** (25 replacements and 3 new files) relative to the November 11 BotKeep baseline. New modules: `raid-scheduler.js`, `raid-boss-registry.js`. It also includes regression tests, SHA-256 compatibility manifest, a read-only target verifier, English documentation, and onboarding guide.
 
 **Never** copy GitHub's legacy root `index.js` over the deployed bot. The ZIP is a file-level *overlay* for the exact matching BotKeep baseline, not a standalone bot. The patch does not include dependencies, runtime settings, original art, user data, or production journals.
 
 ## Verification performed
 
-- **46/46 offline tests passed**, verified again before publishing.
+- **56/56 offline tests passed**, verified again before publishing.
 - **54 deterministic existing combat scenarios** matched their original traces.
 - **4 existing boss lobby/rules images** matched expected SHA-256 raster outputs.
 - **241 existing source images** were byte-for-byte unchanged; no resizing or recompression.
