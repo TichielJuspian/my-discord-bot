@@ -40,10 +40,14 @@ This is a **cumulative patch**: it includes all reviewed SafePatch v1 Raidset/VV
 
 ## Results
 
-- **46/46 offline tests passed** including the previous 36 regression tests and 10 new boss registry checks.
+- **56/56 offline tests passed** including the previous 36 regression tests and 10 new boss registry checks.
 - Existing 54 deterministic combat traces are identical to the pre-refactor fixtures.
 - The Colossus and Succubus HP cards + neutral rules cards generated **identical SHA-256 hashes** to the original post-v1 baseline.
 - 241 available source image files compared byte-for-byte; 0 differences.
 - **Not tested:** real Discord API latency, live interactive button clicks, actual MongoDB concurrency, BotKeep process management, and deployment/restart with production journals.
 
 Read `BOSS_ONBOARDING_EN.md` before adding a new boss. Read `CHANGE_REPORT_EN.md` for the full technical report.
+
+### Operations UI cleanup
+
+Removed `/gift`, `/rank`, and `/giftpreview`. Retained admin recovery commands. Old ticket/rank buttons still work; the panel repair command uses a single-flight idempotent upsert. The `boostinfo` display now uses 10% ATK per stack.

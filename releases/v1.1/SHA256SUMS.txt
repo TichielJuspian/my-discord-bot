@@ -1,1 +1,1 @@
-339bbd500e2d7145febb3827b8da481d027c5fb3f8dd48e9902d1f16365c855f  GosuBot-v1.1-SafePatch.zip
+c1871cce90964c058f69a821b2803a20199f72142ad4f6dd8adc4bb77db36c08  GosuBot-v1.1-SafePatch.zip

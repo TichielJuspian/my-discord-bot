@@ -1,20 +1,55 @@
 {
   "project": "Gosu General TV Discord Bot",
-  "release": "v1.1 / Staging safe patch (cumulative Raidset + VVIP + Boss Registry)",
+  "release": "v1.1 / Operations cleanup + SafePatch (Raidset, VVIP, Boss Registry)",
   "format_version": 2,
   "baseline": "exact November 11, 2026 user-provided BotKeep backup (before SafePatch v1)",
   "deploy_status": "REVIEW ONLY — NOT DEPLOYED; Discord/MongoDB real integration pending",
   "preserve_original_artwork": true,
   "registry_change": "two enabled world bosses; Icy Dragon disabled metadata only",
-  "tests": "46/46 mock/offline tests passed; no live Discord API or actual MongoDB integration",
-  "file_count": 21,
+  "tests": "56/56 mock/offline tests passed; no live Discord API or actual MongoDB integration",
+  "file_count": 28,
   "changes": [
+    {
+      "path": "booster-point-admin.js",
+      "action": "replace",
+      "baseline_sha256": "d5d687141ec64761b9a1fa71f87041db21e09f591ac01f55a4475c50af8c679a",
+      "patch_sha256": "fccc342745a0dc9a88fd73df5b6cd1b52b4373d94176eccad617159132715351",
+      "size_bytes": 4497
+    },
+    {
+      "path": "command-directory.js",
+      "action": "replace",
+      "baseline_sha256": "7d3b45b31e4e2c97bf9e8c2facbe673c9f59efb6a85b40e1ef4da7b81429abc1",
+      "patch_sha256": "54199fc97efe2a561c69c73ecfad9dd25e161a400943e06e38f6e8781824eaa2",
+      "size_bytes": 4677
+    },
+    {
+      "path": "community-layout.js",
+      "action": "replace",
+      "baseline_sha256": "1aadec8ac772c76fe96daff13ed915229c29c514f4f3a14c70908c9905abdbaa",
+      "patch_sha256": "7ace1f26a473050525bf1d7ae96f197ff13a41f1e2afc02db5aecd03d617f9fe",
+      "size_bytes": 3298
+    },
     {
       "path": "community-panels.js",
       "action": "replace",
       "baseline_sha256": "b1380251a8fef7164d29da4dff2b9c88fb259badb76250b6056fb47a827f8951",
-      "patch_sha256": "afb1aa9915db63c8167962c7e28223f05add45d69351699396f82043c34ac7ab",
-      "size_bytes": 4913
+      "patch_sha256": "f0e3629b3dedfe23d3039ef27f10cde91bbb7db7880fa3659114cb7e4985d1dd",
+      "size_bytes": 4801
+    },
+    {
+      "path": "community-setup.js",
+      "action": "replace",
+      "baseline_sha256": "a01a29d83b9a4e018c509ae9859fb39afd6b48c5a45099038e437c3f9f113d1a",
+      "patch_sha256": "346e78e64c77db300424a141359f2325692043440d726f02f83549df3991157f",
+      "size_bytes": 5378
+    },
+    {
+      "path": "community-views.js",
+      "action": "replace",
+      "baseline_sha256": "a866d6661e712a032b5b2512342ab84158efb8c6c29247b662b3adc0b4e58f52",
+      "patch_sha256": "dc0212e241de01e415972fc03f73b99b6c4b272cafcc4dcf39d647fcae86745f",
+      "size_bytes": 6460
     },
     {
       "path": "gift-channel-bindings.js",
@@ -24,18 +59,32 @@
       "size_bytes": 1636
     },
     {
+      "path": "gift-entry.js",
+      "action": "replace",
+      "baseline_sha256": "e3875f3faefc2b41f7a11869c5751584a0468b2bde3294ccd202e64911b87fd5",
+      "patch_sha256": "30d372195dd22c6ee5220277d3d035a43200f23ce39aa58396914a61606c41a4",
+      "size_bytes": 9740
+    },
+    {
+      "path": "gift-panel-upsert.js",
+      "action": "add",
+      "baseline_sha256": null,
+      "patch_sha256": "d6bd6e585638307cc15af93a655146bc92aaac1b47074e23f3831e6ee1cbd7b7",
+      "size_bytes": 2220
+    },
+    {
       "path": "gift-system.js",
       "action": "replace",
       "baseline_sha256": "e10016e70d6859952cf039478db2905ba65c31b712e5e0c21e9027dca5ace26e",
-      "patch_sha256": "ce4cc70ee95efc35fb5c05cab5c77c8108d62f31c9d8ffa1acc0eed69cfced1a",
-      "size_bytes": 38429
+      "patch_sha256": "3781fa70bcbee3413fb20c8fbd11e92e3a85d6cf2039f6ece6bc4ef7c4b15a4d",
+      "size_bytes": 37940
     },
     {
       "path": "raid-booster.js",
       "action": "replace",
       "baseline_sha256": "63df53e81ac7011c0ef71c7f92ba66ce5e1d2d0ecee0fcf4fa90bba7c5f8fc3d",
-      "patch_sha256": "a1d245b7d119ad4669a63c172fe8bfe6e4816450a622721a13eb1576f8eb89da",
-      "size_bytes": 717
+      "patch_sha256": "0246b88c9ad6180e1e64708c29cef779d0a3a088d4bddbb0c883ea84979c6227",
+      "size_bytes": 828
     },
     {
       "path": "raid-boss-health.js",
@@ -156,5 +205,6 @@
       "patch_sha256": "a3d1797c7c086ff98852b50a6875bc3c189818d689f9fd5ff741e7a3ad1ea080",
       "size_bytes": 15149
     }
-  ]
+  ],
+  "operations_change": "Remove /gift, /rank and /giftpreview commands; retain legacy buttons and operator-only recovery commands; deduplicate VVIP panel; correct booster info."
 }

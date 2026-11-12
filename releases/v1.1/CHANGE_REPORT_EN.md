@@ -33,3 +33,12 @@ The previous implementation had independent hardcoded boss lists and labels in t
 ## Next staging milestone
 
 Run real interaction and MongoDB integration tests against separate accounts, followed by a controlled rollout. Build the Icy Dragon puzzle as a distinct, disabled feature branch; do not enable its rotation entry until all expected combat and art assets are implemented.
+
+## v1.1 Operations cleanup
+
+- De-registered `/gift`, `/rank`, `/giftpreview`; profile and VVIP panel buttons remain available.
+- Kept administrator-only `/giftsetup`, `/giftpanel`, `/giftqueue`, `/boostinfo`.
+- The existing `community:rank` button remains compatible; new guide omits duplicate rank UI.
+- The manual and startup VVIP panel flows share a safe upsert with duplicate prevention and channel checks.
+- Corrected the booster administration text to 10% attack per stack, sourced from the raid combat constant.
+- 56/56 offline regression tests passed; real Discord and isolated MongoDB integration not yet run.

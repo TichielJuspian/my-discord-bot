@@ -19,8 +19,6 @@ function createGifts({ client, isAdmin, adminRole, modRole, operatorId }) {
   const archive = createTicketArchive({ client, validateReview: staffOnly, canReadUserContent: () => client.options?.intents?.has(GatewayIntentBits.MessageContent) ?? false, beforeClose: c => c.billingCycleId ? billing.unlock(c.guildId, c.userId, c.billingCycleId) : Promise.resolve() });
   let claims, settings, tickets, extras, jobs, ready = false, timer;
   const commands = [
-    new SlashCommandBuilder().setName('gift').setDescription('Open your VVIP gift ticket / view benefit status').setDMPermission(false),
-    adminCommand('giftpreview', 'Administrator-only preview of the private ticket; no membership credit is granted'),
     adminCommand('giftsetup', 'Configure VVIP gifts and private staff review channel')
       .addRoleOption(o => o.setName('role').setDescription('YouTube-managed VVIP tier role').setRequired(true))
       .addChannelOption(o => o.setName('review').setDescription('Private staff-only review channel').addChannelTypes(ChannelType.GuildText).setRequired(true)),
@@ -168,7 +166,7 @@ function createGifts({ client, isAdmin, adminRole, modRole, operatorId }) {
     if (!(chat ? commands.some(c => c.name === i.commandName) : i.customId?.startsWith('gift:'))) return false;
     try {
       if (!ready || !i.guild) throw new Error('Gift applications are not ready. Please try again later.');
-      const admin = chat ? i.commandName !== 'gift' : /^gift:(start|finish|complete|changes):/.test(i.customId);
+      const admin = chat || /^gift:(start|finish|complete|changes):/.test(i.customId);
       const request = i.isButton() && i.customId === 'gift:request';
       if (!request) await i.deferReply({ ephemeral: true });
       if (admin && !isAdmin(await fresh(i.guild, i.user.id))) throw new Error('Only an administrator can perform this action.');
@@ -216,10 +214,6 @@ function createGifts({ client, isAdmin, adminRole, modRole, operatorId }) {
         const sent=await notify(saved,cfg);
         await i.editReply({content:`Your request is saved! 💙 ${sent?'Gosu General has been notified.':'The notification is delayed; your saved request is available to Gosu General.'}\nNext request: **${date(saved.nextAt)}**. Edits keep the same date.`,embeds:[await embed(saved)],allowedMentions:{parse:[]}}); return true;
       }
-      if (chat && i.commandName === 'gift' && cfg.panelChannelId && i.channelId !== cfg.panelChannelId) {
-        await i.editReply({ content: `Please use **/gift** in <#${cfg.panelChannelId}> to open your VVIP ticket. 💙`, allowedMentions: { parse: [] } });
-        return true;
-      }
       if (chat && i.commandName === 'giftverify') {
         const userId = i.options.getUser('user').id;
         if ((await tickets.findOne({ _id: `${i.guildId}_${userId}` }))?.closingClaimId) throw new Error('The previous ticket is being archived. Please verify the next period after it closes.');
@@ -248,8 +242,11 @@ function createGifts({ client, isAdmin, adminRole, modRole, operatorId }) {
         await i.editReply(`Extra gift recorded: ${safe(extra.item)}. Base claim balance is unchanged. Reference: ${extra._id}${notified ? '' : ' Ticket notification failed; record is retained.'}`); return true;
       }
       if (chat && i.commandName === 'giftpanel') {
-        await i.channel.send(panel()); await settings.updateOne({ _id: i.guildId }, { $set: { panelChannelId: i.channelId } });
-        await i.editReply('Application panel posted.'); return true;
+        const result = await require('./gift-panel-upsert').upsert({
+          guildId: i.guildId, channel: i.channel, botId: client.user.id,
+          settings, payload: panel(), allowedChannelId: cfg.panelChannelId
+        });
+        await i.editReply(result.reused ? 'Existing VVIP application panel updated.' : 'VVIP application panel restored.'); return true;
       }
       if (chat && i.commandName === 'giftqueue') {
         const page = i.options.getInteger('page') || 1;
@@ -257,7 +254,6 @@ function createGifts({ client, isAdmin, adminRole, modRole, operatorId }) {
         for (const c of docs) await review(c, cfg);
         await i.editReply(`Page ${page}: ${docs.length} requests posted. Older-cycle requests may be visible, but cannot start delivery after their verified period ends.`); return true;
       }
-      if (chat && i.commandName === 'giftpreview') { await myStatus(i); return true; }
       if (i.isButton() && admin) {
         const [, action, id, rev] = i.customId.split(':'), c = await claims.findOne({ _id: id, guildId: i.guildId });
         if (!c || c.revision !== Number(rev)) throw new Error('This request changed. Use /giftqueue for the latest version.');
