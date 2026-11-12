@@ -1,0 +1,160 @@
+{
+  "project": "Gosu General TV Discord Bot",
+  "release": "v1.1 / Staging safe patch (cumulative Raidset + VVIP + Boss Registry)",
+  "format_version": 2,
+  "baseline": "exact November 11, 2026 user-provided BotKeep backup (before SafePatch v1)",
+  "deploy_status": "REVIEW ONLY — NOT DEPLOYED; Discord/MongoDB real integration pending",
+  "preserve_original_artwork": true,
+  "registry_change": "two enabled world bosses; Icy Dragon disabled metadata only",
+  "tests": "46/46 mock/offline tests passed; no live Discord API or actual MongoDB integration",
+  "file_count": 21,
+  "changes": [
+    {
+      "path": "community-panels.js",
+      "action": "replace",
+      "baseline_sha256": "b1380251a8fef7164d29da4dff2b9c88fb259badb76250b6056fb47a827f8951",
+      "patch_sha256": "afb1aa9915db63c8167962c7e28223f05add45d69351699396f82043c34ac7ab",
+      "size_bytes": 4913
+    },
+    {
+      "path": "gift-channel-bindings.js",
+      "action": "replace",
+      "baseline_sha256": "a07abf798e07f5e375a66f910c98d391ebc6a84323b632c0c71f7c61eea7fb9e",
+      "patch_sha256": "daf8eae8e959ed30cc1d8f79b491e59e6ae21a4d96551e01f8009fa9049032df",
+      "size_bytes": 1636
+    },
+    {
+      "path": "gift-system.js",
+      "action": "replace",
+      "baseline_sha256": "e10016e70d6859952cf039478db2905ba65c31b712e5e0c21e9027dca5ace26e",
+      "patch_sha256": "ce4cc70ee95efc35fb5c05cab5c77c8108d62f31c9d8ffa1acc0eed69cfced1a",
+      "size_bytes": 38429
+    },
+    {
+      "path": "raid-booster.js",
+      "action": "replace",
+      "baseline_sha256": "63df53e81ac7011c0ef71c7f92ba66ce5e1d2d0ecee0fcf4fa90bba7c5f8fc3d",
+      "patch_sha256": "a1d245b7d119ad4669a63c172fe8bfe6e4816450a622721a13eb1576f8eb89da",
+      "size_bytes": 717
+    },
+    {
+      "path": "raid-boss-health.js",
+      "action": "replace",
+      "baseline_sha256": "b3d53ef73bfe403f686acdb844e39541c9b164e9aa86be0a859ee0845ee4d9ac",
+      "patch_sha256": "afa806edef507404512b6561164e9c1aeedf2811ce3ce6f08f7141e51b799ee3",
+      "size_bytes": 385
+    },
+    {
+      "path": "raid-boss-registry.js",
+      "action": "add",
+      "baseline_sha256": null,
+      "patch_sha256": "1c3268f50856918a99ca2f1ff48531cb95624091709cb2b4f7ff4f34c40568b5",
+      "size_bytes": 5418
+    },
+    {
+      "path": "raid-compact-effects.js",
+      "action": "replace",
+      "baseline_sha256": "221cb60e98d012512b59284caeaeb3bbcc274aa6a9e3eecaa8caf9de26a301fa",
+      "patch_sha256": "0f4977e9abf91f09ff11febf1db712e17286b54c7cb89229a8487eff63815faa",
+      "size_bytes": 4264
+    },
+    {
+      "path": "raid-engine/gimmick-trial-engine.cjs",
+      "action": "replace",
+      "baseline_sha256": "5bf65070a20bccbf2b7f6cf39802816059d3174b459d5545bdab76afbd17714b",
+      "patch_sha256": "caa121eded0e1c65dc06730c29d64138e9a0a3e0fa9c7b4870a6295a853e825e",
+      "size_bytes": 28692
+    },
+    {
+      "path": "raid-lobby-card.js",
+      "action": "replace",
+      "baseline_sha256": "f82a7b9af04083e47c959ea178335305d7959bf4bec6bc660748b20b8962c351",
+      "patch_sha256": "e3b118a4ede112e5c9337e33a0493a243b81c481faec26895d2440ea995c04fc",
+      "size_bytes": 4736
+    },
+    {
+      "path": "raid-lobby.js",
+      "action": "replace",
+      "baseline_sha256": "c5fdfe6682a166b3cd93c22371706b9aee5ff3dc8164d5efe18e6daa0411d993",
+      "patch_sha256": "465b300f5886db16f9356ebe2873a3b764570bdd50a1d2878d4db92e168dfaff",
+      "size_bytes": 26724
+    },
+    {
+      "path": "raid-panels.js",
+      "action": "replace",
+      "baseline_sha256": "436a3f5be4ed0e0386f575280ea7d42ac61c669c6cf140e77012eafffc2b8627",
+      "patch_sha256": "29b7f4aed6bb492af9e8d7a4dece6bb08803011cb85a30e839740fb83acab554",
+      "size_bytes": 11147
+    },
+    {
+      "path": "raid-point-rewards.js",
+      "action": "replace",
+      "baseline_sha256": "c661c0087fd0320c6763af083abf13b651cdd4a8e908f3256c7a0b3f8eca5ee4",
+      "patch_sha256": "7fc91340a887e816838c718468ec9b510094f933b958e6c54fac400d75171530",
+      "size_bytes": 4359
+    },
+    {
+      "path": "raid-rules-card.js",
+      "action": "replace",
+      "baseline_sha256": "0856556b54446ef627aa06af0776dc63ff61cb7a7737d61cc61842272be4faa8",
+      "patch_sha256": "70becc17eae70dad1d3e876e83b571f80ed357d158d20fdbbe97989863918c1f",
+      "size_bytes": 4122
+    },
+    {
+      "path": "raid-scheduler.js",
+      "action": "add",
+      "baseline_sha256": null,
+      "patch_sha256": "775a11cbea52bfa5ac2e2392de4265aadde3cffbeea1321f404e792abc56c8be",
+      "size_bytes": 8149
+    },
+    {
+      "path": "raid-test.js",
+      "action": "replace",
+      "baseline_sha256": "9bc6d1fe8522a7fb81bfbba26855b5f055cd3df1eb6586d97a42f5766a100e2c",
+      "patch_sha256": "c3d5492b4d6417573e4694f51e840f0eaf4c9d1aa1f21d1c228099647b07dcf1",
+      "size_bytes": 46110
+    },
+    {
+      "path": "raid-workshop-boost.js",
+      "action": "replace",
+      "baseline_sha256": "9f37502fea30be58428a32fbdb5600abe2f0ed23563a690aa16278d0d40298ab",
+      "patch_sha256": "779ffd2f745f4b16edd9e052108b0e3026e1b6c1d1e718b79cb418831f4aef86",
+      "size_bytes": 924
+    },
+    {
+      "path": "raid-workshop-class.js",
+      "action": "replace",
+      "baseline_sha256": "961f07ae2f050adb401f393e20f9a4bd02cafd3f362479abe40c3089b7fe9fd0",
+      "patch_sha256": "5f44c36e49d9debb0c6f9704af2e40aac556078faa29cb6af1c00c56b7bbe7d1",
+      "size_bytes": 2423
+    },
+    {
+      "path": "raid-workshop-render.js",
+      "action": "replace",
+      "baseline_sha256": "c587354cbe4116d0ee01ee0168901716c6d7c8f5bd5b0f5af484e656bd9e42a2",
+      "patch_sha256": "d7fbaebca619752c7b39b10de8371a6430ca044819d0bb8e73b4d90fd0b64fd3",
+      "size_bytes": 3056
+    },
+    {
+      "path": "raid-workshop-store.js",
+      "action": "replace",
+      "baseline_sha256": "ac325132e82fd657e0268c3e8785f109a94e6b1fb04813f6f0faa2b2ff79a244",
+      "patch_sha256": "04193e91d0e367b2b9dca61743e9b6678b01343bc473c44860a0f7263355c37b",
+      "size_bytes": 6180
+    },
+    {
+      "path": "raid-workshop-view.js",
+      "action": "replace",
+      "baseline_sha256": "1114bf206a85717b10f44d8d606b7391ca3ae2624dd106c503c6c3ffa3c2ee17",
+      "patch_sha256": "2e13af345a8cd50368d4235e100115f350be82b8d2db0c63e6b86d2bcbe6e37b",
+      "size_bytes": 8493
+    },
+    {
+      "path": "raid-workshop.js",
+      "action": "replace",
+      "baseline_sha256": "281cee8cf94ca984ecfbe07f69c71afd5f4ef9cb32dba34ee240e80c75f02327",
+      "patch_sha256": "a3d1797c7c086ff98852b50a6875bc3c189818d689f9fd5ff741e7a3ad1ea080",
+      "size_bytes": 15149
+    }
+  ]
+}
