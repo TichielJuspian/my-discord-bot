@@ -1,0 +1,330 @@
+{
+  "schema": 1,
+  "source": "BotKeep backup, before safety fixes",
+  "cases": {
+    "warrior:earth:1:1": {
+      "turns": 12,
+      "finished": "defeated",
+      "finalDamage": 127,
+      "traceHash": "3865039cb18d82533656476925cdafeb17b32765436287e37276a2671177df40"
+    },
+    "warrior:earth:1:37": {
+      "turns": 12,
+      "finished": "defeated",
+      "finalDamage": 136,
+      "traceHash": "9adb39093c0c69644d1446630604cdbec5ea3192c8dc1f0c11ef32c832ffd3d3"
+    },
+    "warrior:earth:1:271": {
+      "turns": 12,
+      "finished": "defeated",
+      "finalDamage": 135,
+      "traceHash": "fefea334b113b77ed9ec7c8054be6904e12157fdf16e675c920edf81424e3fd4"
+    },
+    "warrior:earth:30:1": {
+      "turns": 15,
+      "finished": "defeated",
+      "finalDamage": 888,
+      "traceHash": "66c184081585859b3689ed15bf45cbaed3556f30a33eac15194d358db6f88c05"
+    },
+    "warrior:earth:30:37": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 1092,
+      "traceHash": "1d2157aecfe4d3d500831f240e966033325147b9dd9da0e7e3c9196ce01aca2c"
+    },
+    "warrior:earth:30:271": {
+      "turns": 17,
+      "finished": "defeated",
+      "finalDamage": 893,
+      "traceHash": "e3c9c997ddd50d57339934a22fddea7c866c94efdaccb7d4564775be30735fce"
+    },
+    "warrior:earth:70:1": {
+      "turns": 19,
+      "finished": "defeated",
+      "finalDamage": 2409,
+      "traceHash": "38f52c20137fdb6247d1dbdec3d5345d0a8982c151e17553a5f1b24ff02696ff"
+    },
+    "warrior:earth:70:37": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 2550,
+      "traceHash": "b6f7f85ad5d92f1fd9083bf087a39bc5ef75a914c917898ddf4b166bf399bae7"
+    },
+    "warrior:earth:70:271": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 2239,
+      "traceHash": "4a3fefd0107c84eaad2ae09bdc43ad1f44e0bb2157fd8d563e9b105c570dc0cf"
+    },
+    "warrior:nameless_succubus:1:1": {
+      "turns": 11,
+      "finished": "defeated",
+      "finalDamage": 110,
+      "traceHash": "41bf01a2571016ed14478a62f2b1b6c77fa1ac2b1be6aab3d598dd90d536bab2"
+    },
+    "warrior:nameless_succubus:1:37": {
+      "turns": 10,
+      "finished": "defeated",
+      "finalDamage": 110,
+      "traceHash": "a210d68150309eeb7c4098bcb1f9ab5854412e6cf870065035d8bf9b23978a11"
+    },
+    "warrior:nameless_succubus:1:271": {
+      "turns": 10,
+      "finished": "defeated",
+      "finalDamage": 85,
+      "traceHash": "7d2845db41e0b8c9210fbf749e3b2b9a00d2429edd9d39d0d9f6e0e20ec72889"
+    },
+    "warrior:nameless_succubus:30:1": {
+      "turns": 15,
+      "finished": "defeated",
+      "finalDamage": 895,
+      "traceHash": "15e847468ff40694aa98367db63fa6e32a2920bf1977a25679b5a8277502a21b"
+    },
+    "warrior:nameless_succubus:30:37": {
+      "turns": 13,
+      "finished": "defeated",
+      "finalDamage": 840,
+      "traceHash": "aef45990740d7061c4d1c35048ae49f3af7429f24aa37d968e80f419108cd696"
+    },
+    "warrior:nameless_succubus:30:271": {
+      "turns": 7,
+      "finished": "defeated",
+      "finalDamage": 310,
+      "traceHash": "d1639d06892e7c989b1b3b1d84bbda9cfc650e2577f2a400917edc16c14d4658"
+    },
+    "warrior:nameless_succubus:70:1": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 2667,
+      "traceHash": "3cb7529864c8bb02551b3d143cbf2b94c399725348e821b07b2f728ba90013d2"
+    },
+    "warrior:nameless_succubus:70:37": {
+      "turns": 13,
+      "finished": "defeated",
+      "finalDamage": 1842,
+      "traceHash": "b24fe4fbb9d5add24bfe39b0cebcc21c44a6973a1b95fb297a1d612298a1f732"
+    },
+    "warrior:nameless_succubus:70:271": {
+      "turns": 11,
+      "finished": "defeated",
+      "finalDamage": 1117,
+      "traceHash": "29565792dbfea0627c4dbf25cf3a3079a25fb753525e593c5b7a3588b5c811b5"
+    },
+    "paladin:earth:1:1": {
+      "turns": 16,
+      "finished": "defeated",
+      "finalDamage": 168,
+      "traceHash": "c58eb91754b3898b81ca28f74f7665e5249d69c2bbdbe3b4998cf06ea1034ad0"
+    },
+    "paladin:earth:1:37": {
+      "turns": 19,
+      "finished": "defeated",
+      "finalDamage": 208,
+      "traceHash": "bdf7b205aebb9cfcd18c182f227b4e2a0ba7f4e1c2fef3baca0ed7aadf25abae"
+    },
+    "paladin:earth:1:271": {
+      "turns": 19,
+      "finished": "defeated",
+      "finalDamage": 216,
+      "traceHash": "cb9e9a2d888b18b6dd9c099573ef6dfc0aab64fa050e9db2857f1cb175ec6531"
+    },
+    "paladin:earth:30:1": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 1227,
+      "traceHash": "d80f0a40e4a1fa5a68dacd9ceaa9d3179871b97bf709744cfad1875ce0cbb8ae"
+    },
+    "paladin:earth:30:37": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 1303,
+      "traceHash": "ea83b0830b3650f8a3a305d445e7c9cb302161f1f6bffec12fc5eb30cecd8d06"
+    },
+    "paladin:earth:30:271": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 1295,
+      "traceHash": "07673d07f5504b0ba70b0172f7ca4c136ca2cd9e1679a7131d68b24c37c2258e"
+    },
+    "paladin:earth:70:1": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 2632,
+      "traceHash": "a5242850f8f5fb14c1a851cfdd1ced104e74821157fded8b71d97487138ddd48"
+    },
+    "paladin:earth:70:37": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 2748,
+      "traceHash": "21dd2ef39ed69c9ede72a894aef8cab0fd4a752f9d44b453f99b460b8afdbacb"
+    },
+    "paladin:earth:70:271": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 2838,
+      "traceHash": "707448ec7e2b5454a286403ee2ac38fb4006329bfa8d1c0115a7303395febcac"
+    },
+    "paladin:nameless_succubus:1:1": {
+      "turns": 13,
+      "finished": "defeated",
+      "finalDamage": 120,
+      "traceHash": "20bf8ff02a0a7187ab179b57b958364f641d3b03b9bd9650898d98ce1285ac0d"
+    },
+    "paladin:nameless_succubus:1:37": {
+      "turns": 8,
+      "finished": "defeated",
+      "finalDamage": 68,
+      "traceHash": "d5dd4b83b6ff8a08b1b0d6f23669efd3a6cfdf7a93d91d3eb6a069472fb7c5bf"
+    },
+    "paladin:nameless_succubus:1:271": {
+      "turns": 13,
+      "finished": "defeated",
+      "finalDamage": 142,
+      "traceHash": "c722637ec5d34710f20d156cd58d9203fcc6e11976651c247ced42be1911c222"
+    },
+    "paladin:nameless_succubus:30:1": {
+      "turns": 13,
+      "finished": "defeated",
+      "finalDamage": 172,
+      "traceHash": "aa04902dd9a5d48d9403741cbe9295ae7e531512cff0f8c940790b655a16133e"
+    },
+    "paladin:nameless_succubus:30:37": {
+      "turns": 18,
+      "finished": "defeated",
+      "finalDamage": 1118,
+      "traceHash": "5cce08b3e1cbef89b3d7cbc2c1aad5b3bb3cc270e941dd62cfad53ad4d4da757"
+    },
+    "paladin:nameless_succubus:30:271": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 1240,
+      "traceHash": "c5780c8e4ffa7306b6d406f5a1dac43b7b183433d2e62e93f435aa38bc7809b8"
+    },
+    "paladin:nameless_succubus:70:1": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 2516,
+      "traceHash": "a029da7706c4a096e8f3781ee5d39a5351ce513f20d33420b19f6b3c7bfa2778"
+    },
+    "paladin:nameless_succubus:70:37": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 2567,
+      "traceHash": "379f22a74d4c4383a8f5a6d3c90ac86fa75d07e62b715b39453608ddbf864f29"
+    },
+    "paladin:nameless_succubus:70:271": {
+      "turns": 18,
+      "finished": "defeated",
+      "finalDamage": 2388,
+      "traceHash": "7c223a4304ca3963a6824b6e7ada9fd0b181693570b6b8c30e13c4a9aa4e1fd9"
+    },
+    "berserker:earth:1:1": {
+      "turns": 7,
+      "finished": "defeated",
+      "finalDamage": 15,
+      "traceHash": "423acfa4477d8f0ba84a90ed7aa4b46eb7e42401ebde751b869663a3df3414c7"
+    },
+    "berserker:earth:1:37": {
+      "turns": 10,
+      "finished": "defeated",
+      "finalDamage": 78,
+      "traceHash": "b3bbd0ecbd39fc5f15cb032da82f5914aa34bf88af649fe9577a882a0a02b9f3"
+    },
+    "berserker:earth:1:271": {
+      "turns": 7,
+      "finished": "defeated",
+      "finalDamage": 18,
+      "traceHash": "bc0b269075c9fadf8b3add7afd8beaf774177f205a11257f82b28aab3aa8991d"
+    },
+    "berserker:earth:30:1": {
+      "turns": 16,
+      "finished": "defeated",
+      "finalDamage": 1251,
+      "traceHash": "d53e9ec08d0c7d15fe98727c931226313f03abc82be9b54d20723db82b86ba5b"
+    },
+    "berserker:earth:30:37": {
+      "turns": 18,
+      "finished": "defeated",
+      "finalDamage": 1698,
+      "traceHash": "cc8027f185f478a9337da0967e8e8bfd45a7eaecba644c232151245a4ee76115"
+    },
+    "berserker:earth:30:271": {
+      "turns": 16,
+      "finished": "defeated",
+      "finalDamage": 982,
+      "traceHash": "c0c671bb64be3197f07074fdf66619a1d94a5733e1114ac5e2b23172e83f4317"
+    },
+    "berserker:earth:70:1": {
+      "turns": 18,
+      "finished": "defeated",
+      "finalDamage": 2847,
+      "traceHash": "320902bc78109402988d7ef563eb60191ecf63b26ffbf5eba1b38bad6d186175"
+    },
+    "berserker:earth:70:37": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 3724,
+      "traceHash": "db290aa5c6428fc9d290f720198d625259af845018f4f2c36106796a71386609"
+    },
+    "berserker:earth:70:271": {
+      "turns": 20,
+      "finished": "active",
+      "finalDamage": 2330,
+      "traceHash": "3efd528a98d58ea3bd9c5a4eaebfdb8a1467163b539c3a2af477c8049790c56e"
+    },
+    "berserker:nameless_succubus:1:1": {
+      "turns": 5,
+      "finished": "defeated",
+      "finalDamage": 18,
+      "traceHash": "5fe0fc5f32c9e71c452169ee751dc757074a40d28144d000de7c2687071d65e9"
+    },
+    "berserker:nameless_succubus:1:37": {
+      "turns": 6,
+      "finished": "defeated",
+      "finalDamage": 15,
+      "traceHash": "dd1a0898e4c2058bc999b5e66542c298e8bae7a7e49cfae82d560e9389aaf559"
+    },
+    "berserker:nameless_succubus:1:271": {
+      "turns": 6,
+      "finished": "defeated",
+      "finalDamage": 90,
+      "traceHash": "bab883e88a39d4d697fffa780fc330b214975feb7f1e3bf129168b14ad9b09f1"
+    },
+    "berserker:nameless_succubus:30:1": {
+      "turns": 6,
+      "finished": "defeated",
+      "finalDamage": 84,
+      "traceHash": "16d04dbab50729d284e61eebceb0f2ea08d17d32c22cf1d05b86f110bf9b9cb8"
+    },
+    "berserker:nameless_succubus:30:37": {
+      "turns": 6,
+      "finished": "defeated",
+      "finalDamage": 58,
+      "traceHash": "9d7d1830a6ad045ec23c5cf9eed7499123187f465624ec269ae4acd5e6b1e411"
+    },
+    "berserker:nameless_succubus:30:271": {
+      "turns": 7,
+      "finished": "defeated",
+      "finalDamage": 351,
+      "traceHash": "30366bd599ad6574b30e62bd6db9c15937ff5a5773273db7ceacedc492cc2e42"
+    },
+    "berserker:nameless_succubus:70:1": {
+      "turns": 9,
+      "finished": "defeated",
+      "finalDamage": 288,
+      "traceHash": "9bf28b014f9645e8517abb04a730ca6d9822f7c76c68201c810506f56bc8e23c"
+    },
+    "berserker:nameless_succubus:70:37": {
+      "turns": 7,
+      "finished": "defeated",
+      "finalDamage": 118,
+      "traceHash": "aba36428aec9074066ff00bfc05c6c76f1f433b07fa27dffa3949a9b5f1afce9"
+    },
+    "berserker:nameless_succubus:70:271": {
+      "turns": 14,
+      "finished": "defeated",
+      "finalDamage": 2131,
+      "traceHash": "cd3b2ec4b0163687494a854253a3b1a6bcdff9fe383da4ac3b0a480c17db0fc7"
+    }
+  }
+}

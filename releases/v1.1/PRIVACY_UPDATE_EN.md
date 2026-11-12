@@ -1,0 +1,5 @@
+# Proposed Privacy-Policy Wording (English)
+
+When an authorized operator confirms that an MLBB gift was delivered, the bot immediately attempts to archive the private VVIP ticket conversation and attachments into a staff-restricted archive channel. It checks that the transcript can be read and that the archive remains private. **Only after successful verification does it delete the original ticket channel.** If verification or deletion cannot be confirmed, the ticket is retained for manual review and safe retry. Archived copies, claim records and payment/verification metadata may remain after the original channel is deleted; the channel deletion does not itself erase retained archives. Members may request access, correction, or removal from the designated server operator, subject to provider backup limitations.
+
+This wording should replace the prior 12-hour post-delivery wait claim wherever that claim appears in the public server notice and privacy document. Review it for local legal and platform requirements before publication.
