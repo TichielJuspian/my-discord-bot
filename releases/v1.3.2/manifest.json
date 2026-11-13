@@ -1,0 +1,25 @@
+{
+  "version": "v1.3.2",
+  "kind": "incremental production patch",
+  "files": [
+    {
+      "path": "raid-engine/enrage-stages.cjs",
+      "before_sha256": "1e40ec30b107b9f5249a1318c3952b11a67ff43813fc1e17ae2d281fe738ccbf",
+      "sha256": "273a9b0d6d2fa16d662f7e997408112de3f9c7018f3c86a1441d79a9dc4b06d6"
+    },
+    {
+      "path": "raid-engine/gimmick-trial-engine.cjs",
+      "before_sha256": "135f7a1baf29f322b0cf40b3f59a58efe3e66dc51cb889a33f8d87463c05e300",
+      "sha256": "7ba8202ae20153811809f1a0b99ca1174c72f0d14ece5b606e15bc33f9179b20"
+    }
+  ],
+  "validation": {
+    "stage_equivalence_cases": 1232,
+    "direct_hit_cases": 72,
+    "battle_state_comparisons": 23789,
+    "production_engine_readback_files": 19,
+    "unchanged_engine_files": 17,
+    "syntax_checks": 19,
+    "actual_discord_combat_tested": false
+  }
+}
