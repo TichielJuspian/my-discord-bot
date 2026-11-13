@@ -1,0 +1,132 @@
+{
+  "version": "1.3",
+  "kind": "historical-incremental-deployment-patch",
+  "deployedConfirmedAt": "2026-11-13T09:06:59Z",
+  "aggregateSHA256": "73dc6fcbc742a25b619936506559f338775e26ddf77766f1af73b2c9d1eaf468",
+  "aggregateAlgorithm": "SHA256 of file + NUL + SHA256 + newline records, sorted with JavaScript localeCompare",
+  "files": [
+    {
+      "file": "raid-battle-feed.js",
+      "sha256": "530db5afc11f004ac1c61b012bea83d8ef0d209f972f2ff009a2564cd4821be1",
+      "baselineSHA256": "a6d8ae1afe0889bb21c80d575eba88e64f66dc6b596ee3b94a8d122a2e237318",
+      "bytes": 14071
+    },
+    {
+      "file": "raid-colossus-art.js",
+      "sha256": "3941f9ac9611395cdfdd818b053aafa394265eb1642151cc349a6da458b054ca",
+      "baselineSHA256": "8d45a85bf516d37a2e0029caebc46d33ec8d4f7446d98321ea7dcd4a4e082676",
+      "bytes": 2910
+    },
+    {
+      "file": "raid-compact-effects.js",
+      "sha256": "99304e8c5efe57a8a065e4db346c0644302d63a5aee8d637e000860a615516ef",
+      "baselineSHA256": "a0ae2f992c2e65c8e7046f5622a4ca608cf2c273fad03de909910e4282b5c6e4",
+      "bytes": 4840
+    },
+    {
+      "file": "raid-engine/colossus-pattern-director.cjs",
+      "sha256": "851307c6ce0d8dc3eaeed47813fed2234fccda732c52ee9ec3f580ba36e5dcd9",
+      "baselineSHA256": null,
+      "bytes": 4646
+    },
+    {
+      "file": "raid-engine/common-pattern-director.cjs",
+      "sha256": "837f2a567b07e5bf1d86e8088aa797adb72fe2a92fbbb7d5a8ede4b2b7e27a76",
+      "baselineSHA256": "50ac61ad7253a239bdc3a656754a032edfc2474193d68f84176fbeeaece46e7a",
+      "bytes": 5083
+    },
+    {
+      "file": "raid-engine/gimmick-trial-engine.cjs",
+      "sha256": "b93018af02d47db5f86db32557639b9ed3e6e0b0b0f35f6a7dd679f7ad5cc786",
+      "baselineSHA256": "6b8c0b807becfc8e99cb6b0b034a33382d51aebb13ea4c2a6aa35c7552d3cc7e",
+      "bytes": 29931
+    },
+    {
+      "file": "raid-engine/pattern-director.cjs",
+      "sha256": "a71dbbcb82707fd90f9ddec1133e824c39c07d3c80b11df600c40e78b10a99d1",
+      "baselineSHA256": "25ef1cb64cafe993aed89cd4f98f9ddeb5b58ec746f66b5b5e21c840c83b2500",
+      "bytes": 5667
+    },
+    {
+      "file": "raid-engine/pattern-profiles.cjs",
+      "sha256": "fb08b1f23538d5b20a3a47388beebadc02b0db0d1eadcd714e588d015f9bee08",
+      "baselineSHA256": "83e59a6c0f571a6faac93428b8a2c92b9bef84fff5e89c31555e83629b0828c9",
+      "bytes": 3289
+    },
+    {
+      "file": "raid-intent-story.js",
+      "sha256": "77c0687d30c11b38e786300545d6c943e892bfb6e4a100de9b680b66e0b4e070",
+      "baselineSHA256": "3d5cb3f0c40a5bdf328bffcdc3b4c00d63d432411e9759af36e8c1782425724e",
+      "bytes": 3843
+    },
+    {
+      "file": "raid-succubus.js",
+      "sha256": "b2d0eaa6f13307a7946044b0aaf63bd683e651c68469fe506c2dcef63f1dd861",
+      "baselineSHA256": "66dbb81513f1ff7dbca645fc0810fe90769cad600429fe8a4f64c6eab8707223",
+      "bytes": 8989
+    },
+    {
+      "file": "raid-visible-effects.js",
+      "sha256": "b2d7ae7b8da24ce87e9281ff4ecc13c8977e585f1de35a65c4465d7e7b31b6cc",
+      "baselineSHA256": "a23f06782d67cdcccf3df2858d8a13d39ad360108540f2f474e58d08722f0e51",
+      "bytes": 5139
+    }
+  ],
+  "recordedTests": {
+    "total": 1137,
+    "failed": 0,
+    "engine": 588,
+    "ui": 549,
+    "syntax": 36,
+    "fullStateActions": 4800,
+    "independentAdditionalSuccubusActions": 1676,
+    "suites": [
+      {
+        "name": "colossus",
+        "checks": 155,
+        "exitCode": 0
+      },
+      {
+        "name": "ultimate",
+        "checks": 68,
+        "exitCode": 0
+      },
+      {
+        "name": "succubus-main",
+        "checks": 84,
+        "exitCode": 0
+      },
+      {
+        "name": "succubus-third",
+        "checks": 68,
+        "exitCode": 0
+      },
+      {
+        "name": "succubus-reset",
+        "checks": 98,
+        "exitCode": 0
+      },
+      {
+        "name": "succubus-policy",
+        "checks": 115,
+        "exitCode": 0
+      },
+      {
+        "name": "presentation",
+        "checks": 228,
+        "exitCode": 0
+      },
+      {
+        "name": "ui-main",
+        "checks": 285,
+        "exitCode": 0
+      },
+      {
+        "name": "ui-third",
+        "checks": 36,
+        "exitCode": 0
+      }
+    ]
+  },
+  "actualDiscordPlaytest": false
+}

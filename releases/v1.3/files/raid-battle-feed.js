@@ -1,0 +1,70 @@
+'use strict';
+const C=require('./raid-critical-label');
+const {Resvg}=require('@resvg/resvg-js'),R=require('./raid-engine/progression-combat.cjs'),icons=require('./raid-impact-icon');
+const fontFiles=['raid-latin-bold.otf','assets/NotoSansKR-Bold.otf','NotoSansKR-Bold.otf'].map(x=>require('node:path').join(__dirname,x)).filter(x=>require('node:fs').existsSync(x)).slice(0,1);
+const fontOptions={font:{fontFiles,defaultFontFamily:'Noto Sans KR',loadSystemFonts:fontFiles.length===0}};
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+function model(s,resultOnly=false){
+ const l=s.log.at(-1),ended=s.status!=='active',succ=require('./raid-succubus').active(s);
+ const p=succ&&s.director?.phase?s.director.phase:R.phase(s);
+ const hints={normal:'The Colossus draws back its '+(s.director?.hand||'right')+' fist.',warning:'The Colossus clenches both fists.',heavy:'The Colossus raises both fists overhead.',mark_warning:'Ominous energy gathers within its chest.',mark:'Ominous energy gathers within its chest.',struggle_start:'The ground trembles as it gathers strength.',struggle:'Energy surges beneath its fists.',struggle_end:'The shockwave is about to erupt.',opening:'The Colossus staggers.',recovery:'The Colossus pulls its fists from the ground.',enrage:'Its eyes flare. Burning cracks spread across its body.'};
+ let hint=succ?'BOSS INTENT':'NEXT ATTACK',sub=succ?require('./raid-succubus').hint(s,p):hints[p]||'The boss gathers its strength.',progress=null;
+ if(['warning','heavy'].includes(p)){hint+=' / WARNING';sub=succ?'Crimson power gathers between her raised hands.':hints[p];}
+ if(['mark_warning','mark'].includes(p)){hint+=' / CURSE WARNING';sub=succ?'An eye-shaped sigil forms between her hands.':hints[p];}
+ if(p==='enrage'){hint='ENRAGE / TRANSFORMATION';sub=succ?'Her eyes blaze gold. Crimson power erupts.':hints.enrage;}
+ if(p.startsWith('struggle')&&(s.config.boss!=='earth'||p!=='struggle_start')){const n=p==='struggle_start'?0:s.struggleSkills||0;progress=n/2;hint+=' / WARNING';sub=(succ?'CRIMSON MIRAGE':'SHOCKWAVE')+' '+n+'/2 skills | '+require('./raid-engine/mechanic-rules.cjs').remaining(s)+' actions left | Failure: '+require('./raid-engine/mechanic-rules.cjs').failureLabel(s);}
+ if(p==='opening')sub=(succ?'She staggers.':'The Colossus staggers.')+' DAMAGE x1.5 / '+(1+(s.director?.queue||[]).filter(x=>x==='opening').length)+' turns left.';
+ const story=require('./raid-intent-story').intent(s,p);hint=story.title;let storyLines=story.lines,secondary=story.secondary||'';const mechanicText=progress!==null?sub:'';sub=storyLines.join(' ');
+ if(ended){secondary='';storyLines=[];hint=s.hp<=0?'EXHAUSTED':'BATTLE ENDED';sub='';progress=null;}
+ if(resultOnly){secondary='';storyLines=[];hint='TURN RESULT';sub='';progress=null;}
+ if(!ended&&s.offer?.screen==='prelude'){secondary='';hint="NEXT ACTION / DEVIL'S OFFER";storyLines=[succ?"Devil's Offer: she prepares a contract.":'She suddenly stops attacking and smiles.'];sub=storyLines[0];progress=null;}
+ if(!l)return {hint,sub,progress,storyLines,...(secondary?{secondary}:{}),mechanicText,own:'BATTLE READY',boss:'',counter:'',effects:'Choose your action.',critical:false,severe:false};
+ const lines=require('./raid-combat-copy')(l,s),own=l.offerCinematic?'CONTRACT RESOLVED':l.ultimate?(l.critical?'ULTIMATE '+C.label(C.tier(l))+'! ':'ULTIMATE HIT! ')+l.damage+' DAMAGE':lines[0].replace(/^#+ /,'');
+ const direct=l.incoming||0,mechanic=l.mechanicDamage||0,dot=l.dot||0;
+ const name={normal:(l.hand||'').toUpperCase()+' FIST',flurry:'FLURRY',heavy:l.rampageStrike===2?'ARM SWEEP':'CRUSHING BLOW'}[l.phase];
+ let boss=name?name+'  /  '+(direct?'YOU -'+direct+' HP':'BLOCKED'):mechanic?'SHOCKWAVE  /  YOU -'+mechanic+' HP':'';
+ if(l.curseInterruptedNow)boss='CAST INTERRUPTED!';else if(l.shockwaveInterrupted)boss='SHOCKWAVE INTERRUPTED!';else if(l.phase==='mark')boss='CURSED: SANDSTORM';
+ if(require('./raid-succubus').active(s)){if(name)boss=require('./raid-succubus').move(s,l).toUpperCase()+' / '+(direct?'YOU -'+direct+' HP':'BLOCKED');if(mechanic)boss='CRIMSON MIRAGE / YOU -'+mechanic+' HP';if(l.phase==='mark_warning')boss='PREPARING CHARM / NO BOSS ATTACK';if(l.phase==='mark_prepare')boss='PREPARING CHARM / NO BOSS ATTACK';if(l.phase==='mark')boss='CURSE RESOLVED / NO BOSS ATTACK';if(l.charmApplied)boss='CHARMED! +5 TURNS';if(l.curseInterruptedNow)boss='CAST INTERRUPTED!';if(l.shockwaveInterrupted)boss='MIRAGE INTERRUPTED!';}
+ if(l.ultimate)boss=l.patternCancelled?'BOSS PATTERN CANCELLED!':(s.config.job==='paladin'?'JUDGMENT / DIRECT HIT':'RESONANT WAVE / DIRECT HIT');
+ if(!boss&&['opening','recovery','rampage','warning','mark_warning','struggle_start','struggle'].includes(l.phase))boss=({rampage:'FURIOUS',opening:'GROGGY',recovery:'RECOVERY',warning:'PREPARING HEAVY ATTACK',mark_warning:'PREPARING CURSE',struggle_start:succ?'PREPARING MIRAGE':'PREPARING SHOCKWAVE',struggle:'PREPARING SPECIAL'})[l.phase]+' / NO BOSS ATTACK';
+ if(name&&!direct&&!l.ultimate&&!l.emergencyEvaded){if(l.evades>0)boss=(succ?require('./raid-succubus').move(s,l).toUpperCase():name)+' / EVADED';else if(['stun','blind'].includes(l.statusEffect))boss='BOSS DISABLED / NO STRIKE';}
+ if(s.config.boss==='earth'&&l.phase==='recovery'&&!l.ultimate)boss='RECOVERY / NO ATTACK / NORMAL DAMAGE';
+ if(s.config.boss==='earth'&&l.phase==='heavy'&&l.rampageStrike>0&&!l.ultimate)boss='RAMPAGE '+l.rampageStrike+'/3 / '+boss;
+ if(l.offerCinematic)boss='NO ATTACK / CHOOSE YOUR NEXT ACTION';
+ if(l.phase==='enrage')boss=succ?'THE SUCCUBUS BURNS WITH GREATER FURY':'THE COLOSSUS BURNS WITH GREATER FURY';
+ if(l.emergencyEvaded)boss='DANGER EVADED / NO DAMAGE';
+ if(mechanic&&l.action==='guard')boss=(require('./raid-succubus').active(s)?'MIRAGE':'SHOCKWAVE')+' / GUARD BYPASSED / -'+mechanic+' HP';
+ const curseResult=!require('./raid-succubus').active(s)&&l.phase==='mark'&&!l.curseInterruptedNow&&!l.emergencyEvaded;
+ const earthSand=s.config.boss==='earth',sandDot=dot>0?' / -'+dot+' HP':'';
+ const dotLine=earthSand?(l.sandstormApplied?'SANDSTORM / +20% DIRECT / -5% MAX HP / 4 TURNS'+sandDot:l.sandstormExpired?'SANDSTORM EXPIRED'+sandDot:dot>0?'SANDSTORM / -'+dot+' HP'+(l.sandstormExtraDamage?' / EXTRA DIRECT DAMAGE +'+l.sandstormExtraDamage:''):l.sandstormExtraDamage?'SANDSTORM / EXTRA DIRECT DAMAGE +'+l.sandstormExtraDamage:''):l.sandstormApplied?'SANDSTORM +'+l.sandstormStacks+' / DAMAGE TAKEN +'+(10+10*l.sandstormStacks)+'% / 4 TURNS':l.sandstormExpired?'SANDSTORM EXPIRED':l.sandstormExtraDamage?'SANDSTORM / EXTRA DAMAGE +'+l.sandstormExtraDamage:dot?'Ongoing damage / -'+dot+' HP':'';
+ const effects=[];if(Number.isFinite(l.warrior?.sixthSenseHeal))effects.push('Sixth Sense / Heal +'+l.warrior.sixthSenseHeal+' HP');if(l.warrior?.parryHeal>0)effects.push('Parry heal +'+l.warrior.parryHeal);if(l.graceProc)effects.push('Divine Grace / Heal +'+(l.paladin?.divineHeal||0));if(l.enchantGranted)effects.push(l.enchantRefreshed?'Enchant kept / 1 stack':'Enchant gained / Next attack +20% ATK');if(l.enchantConsumed)effects.push('Enchant +20% ATK used');const energy=require('./raid-energy-log').format(l).replace(/^Energy \S+ -> \S+(?: · )?/, '');if(energy)effects.push(energy);if(l.heal>0)effects.push('Heal +'+l.heal);if(l.charmBlocked)effects.push('Attack stopped / Energy kept');const sharp=s.overheatTurns>0?2:(s.sharpEye||0),sense=!!s.sixthSense||s.overheatTurns>0;const empowermentDetail=sharp?'Next Thrust: damage +'+(sharp*10)+'%'+(sense?' / CRIT +35 percentage points':''):'';if(['success','perfect'].includes(l.parryResult)&&empowermentDetail)effects.push(empowermentDetail);
+ const passiveNotice=l.warrior?.overheat?'BLADE TRANCE ACTIVATED / '+l.warrior.overheatTurns+' turns / Thrust 0 energy':l.warrior?.overheatEnded?'BLADE TRANCE ENDED / Thrust costs 2 energy':s.overheatTurns>0?'BLADE TRANCE / '+s.overheatTurns+' turns left / Thrust 0 energy':'';if(passiveNotice)effects.push(passiveNotice);
+ if(s.bossHP<=0){secondary='';hint='VICTORY';sub='Congratulations! The boss has surrendered to you.';storyLines=[sub];progress=null;boss='BOSS SURRENDERED / RAID COMPLETE';}
+ return {hint,sub,progress,storyLines,...(secondary?{secondary}:{}),mechanicText,own,boss,ownDetail:Number.isFinite(l.warrior?.sixthSenseHeal)?'Sixth Sense / Heal +'+l.warrior.sixthSenseHeal+' HP':'',defeated:s.hp<=0,bossDetail:['success','perfect'].includes(l.parryResult)?[l.parryBlocked>0?'Parry reduced damage by '+l.parryBlocked:null,dot>0?'Ongoing damage -'+dot+' HP':null,mechanic>0?'Mechanic damage -'+mechanic+' HP':null,s.hp<=0?'Defeated':null].filter(Boolean).join(' · '):'',passiveNotice,empowermentDetail,nextAttackEmpowered:s.hp>0&&!!sharp,counter:l.counterDamage>0?'COUNTER'+(C.counterTier(l,s)>0?' '+C.label(C.counterTier(l,s)):'')+'!  '+l.counterDamage+' DAMAGE':'',dotLine:['success','perfect'].includes(l.parryResult)?'':dotLine,effects:effects.join('  /  '),criticalTier:C.tier(l),counterCritTier:C.counterTier(l,s),critical:!!l.critical||l.parryResult==='perfect',severe:direct+mechanic>=Math.max(20,Math.ceil(s.stats.hp*.15))};
+}
+
+function readable(value){return String(value||'').toLowerCase().replace(/\b(hp|xp|atk|def)\b/g,x=>x.toUpperCase()).replace(/\blv(\d+)\b/g,(_,n)=>'Lv'+n).replace(/\bcritical\b/g,'Critical').replace(/(^|[\/!]\s*)([a-z])/g,(_,prefix,c)=>prefix+c.toUpperCase()).replace(/\bblade trance\b/gi,'BLADE TRANCE');}
+
+// Measure actual glyph advances using the same renderer and font as the output.
+const widths=new Map();
+function width(value,size){const key=size+':'+value;if(widths.has(key))return widths.get(key);const r=new Resvg('<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="80"><text x="0" y="50" font-family="Noto Sans KR" font-weight="bold" font-size="'+size+'">'+esc(value)+'</text></svg>',fontOptions);const b=r.innerBBox(),w=b?b.width:0;widths.set(key,w);if(widths.size>2000)widths.delete(widths.keys().next().value);return w;}
+function wrapUncached(value,size,maxWidth,maxLines=3){const words=String(value||'').trim().split(/\s+/).filter(Boolean),rows=[];let row='';for(const word of words){const candidate=row?row+' '+word:word;if(width(candidate,size)<=maxWidth){row=candidate;continue;}if(row){rows.push(row);row='';}if(width(word,size)<=maxWidth){row=word;continue;}for(const c of word){if(row&&width(row+c,size)>maxWidth){rows.push(row);row='';}row+=c;}}if(row)rows.push(row);if(rows.length>maxLines){rows.length=maxLines;let end=rows.at(-1);while(end&&width(end+'…',size)>maxWidth)end=end.slice(0,-1);rows[maxLines-1]=end+'…';}return rows;}
+// Reuse exact line breaks; measurement, clipping and typography stay unchanged.
+// Return fresh arrays so callers cannot mutate the cached layout.
+const wrappedLines=new Map(),WRAP_MAX_ENTRIES=256,WRAP_MAX_BYTES=128*1024;
+let wrappedBytes=0;
+function wrap(value,size,maxWidth,maxLines=3){
+ const input=String(value||'');
+ if(input.length>2048||!Number.isFinite(size)||!Number.isFinite(maxWidth)||!Number.isInteger(maxLines)||maxLines<1)return wrapUncached(input,size,maxWidth,maxLines);
+ const key=JSON.stringify([input,size,maxWidth,maxLines]),cached=wrappedLines.get(key);
+ if(cached){wrappedLines.delete(key);wrappedLines.set(key,cached);return cached.rows.slice();}
+ const rows=wrapUncached(input,size,maxWidth,maxLines),bytes=Buffer.byteLength(key)+rows.reduce((n,row)=>n+Buffer.byteLength(row),0);
+ if(bytes<=WRAP_MAX_BYTES){wrappedLines.set(key,{rows:rows.slice(),bytes});wrappedBytes+=bytes;
+  while(wrappedLines.size>WRAP_MAX_ENTRIES||wrappedBytes>WRAP_MAX_BYTES){const first=wrappedLines.keys().next().value;wrappedBytes-=wrappedLines.get(first).bytes;wrappedLines.delete(first);}
+ }
+ return rows;
+}
+function render(m,l){return require('./raid-metal-ui').feedSVG(m,l,wrap,readable,log=>icons.asset(log).attachment.toString('base64'));}
+function offerDetail(s){const o=s.offer,parts=[];if(o.healRate)parts.push('Heal +'+o.heal+' HP');if(o.energyCost)parts.push('Energy -'+o.energyCost);if(o.hpLoss)parts.push('HP -'+o.hpLoss);if(o.outgoing)parts.push('Damage dealt '+(o.outgoing>0?'+':'')+Math.round(o.outgoing*100)+'%');if(o.incoming)parts.push('Damage taken '+(o.incoming>0?'+':'')+Math.round(o.incoming*100)+'%');if(o.lifesteal)parts.push('Lifesteal '+Math.round(o.lifesteal*100)+'%');if(o.charm)parts.push('Charm '+o.charm+' turns');if(o.remaining)parts.push(o.remaining+' turns');return parts.join(' · ')||'Press NEXT to return to battle.';}
+function asset(a){const s=a.state,source=a.offerScene?{...s,log:s.log.filter(l=>!l.offerCinematic)}:s;let m=model(source,!!a.cutsceneResult);const l=source.log.at(-1)||{};if(a.offerScene){const prelude=a.offerScene==='prelude',choice=a.offerScene==='choice';m=prelude?{...m,hint:require('./raid-succubus').active(s)?"NEXT ACTION / DEVIL'S OFFER":'NEXT ACTION',storyLines:[require('./raid-succubus').active(s)?"Devil's Offer: she prepares a contract.":'She smiles and looks at you.'],secondary:'Press NEXT to hear her proposal.',progress:null,mechanicText:''}:{...m,offerEvent:true,hint:'NEXT ACTION',storyLines:[choice?'Choose YES or NO.':'Press NEXT to return to battle.'],secondary:'',boss:choice?'She tempts you with a promise of power.':s.offer.choice==='yes'?'Bargain accepted.':'Offer refused.',bossDetail:choice?'Will you accept her offer?':offerDetail(s),dotLine:'',counter:'',nextAttackEmpowered:false,progress:null,mechanicText:''};}const key=JSON.stringify([s.turn,a.offerScene,s.totals?.damage,m,l]);if(a.feedCache?.key===key)return a.feedCache.asset;m=require('./berserker-ui.cjs').feed(m,s,l);const drawing=render({...m,totalDamage:s.totals?.damage||0},l),result={name:'battle-feed-'+s.turn+'.png',attachment:new Resvg(drawing.svg,fontOptions).render().asPng(),description:[m.hint,...m.storyLines,m.secondary,m.mechanicText,'Last combat turn result',readable(m.own),readable(m.boss),m.bossDetail,readable(m.counter),readable(m.dotLine),m.effects].filter(Boolean).join(' / ')};a.feedCache={key,asset:result};return result;}
+module.exports={asset,model,wrap,render,readable};
