@@ -1,0 +1,135 @@
+{
+  "version": "1.3.1",
+  "kind": "historical-incremental-coordinated-change-patch",
+  "deploymentCompleted": "2026-11-13T15:35:00Z",
+  "timestampPrecision": "minute",
+  "files": [
+    {
+      "file": "raid-avatar.js",
+      "sha256": "cdedb4347c374db14b21a32c498b633141b027357f748cd716657cc6b3650bca",
+      "baselineSHA256": "66b552a942117e88fa615127e7a9e16ca80857c2db4cd4577caba9037279845f"
+    },
+    {
+      "file": "raid-class-card.js",
+      "sha256": "7abcc22b391686c5b14a59ec6edd11a5269931537daadbc8d8f6738e9f01b0ea",
+      "baselineSHA256": "4d58b5648ceee4ddc528b59b8da464c9a7551ee52dc383b305db5ec9d1ea12c0"
+    },
+    {
+      "file": "raid-class-name.js",
+      "sha256": "dab366b9f7a0ecac0ea2524b362e995d9b9fadf646f170a96155a0402ea68351",
+      "baselineSHA256": null
+    },
+    {
+      "file": "raid-class-view.js",
+      "sha256": "90b1bf7bfe941fd9f4876b1646d057dc5f3e5fea80ca1432ad438376687ae283",
+      "baselineSHA256": "6c9558e8bbcb5b5319c3da7f375d460d75d63ad18b6207aa8b748514a16d48c5"
+    },
+    {
+      "file": "raid-engine/roles-engine.js",
+      "sha256": "29c170870a66a1ea195ab3523c42e4f1ccb089f2ad5cc171879d69b7ad9fc770",
+      "baselineSHA256": "8351c6cb715a80b3ffc2edf4fd8d7a05cc1ed9e69f2342165e68ea03fc1a8c6c"
+    },
+    {
+      "file": "raid-entry-flow.js",
+      "sha256": "c04a3903f469eb347a5d61d3826cb9ed3b27cdfa28ea4f86f459303fe69e8561",
+      "baselineSHA256": "30cb8d7c5f7c177c5091cdf2a59880c24dbdf757cf4b583f555af459ce6d5af3"
+    },
+    {
+      "file": "raid-intent-story.js",
+      "sha256": "31661be7d4bd600b2328f9a98ab472985e7c0d46f8ebaf5c515580038967b824",
+      "baselineSHA256": "e22c7372ed8985fe8a07251588eba452886e02f539bb662da0abeb2fde70bbca"
+    },
+    {
+      "file": "raid-leaderboard.js",
+      "sha256": "de165e0a49910fe5eedd335bd295b3d89badd282fbc4894a7eb145d0297abf8e",
+      "baselineSHA256": "6cbc4b18af71eb8117666654a1273c058c82e130689b920e7527bc4ed2783774"
+    },
+    {
+      "file": "raid-metal-ui.js",
+      "sha256": "0818548c15de9e5dab4f9d5bd4e39b36d16492a4b2379b467036e88442ed1729",
+      "baselineSHA256": "10c462483228e54049f1704faa366dde507dd66f8330c67d1b65d0c491893cc8"
+    },
+    {
+      "file": "raid-ranking-card.js",
+      "sha256": "c9cfff905579be74c7b601e7a3f30a5cbe7d2e8083737ccc89c7405fa6ff82e8",
+      "baselineSHA256": "9b112fd47f19b92bff006779d9e7e5c32608a9bcc1ff6fb0bf364f1e559e5fc3"
+    },
+    {
+      "file": "raid-recent-card.js",
+      "sha256": "b2ddbddfa5d6cf1ac4babd97501e8ba384f01cc367388b8ac8054f9443982abd",
+      "baselineSHA256": "6c303f6e7c808ab1358ab85be11ce10bbca89d092edf26f4033f3d304647ddf0"
+    },
+    {
+      "file": "raid-rules-card.js",
+      "sha256": "fc965587eb06bf2f4f3ae97ac59f8cc59449b70ca47675868f5ae92cb307009b",
+      "baselineSHA256": "70becc17eae70dad1d3e876e83b571f80ed357d158d20fdbbe97989863918c1f"
+    },
+    {
+      "file": "raid-scene.js",
+      "sha256": "5160dd1788e6a44da652456d12fbde9f031084a785829dc3e0af9e3ca99ab67f",
+      "baselineSHA256": "83d05d6c36939b9bdb33dac936d1da955e3bdc61199e5ae186770b2b560e0657"
+    },
+    {
+      "file": "raid-skill-guide.js",
+      "sha256": "8dafbf43a6ed4f6e91e5dba6e6868b8b37f0f5c7678a9a13933cb3009058d71c",
+      "baselineSHA256": "ebc5238eb837e25fa2117a5e63b96315f43855ff8898df32894d8709f89dd216"
+    },
+    {
+      "file": "raid-status.js",
+      "sha256": "749474beffd3e1d133d44882c14fcc72ba65b61eb243a598435dc9205602c5fa",
+      "baselineSHA256": "aa34b762fe307aeeaaf58e72caa68f517ac083bfcd1fbfcf8975b53e44522aff"
+    },
+    {
+      "file": "raid-test-build.js",
+      "sha256": "65ea6766bb563e78ff74bbd85ea690e2024a61919464bafe8e9e831436ff99c0",
+      "baselineSHA256": "527a297508ec7a14afb4e9eac699f51a295169d1162c7d5dbfb36b7661152abe"
+    },
+    {
+      "file": "raid-test.js",
+      "sha256": "4594cee1c576ae78a13e6dea5268379b9799939bdf58bab6e2747b0c048a0b2c",
+      "baselineSHA256": "c3d5492b4d6417573e4694f51e840f0eaf4c9d1aa1f21d1c228099647b07dcf1"
+    },
+    {
+      "file": "raid-workshop-card.js",
+      "sha256": "91a236004820f8ca4c82f68a8b7df425fc6fb81eef6581b1327bf089ddabac35",
+      "baselineSHA256": "1d489fc1ba444a1fce1a74ecf0cbaea296a0b981562c67696676a675f7be9de9"
+    },
+    {
+      "file": "raid-workshop-class.js",
+      "sha256": "74a535e4bd8f16af6220c08bccd8aa8c026e321abad887356f4f7dea46403732",
+      "baselineSHA256": "9f9c76ef41960da0ac6206143fadc55b34a27bc210c84ec806497b3d3adb9370"
+    },
+    {
+      "file": "raid-workshop-detail.js",
+      "sha256": "e4e0e70c5c489531d6b5546b615c281e2c43fef0223003e93e0b72c80a339f89",
+      "baselineSHA256": "f5d487c610ae913d033fe22fd6bc870b3c91b3c4c6c2f1dbb6ad79ef239d97f3"
+    },
+    {
+      "file": "raid-workshop-model.js",
+      "sha256": "93c27c718abab8981c6cf88a7cd4319039e6bbf7886a5c59a8308c550f2b00a4",
+      "baselineSHA256": "44606bfa25c162e2934dd7b4f5250c2b2d1b95cee780b940486df870fa4eaa6c"
+    },
+    {
+      "file": "raid-workshop-view.js",
+      "sha256": "9be587634de77b2b0aeaccbd3cee260062e4ffae1d63b28fb48ba5937e38aa74",
+      "baselineSHA256": "2e13af345a8cd50368d4235e100115f350be82b8d2db0c63e6b86d2bcbe6e37b"
+    },
+    {
+      "file": "raid-workshop-visuals.js",
+      "sha256": "9a86a2f06d377348d59af9fe1796560c67fc1b48d137b0ba783bffefed1859ca",
+      "baselineSHA256": "4da1afb3558acf833be70729c2372a0cfcefa970206826165f1e376aef0eb20b"
+    },
+    {
+      "file": "raid-workshop.js",
+      "sha256": "3a45ee60a88eafcb16ad0c9ad757ab47d4bdc8a297d43dc6908d5fa56cc82a7c",
+      "baselineSHA256": "a3d1797c7c086ff98852b50a6875bc3c189818d689f9fd5ff741e7a3ad1ea080"
+    },
+    {
+      "file": "succubus-art-20261113/boss-art-map.json",
+      "sha256": "dc29c8cc5dc57d67bb533f2ce123f1dba9110a61a85665342695bacd10be23eb",
+      "baselineSHA256": "a446ce66fa3f37625762990de5225ad384260b8f5243b6fbea4d927f31055239"
+    }
+  ],
+  "actualDiscordPlaytest": false,
+  "cumulativeFromV13": false
+}

@@ -1,0 +1,190 @@
+{
+  "bossId": "nameless_succubus",
+  "displayName": "Nameless Succubus",
+  "type": "daily",
+  "baseBoss": "Earth Colossus",
+  "integrationStatus": "Presentation mapping for final user-supplied Succubus.zip",
+  "inherit": "Keep existing Earth Colossus numerical stats, turn flow, counter windows and existing special mechanic rules; change presentation only except charm effect below.",
+  "charm": {
+    "id": "charm",
+    "displayName": "Charm",
+    "icon": "Status-Curse Icon Charm.png",
+    "durationTurns": 5,
+    "attackBlockChancePerTurn": 0.3,
+    "reapplication": "remainingTurns += 5",
+    "potencyStacks": false,
+    "blocks": "attacks only, not all actions",
+    "note": "Duration extends additively; never reset remaining duration to 5. Attack eligibility/turn-decrement ordering must match main combat engine and be tested."
+  },
+  "states": {
+    "idle": {
+      "image": "Normal/00 idle.jpg"
+    },
+    "basic1": {
+      "name": "Crimson Claw",
+      "description": "She leans in, slowly curling her extended fingers.",
+      "image": "Normal/01 Attack1.jpg"
+    },
+    "basic2": {
+      "name": "Scarlet Needle",
+      "description": "She fixes her gaze on you, extending a single finger.",
+      "image": "Normal/02 Attack2.jpg"
+    },
+    "heavyPrepare": {
+      "name": "Crimson Seed",
+      "description": "She cups her hands around a faint red glow.",
+      "image": "Normal/03 Heavy_Prep.jpg"
+    },
+    "heavy": {
+      "name": "Blood Surge",
+      "description": "She thrusts her palms forward. The air trembles.",
+      "image": "Normal/04 Heavy_Attack.jpg"
+    },
+    "special": {
+      "name": "Shard Calling",
+      "description": "She lifts her hands as crimson fragments swirl.",
+      "image": "Normal/08 Mechanic_Prap A.jpg",
+      "rules": "Use existing Colossus special mechanic; no new mirror-selection UI or rule."
+    },
+    "cursePrepare": {
+      "name": "Wicked Glance",
+      "description": "Two fingers touch her temple as she smiles.",
+      "image": "Normal/05 Curst_Prep.jpg"
+    },
+    "curse": {
+      "name": "Abyssal Eye",
+      "description": "A crimson pattern forms above her open palm.",
+      "image": "Normal/06 Curse_Cast.jpg"
+    },
+    "enragedIdle": {
+      "image": "Enraged/00_Enrage_Idle.jpg",
+      "name": "Crimson Fury",
+      "description": "She smiles, arms wide, as crimson energy coils."
+    },
+    "enragedBasic1": {
+      "name": "Savage Claw",
+      "description": "She lunges forward, claws cutting through the air.",
+      "image": "Enraged/01 Enraged_Attack1.jpg"
+    },
+    "enragedBasic2": {
+      "name": "Twin Rupture",
+      "description": "She extends both hands, crimson sparks gathering.",
+      "image": "Enraged/02 Enraged_Attack2.jpg"
+    },
+    "enragedHeavyPrepare": {
+      "name": "Blood Vortex",
+      "description": "A crimson mass swirls above her raised arms.",
+      "image": "Enraged/03 Enraged_Heavy_Prep.jpg"
+    },
+    "enragedHeavy": {
+      "name": "Crimson Devastation",
+      "description": "She thrusts both palms forward, wings flaring.",
+      "image": "Enraged/04 Enraged_Heavy_Release.jpg"
+    },
+    "enragedSpecial": {
+      "name": "Shard Calling",
+      "description": "She lifts her hands as crimson fragments swirl.",
+      "image": "Normal/08 Mechanic_Prap A.jpg",
+      "rules": "Use existing Colossus special mechanic; no new mirror-selection UI or rule."
+    },
+    "enragedCursePrepare": {
+      "name": "Wicked Glance",
+      "description": "Two fingers touch her temple as she smiles.",
+      "image": "Normal/05 Curst_Prep.jpg"
+    },
+    "enragedCurse": {
+      "name": "Abyssal Eye",
+      "description": "A crimson pattern forms above her open palm.",
+      "image": "Normal/06 Curse_Cast.jpg"
+    },
+    "playerExhausted": {
+      "image": "Normal/12 Player_Defeated.jpg"
+    },
+    "defeated": {
+      "image": "Normal/13 Player Victory.jpg",
+      "note": "Final user-approved pose: two arms, one holding opposite upper arm; small bandaged head bump."
+    },
+    "groggy": {
+      "image": "Normal/11 Stagger_A.jpg",
+      "name": "Broken Poise",
+      "description": "She doubles over, chest clutched, wings faltering."
+    },
+    "enragedGroggy": {
+      "image": "Normal/11 Stagger_A.jpg",
+      "name": "Broken Poise",
+      "description": "She doubles over, chest clutched, wings faltering."
+    },
+    "warriorUltimateHit": {
+      "image": "Normal/14 Warrior Ultimate hit.jpg",
+      "note": "White-silver crescent from bottom-left upward into torso, as confirmed by main thread."
+    },
+    "hit": {
+      "image": "Normal/07 Hit reaction.jpg",
+      "name": "Hex Recoil",
+      "description": "She winces and clutches her head in pain."
+    },
+    "specialPrepareB": {
+      "image": "Normal/09 Mechanic_Prap B.jpg",
+      "name": "Twin Vortex",
+      "description": "Crimson spirals tighten around her parted hands."
+    },
+    "specialCast": {
+      "image": "Normal/10 Mechanic_Cast.jpg",
+      "name": "Crimson Rite",
+      "description": "Arms wide, she stands beneath a crimson circle."
+    },
+    "groggyFinal": {
+      "image": "Normal/12 Stagger_B.jpg",
+      "name": "Second Breath",
+      "description": "Trembling, she lifts her head and breathes steadily."
+    },
+    "paladinUltimateHit": {
+      "image": "Normal/15 Paladin Ultimate hit.jpg"
+    },
+    "berserkerUltimateHit": {
+      "image": "Normal/16 Berserker Ultimate Hit.jpg"
+    },
+    "offer": {
+      "image": "Enraged/06 Special_Devils_Contract_Offer.jpg",
+      "name": "Devil's Bargain",
+      "description": "She touches her lips, offering a glowing scroll."
+    },
+    "offerYes": {
+      "image": "Enraged/07 Special_Devils_Contract_Offer YES.jpg"
+    },
+    "offerNo": {
+      "image": "Enraged/08 Special_Devils_Contract_Offer NO.jpg"
+    },
+    "enragedIdle2": {
+      "image": "Enraged/09 Enrage_Level 2.jpg",
+      "name": "Blood Awakening",
+      "description": "Wings flare as crimson currents swirl around her."
+    },
+    "enragedIdle3": {
+      "image": "Enraged/10 Enrage_maximum.jpg",
+      "name": "Abyssal Ascension",
+      "description": "Head back, she roars as crimson energy erupts."
+    },
+    "charmIcon": {
+      "image": "Status-Curse Icon Charm.png"
+    },
+    "entrance": {
+      "image": "succubus-entrance-static.jpg"
+    },
+    "enragedSpecialPrepareB": {
+      "image": "Normal/09 Mechanic_Prap B.jpg",
+      "name": "Twin Vortex",
+      "description": "Crimson spirals tighten around her parted hands."
+    },
+    "enragedSpecialCast": {
+      "image": "Normal/10 Mechanic_Cast.jpg",
+      "name": "Crimson Rite",
+      "description": "Arms wide, she stands beneath a crimson circle."
+    },
+    "enragedHit": {
+      "image": "Normal/07 Hit reaction.jpg",
+      "name": "Hex Recoil",
+      "description": "She winces and clutches her head in pain."
+    }
+  }
+}
