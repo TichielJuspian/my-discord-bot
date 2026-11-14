@@ -1,0 +1,20 @@
+'use strict';
+const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+const shapes={shield:'M12 3L20 6V12Q20 18 12 22Q4 18 4 12V6Z',sword:'M5 20L19 4L20 9L9 21ZM4 15L12 22',star:'M12 2L15 9L23 10L17 15L19 23L12 19L5 23L7 15L1 10L9 9Z',bolt:'M14 2L5 14H11L9 23L21 9H14Z',heart:'M12 21Q0 13 3 6Q8 1 12 7Q16 1 21 6Q24 13 12 21Z',eye:'M2 12Q12 0 22 12Q12 24 2 12ZM12 8A4 4 0 1 0 12 16A4 4 0 1 0 12 8',swirl:'M4 6Q21 0 21 8Q20 13 5 12Q0 17 18 17L10 22',scroll:'M5 3H19V22L15 19L12 22L9 19L5 22ZM9 8H16M9 12H16'};
+function effects(s){const b=s.sharedBuffEffects||{},out=[],add=(name,shape,count,description,bad=false)=>out.push({name,shape,count,description,bad});
+ if(b.hp>0)add('Protection','shield',Math.max(1,Math.round(b.hp/30)),'Maximum HP +'+b.hp);
+ if(b.attack>0)add('Battle Rally','sword',Math.max(1,Math.round(b.attack/.1)),'Attack +'+Math.round(b.attack*100)+'%');
+ if(b.crit||b.critDamage)add('Blessing','star',Math.max(1,Math.round((b.crit||b.critDamage)/10)),'Critical chance +'+(b.crit||0)+'%; critical damage +'+(b.critDamage||0)+'%');
+ if(s.boosterCount>0)add('Booster','bolt',1,'Attack +20%');
+ if(s.config.job==='paladin'){const P=require('./raid-engine/paladin-rules.cjs');if(s.paladinBlessing)add('Hammer Blessing','star',s.paladinBlessing,'Smash damage +'+P.blessingBonus(s)+'%. Lasts for this battle.');if(s.protectionTurns>0)add('Protection','shield',s.protectionTurns,'Next turn: ATK +'+P.protectionBonus(s)+'%, DEF +30%, direct damage taken -20%.');}
+ if(s.config.job==='warrior'){if(s.thrustParryBuff)add('Parry Empowerment','sword',1,'Next Thrust: CRIT +'+(s.thrustParryBuff==='perfect'?50:30)+' percentage points; damage +'+(s.thrustParryBuff==='perfect'?50:30)+'%.');if(s.slashParryTurns)add('Slash Setup','sword',s.slashParryTurns,'Next turn only: Perfect Parry chance +10 percentage points.');if(s.parryMomentum)add('Parry Momentum','shield',s.parryMomentum,'Perfect Parry chance +'+(s.parryMomentum*10)+' percentage points. Resets on Perfect.');if(s.perfectDefenseTurns)add('Perfect Defense','shield',s.perfectDefenseTurns,'DEF +20%.');if(s.keenInstinct)add('Keen Instinct','eye',1,'Next Parry: Perfect chance +10 percentage points.');if(s.thrustCasts)add('Thrust Mastery','star',s.thrustCasts,(s.thrustCasts>=require('./raid-engine/warrior-rules.cjs').threshold(s)?'Deep Thrust active: 320% ATK.':'Evolves at progress '+require('./raid-engine/warrior-rules.cjs').threshold(s)+'.'));}
+ if(s.offer?.remaining)add("Devil's Contract",'scroll',null,require('./raid-devil-offer-view').effect(s));
+ if(s.marks>0)add('Sandstorm','swirl',s.marks,s.marks*3+' damage per turn.',true);
+ if(s.charmTurns>0)add('Charm','eye',null,s.charmTurns+' turns remaining. 30% attack interruption; class passives sealed.',true);
+ return out;
+}
+function svg(s){const all=effects(s),shown=all.length>8?[...all.slice(0,7),{name:'More effects',shape:'star',count:'+'+(all.length-7)}]:all;
+ return shown.map((e,i)=>{const x=500+i%4*28,y=79+Math.floor(i/4)*28,c=e.bad?'#ff879f':'#f2d691';return `<g transform="translate(${x} ${y})"><title>${esc(e.name)}</title><rect width="24" height="24" rx="5" fill="${e.bad?'#48233b':'#243751'}" stroke="${c}"/><path d="${shapes[e.shape]}" transform="translate(3 3) scale(.72)" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${e.count!=null?`<rect x="14" y="14" width="13" height="12" rx="3" fill="#0d1729"/><text x="20" y="24" text-anchor="middle" font-family="Arial" font-size="11" font-weight="bold" fill="white">${esc(e.count)}</text>`:''}</g>`}).join('');
+}
+function payload(a){const list=effects(a.state);return {flags:32768,attachments:[],allowedMentions:{parse:[]},components:[{type:17,accent_color:0xc9a967,components:[{type:10,content:'## ACTIVE EFFECTS\n'+(list.length?list.map(e=>'**'+e.name+(e.count>1?' x'+e.count:'')+'**\n'+e.description).join('\n\n'):'No active effects.')},{type:1,components:[{type:2,style:1,label:'Back to Battle',custom_id:`raidtest:${a.id}:${a.state.turn}:battle`}]}]}]};}
+module.exports={effects,svg,payload};

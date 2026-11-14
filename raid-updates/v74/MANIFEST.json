@@ -1,0 +1,687 @@
+[
+  {
+    "file": "raid-engine/warrior-rules.cjs",
+    "bytes": 2284,
+    "sha256": "39fa5932ba8083404c658dc2b97f377b8b9aa6c6d40bf75b26c87fc4380b3dc9"
+  },
+  {
+    "file": "raid-engine/paladin-rules.cjs",
+    "bytes": 1970,
+    "sha256": "11fc910aaea1ce06f0883a536f445003ed7aeba89439ed54343110fa406b47fd"
+  },
+  {
+    "file": "raid-engine/berserker-rules.cjs",
+    "bytes": 6285,
+    "sha256": "5a9d233fb5cb0c73993b0a27df0a11f472414421673d3830c44c5514ffb285cf"
+  },
+  {
+    "file": "raid-engine/enrage-stages.cjs",
+    "bytes": 1044,
+    "sha256": "890a7ab343e639af3077feb048f7f55afdfdebe384c084dafb4b43263b3ed83b"
+  },
+  {
+    "file": "raid-engine/warrior-source.cjs",
+    "bytes": 2807,
+    "sha256": "713b70097e7904eefcd90b7316063211f65aa963c2113591023f589a62fb121d"
+  },
+  {
+    "file": "raid-engine/pattern-director.cjs",
+    "bytes": 5261,
+    "sha256": "885710885d5444a7c6d4769b685b729b2ba5f62e505cc0c918fcd6bccf911a4b"
+  },
+  {
+    "file": "raid-engine/gimmick-trial-engine.cjs",
+    "bytes": 28108,
+    "sha256": "5bf65070a20bccbf2b7f6cf39802816059d3174b459d5545bdab76afbd17714b"
+  },
+  {
+    "file": "raid-engine/progression-combat.cjs",
+    "bytes": 4257,
+    "sha256": "3f226e11bd40e8694a00cb4f9282fa9009b2bccb094e2bb46c7c4375fce5896b"
+  },
+  {
+    "file": "raid-workshop-model.js",
+    "bytes": 13752,
+    "sha256": "44606bfa25c162e2934dd7b4f5250c2b2d1b95cee780b940486df870fa4eaa6c"
+  },
+  {
+    "file": "raid-item-effect-card.js",
+    "bytes": 1517,
+    "sha256": "856b3597a79223eede00667c17b17ca2f533a15d2ec3040536c10595593b5e38"
+  },
+  {
+    "file": "raid-engine/mechanic-rules.cjs",
+    "bytes": 794,
+    "sha256": "f3694afabea33244131513d70f0a33003b24797383b2497474ab57211f8f1958"
+  },
+  {
+    "file": "raid-skill-guide.js",
+    "bytes": 17830,
+    "sha256": "56ae4a703da0fff181ed6c842c0fe4f9085bdcfc0de7faabe7e519da573b62d3"
+  },
+  {
+    "file": "berserker-guide.cjs",
+    "bytes": 3713,
+    "sha256": "d53f3a635ba6b18cffae47e201a6f8704fb171eca6da236f28d9fb1119836cb6"
+  },
+  {
+    "file": "raid-compact-effects.js",
+    "bytes": 4077,
+    "sha256": "52ed3338fc06de4a21549a6f1c48bb71267e0e3c33c4e74cc1f4c89e69a15f21"
+  },
+  {
+    "file": "berserker-ui.cjs",
+    "bytes": 3129,
+    "sha256": "d73026c1d7a0b399fa31c300d5dac157c5f7a409ecad73b5b6684ff53080fd9d"
+  },
+  {
+    "file": "raid-workshop-render.js",
+    "bytes": 2845,
+    "sha256": "2c6ac5c8570149c7fe0a87cfedb4da55a3f74d83f03f2de87054b04c1f8edf77"
+  },
+  {
+    "file": "raid-workshop-view.js",
+    "bytes": 8114,
+    "sha256": "5b9d8c2886f08a2550717deaa1031b938e0355ff2cbca121386aac32912a2750"
+  },
+  {
+    "file": "raid-workshop.js",
+    "bytes": 13654,
+    "sha256": "305b7be489708bee91678e98cc03f88c440c08e34d7f58fa1fa18850e692d90b"
+  },
+  {
+    "file": "raid-workshop-card.js",
+    "bytes": 9159,
+    "sha256": "6efa8bf8c31c388f66a3ebbfdf25f9d7ed103842bb5d666746fbe582cbdcffac"
+  },
+  {
+    "file": "raid-workshop-visuals.js",
+    "bytes": 3120,
+    "sha256": "de66e0afa372e650459adbac762e9c97dd5ff67f518a7b32a101402e99bddb60"
+  },
+  {
+    "file": "raid-workshop-cache.js",
+    "bytes": 781,
+    "sha256": "7eb61b4e6b1a23596f392932ff6b89d992a72e062f0d01c2ef2870f2af65ee27"
+  },
+  {
+    "file": "raid-workshop-guide.js",
+    "bytes": 282,
+    "sha256": "dd21a63d5180096e33efef0ceb64d384ed0b0b116fada2705cc9c484a6279611"
+  },
+  {
+    "file": "raid-workshop-worker.js",
+    "bytes": 1073,
+    "sha256": "2d421d6cd499737659ae47b1121a74158971e889abef12fb1f28e9257e4e6b38"
+  },
+  {
+    "file": "raid-static-card.js",
+    "bytes": 6511,
+    "sha256": "c207a8172c82c567a222fe6fdf4618e80674b6c2387e9ae1efb44a7a82b37b22"
+  },
+  {
+    "file": "raid-portrait-quality.js",
+    "bytes": 734,
+    "sha256": "b8d10fb65f1229ca81ed3d278934cb1ec0c476a7b9ddf3c8d66cdeaccb495bfe"
+  },
+  {
+    "file": "raid-legendary-motion.js",
+    "bytes": 1214,
+    "sha256": "4f436b19ff7bd9947f4861ce2215e0d155982da443e64cf0052014fc36dd35be"
+  },
+  {
+    "file": "raid-divine-smite.json",
+    "bytes": 541378,
+    "sha256": "2d1381576e6e099738c31fadab9fc0590a9616e5cfabead61adf78b6e9a23dde"
+  },
+  {
+    "file": "raid-prebuilt-guide.js",
+    "bytes": 956,
+    "sha256": "fa68e3b36998dc224cf0ccff5215593a55c97d18808c66f3ccb3079f4d54827f"
+  },
+  {
+    "file": "skill-ready-warrior-normal-core.json",
+    "bytes": 793811,
+    "sha256": "676ac014fa16db47a64899a536c8216b69eab87f08f1642a717a023e15010a89"
+  },
+  {
+    "file": "skill-ready-warrior-normal-passives.json",
+    "bytes": 282224,
+    "sha256": "67d1e8529b1b7baaca6e045e859909610ae10d579a2877eabceb437941b382df"
+  },
+  {
+    "file": "skill-ready-warrior-legendary-core.json",
+    "bytes": 818647,
+    "sha256": "8a0e6adc14b5e6cc200d0c8264e67ea2fce69edaee278dee6e1d32e5d23f13ae"
+  },
+  {
+    "file": "skill-ready-warrior-legendary-passives.json",
+    "bytes": 274616,
+    "sha256": "786e94ce69a13b740cb4772d32b05d6f388d3bf24d3a3dc168ae865da75acec2"
+  },
+  {
+    "file": "skill-ready-paladin-normal-core.json",
+    "bytes": 774461,
+    "sha256": "69072cef8b05ff7f8f116900c72d6dc18c76ac27edd3ad801037d1c8af2142d6"
+  },
+  {
+    "file": "skill-ready-paladin-normal-passives.json",
+    "bytes": 230392,
+    "sha256": "6e0b8e0a80dd7c003c1c7dd4b096e4a7ee41f25ec1f9936b8dc7c47ef99ab419"
+  },
+  {
+    "file": "skill-ready-paladin-legendary-core.json",
+    "bytes": 772093,
+    "sha256": "b4c1957a90e66cd4e2576750a939dc40fe8261090c982cd2b6b23ef34052c0ca"
+  },
+  {
+    "file": "skill-ready-paladin-legendary-passives.json",
+    "bytes": 270196,
+    "sha256": "8c780338ae1c87d9ae5e4720c44ae5671ebdacf108f7dcc6a49e7bed080d8565"
+  },
+  {
+    "file": "skill-ready-berserker-normal-core.json",
+    "bytes": 749534,
+    "sha256": "efd105ea051d951464e3a8a37b8eba21368e29fb70146c0a313cf0861d975810"
+  },
+  {
+    "file": "skill-ready-berserker-normal-passives.json",
+    "bytes": 257238,
+    "sha256": "3d501ec80e67b2003d33dfd9c60ded0d2399313a07987a5b924b43f03baac150"
+  },
+  {
+    "file": "skill-ready-berserker-legendary-core.json",
+    "bytes": 839218,
+    "sha256": "d15d504e44b215cde5425adf49c8350ba00e3e5596266dfc80bf6259fbd0bd0f"
+  },
+  {
+    "file": "skill-ready-berserker-legendary-passives.json",
+    "bytes": 286970,
+    "sha256": "2e5e92408a68d44d112562308e3b18addbac35499bec0ce313a30dfb44f154c0"
+  },
+  {
+    "file": "skill-ready-manifest.json",
+    "bytes": 82,
+    "sha256": "dd05ce3907cff4e7578139368f35482f7719342c6bfe29627880b2f7dd879dd0"
+  },
+  {
+    "file": "raid-entry-flow.js",
+    "bytes": 6422,
+    "sha256": "ec816636a010a51aea95a40276493b3821f20269fa26d9f6d15fc1aed62f5b16"
+  },
+  {
+    "file": "raid-test.js",
+    "bytes": 38927,
+    "sha256": "47d2688af44ea47784c5f3bbdf732739f5c06b723f2dd1561013e34d67f65913"
+  },
+  {
+    "file": "raid-workshop-forge.js",
+    "bytes": 5476,
+    "sha256": "7ee1e4746ca43ffc3a2d3cb70f06d678143a8568e540c59b1cc0153e422f188b"
+  },
+  {
+    "file": "raid-attachment-cache.js",
+    "bytes": 2330,
+    "sha256": "30651e75cdbef939cf86fe58e8707d3b995c11f1005c97a73444adcd18825f31"
+  },
+  {
+    "file": "raid-panels.js",
+    "bytes": 11188,
+    "sha256": "436a3f5be4ed0e0386f575280ea7d42ac61c669c6cf140e77012eafffc2b8627"
+  },
+  {
+    "file": "raid-card-motion.js",
+    "bytes": 4099,
+    "sha256": "1239ca43f63e4c105eeb5533803bad749c117be681353cc97bb32d6fe464a2f0"
+  },
+  {
+    "file": "raid-ui-art.js",
+    "bytes": 3949,
+    "sha256": "ee28c321178597ea3da32065ae3acad1b115c7650f7b9180b26e6d9da4a38962"
+  },
+  {
+    "file": "points-system.js",
+    "bytes": 15656,
+    "sha256": "cf53a019b0fc9f1bc07214809da4365ac7dfa95c239b5ba7ff7d12b771c41f37"
+  },
+  {
+    "file": "atelier-shop.js",
+    "bytes": 7534,
+    "sha256": "efe0c75a7969f22a666682c791455dc046c17d8f2818508604c115484fe938fc"
+  },
+  {
+    "file": "raid-visible-effects.js",
+    "bytes": 4984,
+    "sha256": "0caf807162ecccb53a2cb2ed779fb2968988f358588e667f54c0cab40ced34ac"
+  },
+  {
+    "file": "raid-battle-feed.js",
+    "bytes": 12494,
+    "sha256": "24f9886215f6571d5c62c6ac491920030c3eea06a4fbc3fe7cb93250ffbcb52e"
+  },
+  {
+    "file": "shop-media-cache.js",
+    "bytes": 4954,
+    "sha256": "9222c7172e1f08bb4122ee4733257c6763ef1cc2118038561d898ae88582860a"
+  },
+  {
+    "file": "raid-energy-log.js",
+    "bytes": 1125,
+    "sha256": "cc488060774d4fda89be1223d51303435d1756921427eef6ab2c10a192639a24"
+  },
+  {
+    "file": "raid-metal-ui.js",
+    "bytes": 14171,
+    "sha256": "2ccebe1004fa6eba983126ca54d8837ed4bdd3b918d2e369895f0a928c9cee51"
+  },
+  {
+    "file": "raid-combat-copy.js",
+    "bytes": 2821,
+    "sha256": "358616a5058a4f3b41d15a81bfa144eda9eb86a8beb61364310acafd78b1b062"
+  },
+  {
+    "file": "raid-lobby-card.js",
+    "bytes": 4793,
+    "sha256": "f82a7b9af04083e47c959ea178335305d7959bf4bec6bc660748b20b8962c351"
+  },
+  {
+    "file": "raid-workshop-store.js",
+    "bytes": 5025,
+    "sha256": "848f5e923920b3c84f03ff396dba87b62a71a6092e125b5df5886ea268e00bd3"
+  },
+  {
+    "file": "raid-runtime-metrics.js",
+    "bytes": 776,
+    "sha256": "e3713615c9640930082490ee9dd8fbfac8a6fc81f29fde6216545eb905dee141"
+  },
+  {
+    "file": "raid-render-worker.js",
+    "bytes": 4604,
+    "sha256": "23511c3c424d381bf743b5bc1063584cd6082cb048a9eefc77a0297f12316308"
+  },
+  {
+    "file": "raid-render-child.js",
+    "bytes": 1662,
+    "sha256": "6b7f669318d2cbeb57f27a1b0236997ac05e8c377e1beb3c5f6a95d78e7059e9"
+  },
+  {
+    "file": "raid-ui-fonts.js",
+    "bytes": 820,
+    "sha256": "059cebcd32579ff5f750baa846f1ff9ceeab2d29fc28081673c7967f44db266a"
+  },
+  {
+    "file": "raid-ui-korean-subset.otf",
+    "bytes": 108212,
+    "sha256": "55335b026182fe4188cbb97439272477ff01c075f414ec0b5ccd2a0d8c476dc6"
+  },
+  {
+    "file": "raid-ui-latin-subset.ttf",
+    "bytes": 119616,
+    "sha256": "83829d891c83e7044a6f070fc0b19a2426e6e2392e585eccaad5347adc837921"
+  },
+  {
+    "file": "raid-ui-math-subset.ttf",
+    "bytes": 93712,
+    "sha256": "5e45f97e58cb22ab3c954c6d45a634cede6716e44ebd1b3955d4abd5370f470a"
+  },
+  {
+    "file": "raid-name-fonts.js",
+    "bytes": 990,
+    "sha256": "2556d0140f18c621040e81749189731ee0cac2dce564fa67958b41ad274cacde"
+  },
+  {
+    "file": "raid-metal-assets.js",
+    "bytes": 1343,
+    "sha256": "fb0f7fabee1b006910a17e86b53c843c93576b24efa72ea78b07d9cc1d66249c"
+  },
+  {
+    "file": "raid-workshop-fonts.js",
+    "bytes": 278,
+    "sha256": "5e37276294a4c5280fa8375b3b44bc0fecfb5788f51cf38a2a96825ab6b515a5"
+  },
+  {
+    "file": "raid-battle-inventory.js",
+    "bytes": 2759,
+    "sha256": "48ed53ce65eb4582539b67873205052d80e8c9b8dc60b851df21b3d9b23bd815"
+  },
+  {
+    "file": "raid-item-catalog.js",
+    "bytes": 4888,
+    "sha256": "3b0438977768e8b715ce80410c2c1526043fbdf150e49eeba1ebe0ef0d3fcd02"
+  },
+  {
+    "file": "raid-workshop-inventory.js",
+    "bytes": 584,
+    "sha256": "91b0b4386419eb7ac02ea21a4327d81c8f31c367fd2872e045c0162220d033b1"
+  },
+  {
+    "file": "raid-workshop-detail.js",
+    "bytes": 13797,
+    "sha256": "f4cf692e86fbf222a18748e092e0ca87e1d02c3b364378fea50ed6edeba60ae5"
+  },
+  {
+    "file": "raid-characters.js",
+    "bytes": 7507,
+    "sha256": "02fb443ee8e6118d4c80b33e12089de375561b695d0268b7ae3ffc73c7d94b50"
+  },
+  {
+    "file": "raid-engine/slot-progression.cjs",
+    "bytes": 5550,
+    "sha256": "6b1c922b33d39a3e68c231140d9d615c68754a4d81df7665d233037523baa691"
+  },
+  {
+    "file": "item-common_weapon_1-v72.png",
+    "bytes": 11123,
+    "sha256": "8bf6b8270a29243716acde83a871bb907e7f890de7b88d3ffdcda71ac648270b"
+  },
+  {
+    "file": "item-common_weapon_2-v72.png",
+    "bytes": 21050,
+    "sha256": "9010c3758049bae0e2147321de6503ee2744ca2a36184c8e2e049080f2f1a6c0"
+  },
+  {
+    "file": "item-common_weapon_3-v72.png",
+    "bytes": 15256,
+    "sha256": "8680645a23d808fac81f3107df9e018bebf65c89664a3229442e4912c09b70ed"
+  },
+  {
+    "file": "item-common_weapon_4-v72.png",
+    "bytes": 19311,
+    "sha256": "cc12cd3b2bc824bf5708676fb89c933d25f160c83ce2a1fc8b0cd5a6e1d9d781"
+  },
+  {
+    "file": "item-common_weapon_5-v72.png",
+    "bytes": 18897,
+    "sha256": "3de3528019021477af4d2e892c5ae0bc804c12c743f2ea15776178105bdb5127"
+  },
+  {
+    "file": "item-common_armor_1-v72.png",
+    "bytes": 40227,
+    "sha256": "12212ae2995aaf33f373543ebb7d776d31d79f18e50e384ce491da625223e992"
+  },
+  {
+    "file": "item-common_armor_2-v72.png",
+    "bytes": 42004,
+    "sha256": "185ab85a22b067eb9ed5256ff811341861f55e8ad1162059e6e7930e16f91e0c"
+  },
+  {
+    "file": "item-common_armor_3-v72.png",
+    "bytes": 42589,
+    "sha256": "1b5b62c2caa377299facf815a8caab8a7597736bffabe2f9ca8c90a139a2e344"
+  },
+  {
+    "file": "item-common_armor_4-v72.png",
+    "bytes": 46743,
+    "sha256": "e11383b86056cf7986416ad4074d248a21d7b2d39a32dd00cfa306f08ab53de3"
+  },
+  {
+    "file": "item-common_armor_5-v72.png",
+    "bytes": 38347,
+    "sha256": "ecc4daf0428ed318a278c0b1eb2e08dfe85e9852b6b91e36f528581bdf4ae148"
+  },
+  {
+    "file": "item-common_accessory_1-v72.png",
+    "bytes": 29062,
+    "sha256": "ccb830c8168ceaeeaa5502075fec47474cf13cb2fe55886eb1652a7c952ed5c7"
+  },
+  {
+    "file": "item-common_accessory_2-v72.png",
+    "bytes": 32158,
+    "sha256": "79dd2857f7d503bf47384f7feca7a1790e2536ab0e9de4f672e5f35318cc7010"
+  },
+  {
+    "file": "item-common_accessory_3-v72.png",
+    "bytes": 29080,
+    "sha256": "b2e1109dd9aaba6320dd73de92713e7b4b0d24dc53995e357f738b6aef24fee5"
+  },
+  {
+    "file": "item-common_accessory_4-v72.png",
+    "bytes": 30308,
+    "sha256": "1e195376e770b0384d367de59042c1a7102aeb6a0de2642cec4ac5d2503069d0"
+  },
+  {
+    "file": "item-common_accessory_5-v72.png",
+    "bytes": 28155,
+    "sha256": "383eeb83b37d23770076ec83ca8ec062629b007259de1878c9a1c64a592bde66"
+  },
+  {
+    "file": "item-rare_weapon_1-v72.png",
+    "bytes": 19225,
+    "sha256": "ffd5acc338e64602782624759785c8387f53ccfd8c8eee1d7450d4ec8eb1657d"
+  },
+  {
+    "file": "item-rare_weapon_2-v72.png",
+    "bytes": 19348,
+    "sha256": "bd40cad781ee7e2916078dc6a9e22d862b5fa57a8fb45d7b87a79c103a61a6c3"
+  },
+  {
+    "file": "item-rare_weapon_3-v72.png",
+    "bytes": 17648,
+    "sha256": "d4d476bd0ed142d11cfc5e79b291456b733c71bc40b3fe6dc8299d6b1ce6e6e6"
+  },
+  {
+    "file": "item-rare_weapon_4-v72.png",
+    "bytes": 19080,
+    "sha256": "c1ac0a18cf8e74a27c843d4c568d83ba4bb6585a2cd1bd1b31179f100269530e"
+  },
+  {
+    "file": "item-rare_weapon_5-v72.png",
+    "bytes": 18564,
+    "sha256": "d3a592386d8e4addd59393c83a872d752c04c23044ace8b7f8d94d510ac3cb29"
+  },
+  {
+    "file": "item-rare_weapon_6-v72.png",
+    "bytes": 17424,
+    "sha256": "a21ee8da1087865ec46a2e463ad413893fe00586200e76c8e12723fb0fe903d3"
+  },
+  {
+    "file": "item-rare_armor_1-v72.png",
+    "bytes": 41049,
+    "sha256": "3e88277a87efed2c0d723fe29baa348b483b402a852957e4f0ba3f4e4da43736"
+  },
+  {
+    "file": "item-rare_armor_2-v72.png",
+    "bytes": 43289,
+    "sha256": "8219b6552b7b3b0d697ae762d4a34b5154188b5543300fbd3e95fecb30fe198f"
+  },
+  {
+    "file": "item-rare_armor_3-v72.png",
+    "bytes": 40964,
+    "sha256": "9f7201569025b02236e3dbe474b42b77c9d97a89c16f89e6143f4d393f3b833c"
+  },
+  {
+    "file": "item-rare_armor_4-v72.png",
+    "bytes": 43213,
+    "sha256": "e52aafe926560a7cc9bf7424f37048bc8b1747c3da8e2ceb72e0d130114d2d04"
+  },
+  {
+    "file": "item-rare_armor_5-v72.png",
+    "bytes": 46484,
+    "sha256": "979d6947e3505c2e7bdff3624391cf5db51dfa200af887d9056233e2a4546d93"
+  },
+  {
+    "file": "item-rare_armor_6-v72.png",
+    "bytes": 44522,
+    "sha256": "2ad61b957f50acb6a5cc5b07976ddb51ebb63f7a3ae63c117c980aa398077648"
+  },
+  {
+    "file": "item-rare_accessory_1-v72.png",
+    "bytes": 31474,
+    "sha256": "f280215bf102157af8653b98abc2f94bfce4d783f7aa99dd0275f5669cc068c6"
+  },
+  {
+    "file": "item-rare_accessory_2-v72.png",
+    "bytes": 31643,
+    "sha256": "effd75318521e5377cd3d384604eea05fff51bb8ec0a698a793c9a783870769c"
+  },
+  {
+    "file": "item-rare_accessory_3-v72.png",
+    "bytes": 28077,
+    "sha256": "85c1d3ce699f8dbf2ce81aea7986b47049cd82f32ea800ca27cd805befa358b1"
+  },
+  {
+    "file": "item-rare_accessory_4-v72.png",
+    "bytes": 32887,
+    "sha256": "95775bb6023d2f09a694ee38c7c5f58a8fe265cde872c07041c3086bb2088034"
+  },
+  {
+    "file": "item-rare_accessory_5-v72.png",
+    "bytes": 34566,
+    "sha256": "06dc445cfd2c8ecbabaa7b2b2ea5a5aaaf0cf61bba1490b4cfe9d1f494777305"
+  },
+  {
+    "file": "item-rare_accessory_6-v72.png",
+    "bytes": 32590,
+    "sha256": "e7d16779e82ddefae58a794e0eb5ab82335e70cbd69457f1e261895b77e193be"
+  },
+  {
+    "file": "item-epic_sword-v72.png",
+    "bytes": 21693,
+    "sha256": "f5983a75c716112bbdac96caa9d0f7148ef2ab850e419e99a2c66993a584bad7"
+  },
+  {
+    "file": "item-epic_weapon_2-v72.png",
+    "bytes": 17119,
+    "sha256": "6e79a76cf94bda2528e14958aaf0935efe89c6ae0482c4ddd9dde01e94420dc1"
+  },
+  {
+    "file": "item-epic_weapon_3-v72.png",
+    "bytes": 22798,
+    "sha256": "50e2a2043f80d39949aa59131549a8db0a3a998f3be1a5ff4924b50d79f9511d"
+  },
+  {
+    "file": "item-epic_armor-v72.png",
+    "bytes": 49066,
+    "sha256": "ea64ac9becc3fd79db627044cf7f6af007c8df4aa75e95c7740ba8cfa498299f"
+  },
+  {
+    "file": "item-epic_armor_2-v72.png",
+    "bytes": 43783,
+    "sha256": "0e94ccad1e129e25768a468eaffb2c3f60afab3868a7a4b739e3adc59fe59f9c"
+  },
+  {
+    "file": "item-epic_armor_3-v72.png",
+    "bytes": 42012,
+    "sha256": "659c4b71f6bb6729a99e062b0f601c1a205c60dbabffbc65fe69f2a76a130a87"
+  },
+  {
+    "file": "item-epic_ring-v72.png",
+    "bytes": 33453,
+    "sha256": "e01d91a4ef66adb8291d844b1a854d8a3cf6712ae1d69b5f37d6290b8c5e56db"
+  },
+  {
+    "file": "item-epic_accessory_2-v72.png",
+    "bytes": 35615,
+    "sha256": "d53010c867e7bf2a8c54bfab37baddfc4079055d690ea2538c51709131549259"
+  },
+  {
+    "file": "item-epic_accessory_3-v72.png",
+    "bytes": 33768,
+    "sha256": "e24e31f8c5259ffa404cc271f5fad647254caeeed2ec9385fe97c073a15fc893"
+  },
+  {
+    "file": "item-warrior_legendary_accessory-v72.png",
+    "bytes": 36092,
+    "sha256": "cc4af23d5e20d8f3594b6cc293a3b495d1acb39fabad6809cbe876cf5fdeb9eb"
+  },
+  {
+    "file": "item-paladin_legendary_accessory-v72.png",
+    "bytes": 36092,
+    "sha256": "cc4af23d5e20d8f3594b6cc293a3b495d1acb39fabad6809cbe876cf5fdeb9eb"
+  },
+  {
+    "file": "item-berserker_legendary_accessory-v72.png",
+    "bytes": 36092,
+    "sha256": "cc4af23d5e20d8f3594b6cc293a3b495d1acb39fabad6809cbe876cf5fdeb9eb"
+  },
+  {
+    "file": "item-warrior_legendary_weapon-v72.png",
+    "bytes": 25366,
+    "sha256": "93f35b868187c012afd86a5f0002c629f14e2f2c2291ee5fdde1ceeeab21cd81"
+  },
+  {
+    "file": "item-warrior_legendary_armor-v72.png",
+    "bytes": 46734,
+    "sha256": "74fb8ecce6df7a956007bc16fed63ea20da03a241ec6b25f8360ab6209b8df0b"
+  },
+  {
+    "file": "item-paladin_legendary_weapon-v72.png",
+    "bytes": 38455,
+    "sha256": "405d9ae3177b1443db6e624f7bf5c1e9aa6d3d08d47180d77910ae51eba564d3"
+  },
+  {
+    "file": "item-paladin_legendary_armor-v72.png",
+    "bytes": 35131,
+    "sha256": "80214fcff0603f4b2a6193e730ceb1487a4d82a2011b21e6029c6eaa1e6a3740"
+  },
+  {
+    "file": "item-berserker_legendary_weapon-v72.png",
+    "bytes": 27850,
+    "sha256": "f89b43dacfabaef7036c575d1982eee3781840d3fb986b008e7ea3035067d0da"
+  },
+  {
+    "file": "item-berserker_legendary_armor-v72.png",
+    "bytes": 42043,
+    "sha256": "6a2a1fe7483e561a986b536a106d137c08f47fe2d04e29af2648796221ad21c9"
+  },
+  {
+    "file": "raid-point-rewards.js",
+    "bytes": 1258,
+    "sha256": "41e823771e8f887e0f488e6ad24f17d8f69a3ac2fc10a631249eee14808e3561"
+  },
+  {
+    "file": "raid-lobby.js",
+    "bytes": 21640,
+    "sha256": "4894a72c533eb148fc22a1e4b3fc2d8b4a478888c01da0017b5d90bf532f7fe7"
+  },
+  {
+    "file": "gift-entry.js",
+    "bytes": 8908,
+    "sha256": "d57ddbd5eb249e6ab92ce56e1f47eccb3f85d064316c71664059a2005a0522a4"
+  },
+  {
+    "file": "raid-engine/berserker-source.cjs",
+    "bytes": 4972,
+    "sha256": "0ed63d6c9787b0ca147dbe9b7c06daa3829851fd2101d9f3d5e1d22918415a8f"
+  },
+  {
+    "file": "v71-item-integration.test.cjs",
+    "bytes": 2810,
+    "sha256": "fba983fd86f25fd8bd285eb53056f4fee209c68145822bf9626256af37c047ea"
+  },
+  {
+    "file": "v71-items-enhancement.test.cjs",
+    "bytes": 7126,
+    "sha256": "3547e1794147b26cdc239d741bcdba4e60d53008e1e19e7f05e64f35fa0883fd"
+  },
+  {
+    "file": "v74-raid-rewards.test.cjs",
+    "bytes": 3957,
+    "sha256": "6e13a87596fc44007b09dbba3ca6de875b403805301e014acfe6f4031490944e"
+  },
+  {
+    "file": "raid-engine/paladin-source.cjs",
+    "bytes": 1903,
+    "sha256": "d365f9bba7072b4735545070b7857f69a7a08019e3f39752c1bae72fda97253e"
+  },
+  {
+    "file": "raid-recent-card.js",
+    "bytes": 4065,
+    "sha256": "6c303f6e7c808ab1358ab85be11ce10bbca89d092edf26f4033f3d304647ddf0"
+  },
+  {
+    "file": "raid-finish-battle.js",
+    "bytes": 846,
+    "sha256": "007d45deded38edb3abd852491f6a8846a03df4fc7a4dd1b4bb70a509d35c36d"
+  },
+  {
+    "file": "raid-async.js",
+    "bytes": 498,
+    "sha256": "abdffd86882a0a61d80964447a0a37263b838f720dc52fa16df31bc068360de0"
+  },
+  {
+    "file": "colossus-ready-v55.jpg",
+    "bytes": 119208,
+    "sha256": "4265b5baccd033c4a539bdb5671f1999e4732c3e7a8625f6d50b4bd493fe01f3"
+  }
+]
