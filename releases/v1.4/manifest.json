@@ -1,0 +1,208 @@
+{
+  "version": "v1.4",
+  "kind": "incremental production source release",
+  "released_at": "2026-11-14",
+  "files": [
+    {
+      "path": "berserker-guide.cjs",
+      "new_file": false,
+      "before_sha256": "5828eef655ac0f0d7a5907c295512e2b80672eb32f28c4d865358b3449c4ece9",
+      "sha256": "663cd6f0fdaf487ff2275c5ed31a3c49bb8f2b5363c14264bba01daccdcff2aa",
+      "bytes": 4063
+    },
+    {
+      "path": "berserker-ui.cjs",
+      "new_file": false,
+      "before_sha256": "0d888ba3057be0c1191608a84fef120074753126c07f0a0b3bd3fdabc45c3e4e",
+      "sha256": "893ba3ff2e1fcc887e64f6eeb220b9bbc5848cf7fcd0c7d7e7ef5abfa617bd25",
+      "bytes": 3215
+    },
+    {
+      "path": "raid-characters.js",
+      "new_file": false,
+      "before_sha256": "02fb443ee8e6118d4c80b33e12089de375561b695d0268b7ae3ffc73c7d94b50",
+      "sha256": "e82efc514163ca5a2c33a4175734bdd26ffc23a47cec1d683a7ff2947e377110",
+      "bytes": 7647
+    },
+    {
+      "path": "raid-compact-effects.js",
+      "new_file": false,
+      "before_sha256": "99304e8c5efe57a8a065e4db346c0644302d63a5aee8d637e000860a615516ef",
+      "sha256": "0baf476e28f55233d553041e407738c507e9e0ebdf2b548b7b6c4a0720d7ab73",
+      "bytes": 4687
+    },
+    {
+      "path": "raid-critical-label.js",
+      "new_file": false,
+      "before_sha256": "3d8061288d3a081c931aa304c1e877f8949204e56f07cc463ae3dd38d06da785",
+      "sha256": "802a75e4ea0309e535cb4ab456c3500f8bcbebaa11dd37a359cc551258e50269",
+      "bytes": 369
+    },
+    {
+      "path": "raid-engine/berserker-rules.cjs",
+      "new_file": false,
+      "before_sha256": "bb7ca640ed2b9deb8f938b3ea7fa4e907712152b81f29d8a86005251e61cbc1c",
+      "sha256": "592abe96eb414911a7d937035628b970ffa860d2f7a8ea992434a0a4de87bd91",
+      "bytes": 6704
+    },
+    {
+      "path": "raid-engine/berserker-source.cjs",
+      "new_file": false,
+      "before_sha256": "e39a48501a022e2f41e271c41d750d894bd0cbdf773b6c36f570f66322173201",
+      "sha256": "365f537bca21f10d295609140c2ac480731aae2d926ed3d2f4914810650734c3",
+      "bytes": 5475
+    },
+    {
+      "path": "raid-engine/critical-rules.cjs",
+      "new_file": true,
+      "before_sha256": null,
+      "sha256": "16af7726d5b22e6ac892b55f2598cd3ff4cae9cf4ba8df6672044736cda455e4",
+      "bytes": 873
+    },
+    {
+      "path": "raid-engine/gimmick-trial-engine.cjs",
+      "new_file": false,
+      "before_sha256": "7ba8202ae20153811809f1a0b99ca1174c72f0d14ece5b606e15bc33f9179b20",
+      "sha256": "f3f3079c830d01e064bab1d3f73bf01280835e0e480a8d17941ccbef8ce2c3cc",
+      "bytes": 32947
+    },
+    {
+      "path": "raid-engine/paladin-rules.cjs",
+      "new_file": false,
+      "before_sha256": "11fc910aaea1ce06f0883a536f445003ed7aeba89439ed54343110fa406b47fd",
+      "sha256": "475f042df932f105bb7f1b0d28dbb5e025ed3f4b50288b46848a1d1a6f78d49b",
+      "bytes": 1970
+    },
+    {
+      "path": "raid-engine/progression-combat.cjs",
+      "new_file": false,
+      "before_sha256": "3f226e11bd40e8694a00cb4f9282fa9009b2bccb094e2bb46c7c4375fce5896b",
+      "sha256": "010c6bdde9d3a209deb5156575c3854411505d885c83079e5bec0574ba8aeb52",
+      "bytes": 4258
+    },
+    {
+      "path": "raid-engine/warrior-rules.cjs",
+      "new_file": false,
+      "before_sha256": "7f03ccc8aa25b0a5659a555c548883883211ef1c7aa932a8c659da551284e861",
+      "sha256": "ef48b211fd2e78b1b9bb42c84be1d38adad74f5d0c7c61517de21f8a0012a51e",
+      "bytes": 2438
+    },
+    {
+      "path": "raid-engine/warrior-source.cjs",
+      "new_file": false,
+      "before_sha256": "713b70097e7904eefcd90b7316063211f65aa963c2113591023f589a62fb121d",
+      "sha256": "9d3337af138c7d1b9f495310cecbbf6d30ca3adde9aea498531c12e11d9bb3ab",
+      "bytes": 2807
+    },
+    {
+      "path": "raid-item-catalog.js",
+      "new_file": false,
+      "before_sha256": "3b0438977768e8b715ce80410c2c1526043fbdf150e49eeba1ebe0ef0d3fcd02",
+      "sha256": "a720c8f9a58065895e9aa03434ef38382437235522c5f07edacd74c36727ebda",
+      "bytes": 5580
+    },
+    {
+      "path": "raid-item-effect-card.js",
+      "new_file": false,
+      "before_sha256": "856b3597a79223eede00667c17b17ca2f533a15d2ec3040536c10595593b5e38",
+      "sha256": "ca962c2c17c51f8728afef1703332ab397bb09414145531c225404b93dffc5dc",
+      "bytes": 1523
+    },
+    {
+      "path": "raid-metal-ui.js",
+      "new_file": false,
+      "before_sha256": "0818548c15de9e5dab4f9d5bd4e39b36d16492a4b2379b467036e88442ed1729",
+      "sha256": "e3a2881d19b3659eb77ff2d61d83f352f896fba43e8213fa816c72a688b39cbd",
+      "bytes": 14622
+    },
+    {
+      "path": "raid-skill-guide.js",
+      "new_file": false,
+      "before_sha256": "8dafbf43a6ed4f6e91e5dba6e6868b8b37f0f5c7678a9a13933cb3009058d71c",
+      "sha256": "90d374e617724996752c84010c0f119b90a0648d51b73d5a068e253ba64ce949",
+      "bytes": 18865
+    },
+    {
+      "path": "raid-test-build.js",
+      "new_file": false,
+      "before_sha256": "65ea6766bb563e78ff74bbd85ea690e2024a61919464bafe8e9e831436ff99c0",
+      "sha256": "6c1173e8455f73e3912dea997a91ae48448b28edeb20d23a52b62a09f68b3b8e",
+      "bytes": 1173
+    },
+    {
+      "path": "raid-test-gear.js",
+      "new_file": true,
+      "before_sha256": null,
+      "sha256": "e3780b58b71b48c41c1d82329f926130d91a31a73f806bde0c8ecb4ac6ac400c",
+      "bytes": 3249
+    },
+    {
+      "path": "raid-workshop-card.js",
+      "new_file": false,
+      "before_sha256": "91a236004820f8ca4c82f68a8b7df425fc6fb81eef6581b1327bf089ddabac35",
+      "sha256": "94f5ccc48feeb66cbfe14b8caebf6badd7922346e89a19facad2c868f7b40a32",
+      "bytes": 10257
+    },
+    {
+      "path": "raid-workshop-detail.js",
+      "new_file": false,
+      "before_sha256": "e4e0e70c5c489531d6b5546b615c281e2c43fef0223003e93e0b72c80a339f89",
+      "sha256": "46e6792cbead75f5ebc1b331365e3b352dad86aa70d00463fd84bb517bf664f2",
+      "bytes": 14505
+    },
+    {
+      "path": "raid-workshop-model.js",
+      "new_file": false,
+      "before_sha256": "93c27c718abab8981c6cf88a7cd4319039e6bbf7886a5c59a8308c550f2b00a4",
+      "sha256": "a6e7dde2b8dfd6f85a8210664dc8eb4401e645fce7ca3aa7cc386e1d333279cc",
+      "bytes": 13994
+    },
+    {
+      "path": "raid-workshop-view.js",
+      "new_file": false,
+      "before_sha256": "9be587634de77b2b0aeaccbd3cee260062e4ffae1d63b28fb48ba5937e38aa74",
+      "sha256": "a1dc7304db99d6c87a7703bc1c960e2213c25cd3070a3536196e0188a49efe5c",
+      "bytes": 8625
+    },
+    {
+      "path": "raid-workshop-visuals.js",
+      "new_file": false,
+      "before_sha256": "9a86a2f06d377348d59af9fe1796560c67fc1b48d137b0ba783bffefed1859ca",
+      "sha256": "00f361eb73e6aca99473420acf34c3eeaa6c3a60d71325a348fa9fb242f40708",
+      "bytes": 3369
+    },
+    {
+      "path": "raid-workshop.js",
+      "new_file": false,
+      "before_sha256": "3a45ee60a88eafcb16ad0c9ad757ab47d4bdc8a297d43dc6908d5fa56cc82a7c",
+      "sha256": "6d1726ff32a8a01c3ae54a209b453faa57e8f903e28603a27fff394f13e8431e",
+      "bytes": 15188
+    }
+  ],
+  "validation": {
+    "focused_offline_tests": 69,
+    "deterministic_balance_tests": 34,
+    "test_inventory_tests": 26,
+    "existing_item_enhancement_payment_journal_tests": 9,
+    "mixed_class_switch_drop_sequences": 300,
+    "seeded_simulations": 1440,
+    "simulation_cells": 24,
+    "paired_seeds_per_cell": 30,
+    "source_syntax_checks": 25,
+    "production_readback_files": 25,
+    "production_hash_matches": 25,
+    "production_started_at": "2026-11-14T00:40:39Z",
+    "production_health_verified_at": "2026-11-14T00:42:13Z",
+    "production_status": "Running",
+    "startup_evidence": "COMMANDS REGISTERED",
+    "real_user_discord_functional_tested": false,
+    "raster_render_tested": false,
+    "persistent_player_data_byte_compared": false
+  },
+  "installation": {
+    "complete_distribution": false,
+    "require_matching_predecessor_hashes": true,
+    "preserve_unlisted_files": true,
+    "test_class_gear_cleanup": "disabled by default; requires RAID_TEST_CLASS_GEAR_CLEANUP=1"
+  }
+}
