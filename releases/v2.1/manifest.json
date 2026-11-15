@@ -1,0 +1,313 @@
+{
+  "version": "v2.1",
+  "kind": "incremental v2 source overlay",
+  "complete_distribution": false,
+  "required_baseline": "Compatible already-deployed v2 installation; not the legacy repository root or the v1.4 source snapshot",
+  "file_count": 29,
+  "source_modules": 24,
+  "png_assets": 5,
+  "files": [
+    {
+      "path": "berserker-guide.cjs",
+      "new_file": false,
+      "before_sha256": "663cd6f0fdaf487ff2275c5ed31a3c49bb8f2b5363c14264bba01daccdcff2aa",
+      "sha256": "0a3db398d955f35f69f2fd0f1ae5baa6e8a9e8bfe2ae2003f9b19c945e8b4fa2",
+      "bytes": 3514
+    },
+    {
+      "path": "berserker-ui.cjs",
+      "new_file": false,
+      "before_sha256": "893ba3ff2e1fcc887e64f6eeb220b9bbc5848cf7fcd0c7d7e7ef5abfa617bd25",
+      "sha256": "6f9e4b30375425e1cb8c8d032b76eaf62542af3e01754c3651c5e0dc3754bb67",
+      "bytes": 3222
+    },
+    {
+      "path": "level-point-rewards.js",
+      "new_file": false,
+      "before_sha256": "7544ff37397cb9d6d0bf01cf9ab1dbc24d81bf5d3b0046f83320e649faf578fc",
+      "sha256": "18e592bed355255a25cc22927180c7fcbeb5ee07bb9a3eca325fa7c0d7819edf",
+      "bytes": 7106
+    },
+    {
+      "path": "raid-compact-effects.js",
+      "new_file": false,
+      "before_sha256": "8bc7491a9345b0d4fb9a75b581b83581d280f783ea2027489d10f4f7f0c6e88d",
+      "sha256": "b4c2733e72ec394bb8ccbb9c0d461f6dc139b9523ea974debfadca7cdd0d3d6c",
+      "bytes": 4747
+    },
+    {
+      "path": "raid-engine/berserker-rules.cjs",
+      "new_file": false,
+      "before_sha256": "592abe96eb414911a7d937035628b970ffa860d2f7a8ea992434a0a4de87bd91",
+      "sha256": "cfcbb7ac225726008817af4ba1374a1200a6c1966476ceaef4980b36dfb6cff2",
+      "bytes": 7383
+    },
+    {
+      "path": "raid-engine/paladin-rules.cjs",
+      "new_file": false,
+      "before_sha256": "475f042df932f105bb7f1b0d28dbb5e025ed3f4b50288b46848a1d1a6f78d49b",
+      "sha256": "63ec56e7a393c6945441becd5cc811e6632b9dce7ee3b6b9cd8cccfc01802db3",
+      "bytes": 3419
+    },
+    {
+      "path": "raid-engine/warrior-rules.cjs",
+      "new_file": false,
+      "before_sha256": "264d349198172bc3e58c53e2013cbee7a770fc3d09950e7056cf53181d0ee4b5",
+      "sha256": "ad5423ff47daad17463983f602a1452915065f49a20d9d1c2089c56247b9e502",
+      "bytes": 2643
+    },
+    {
+      "path": "raid-engine/warrior-source.cjs",
+      "new_file": false,
+      "before_sha256": "7fc59647a414a0182f216b851d2aa74f185f2580a550a4a85af9ccd10c5ff627",
+      "sha256": "bb9e87c8b9021268683c2ee4b784cc268403c0eca082b3ebd32cc184551e46b9",
+      "bytes": 2807
+    },
+    {
+      "path": "raid-panels.js",
+      "new_file": false,
+      "before_sha256": "ce901fea858dd43fa515b3815e0a874aaed45f0438bbac62ebefc869b5d7db2f",
+      "sha256": "fb2699d4cd8a2e76f1b0238653cee64a82e566a4b24d0fdc3ce7fe3a959dbbd3",
+      "bytes": 11194
+    },
+    {
+      "path": "raid-skill-guide-inline.cjs",
+      "new_file": true,
+      "before_sha256": null,
+      "sha256": "af4203cecdb8e8c6c75041a4fb30990b7c4d57d58a30680e7d8ecbefe49b5714",
+      "bytes": 4712
+    },
+    {
+      "path": "raid-skill-guide.js",
+      "new_file": false,
+      "before_sha256": "da02ac0e0224cdb7a4075eb072ca95dc7c8cf0cade116292474cdd33e42a3a05",
+      "sha256": "3eb6bb343dd128745a21ae9085a963fcdf1f1b71a32ef8919b15afc2c8af558d",
+      "bytes": 21075
+    },
+    {
+      "path": "raid-static-card.js",
+      "new_file": false,
+      "before_sha256": "bca6324bcaba8686593b903cb1802f3001981101999368265a23dea4e60848f4",
+      "sha256": "ee766fc8a700c1913b6d230d22295af1d1c2ac4555b006f5bf9835b97acda74c",
+      "bytes": 6679
+    },
+    {
+      "path": "raid-workshop-boost.js",
+      "new_file": false,
+      "before_sha256": "779ffd2f745f4b16edd9e052108b0e3026e1b6c1d1e718b79cb418831f4aef86",
+      "sha256": "fde46a3d273282e39fff187e02c8cd435c2ea0f3ff706d161adba01fb621e415",
+      "bytes": 911
+    },
+    {
+      "path": "raid-workshop-card.js",
+      "new_file": false,
+      "before_sha256": "94f5ccc48feeb66cbfe14b8caebf6badd7922346e89a19facad2c868f7b40a32",
+      "sha256": "aa0d53df97b4f6577dc818ed00396c1cbab9ff0d07742a9f2a23417122a8f9f7",
+      "bytes": 10478
+    },
+    {
+      "path": "raid-workshop-guide.js",
+      "new_file": false,
+      "before_sha256": "dd21a63d5180096e33efef0ceb64d384ed0b0b116fada2705cc9c484a6279611",
+      "sha256": "599c66731c253c924a270275c1169fb1eec78a2d708dd4807ee131c8865db245",
+      "bytes": 1646
+    },
+    {
+      "path": "raid-workshop-view.js",
+      "new_file": false,
+      "before_sha256": "a1dc7304db99d6c87a7703bc1c960e2213c25cd3070a3536196e0188a49efe5c",
+      "sha256": "d0fb38b4145c90ba8cb9d98d4c715947bf71ef2a66bac0f58437b9aadc3922bf",
+      "bytes": 8815
+    },
+    {
+      "path": "raid15/assets/berserker-blood-draw.png",
+      "new_file": true,
+      "before_sha256": null,
+      "sha256": "634b781c7a4f0d36c802d0c9d0aa6846cf108b53ac71ea908f52a91249dcb795",
+      "bytes": 3622
+    },
+    {
+      "path": "raid15/assets/paladin-blessing.png",
+      "new_file": true,
+      "before_sha256": null,
+      "sha256": "5d85555b0e13d85a9075e52c5e0cb3a734f0da21a7ec6f35560af37cfba72f8c",
+      "bytes": 4465
+    },
+    {
+      "path": "raid15/assets/paladin-divine-grace.png",
+      "new_file": true,
+      "before_sha256": null,
+      "sha256": "797100b1df5dda6ae66182e0684d213093d028b8b569c9fe04b10ac906dd90c9",
+      "bytes": 5213
+    },
+    {
+      "path": "raid15/assets/paladin-divine-punishment.png",
+      "new_file": true,
+      "before_sha256": null,
+      "sha256": "964086d810e0a490eacc00bf33d3e6f1dda5e75df1dc9dc248fa8c79a47db442",
+      "bytes": 2103
+    },
+    {
+      "path": "raid15/assets/paladin-heal-perfect.png",
+      "new_file": true,
+      "before_sha256": null,
+      "sha256": "9fe185d8d533f3cdd4ed96a162d7829e895447b5d91c58bbe3ebab08f01ab5c2",
+      "bytes": 79398
+    },
+    {
+      "path": "raid15/battle-log-render.cjs",
+      "new_file": false,
+      "before_sha256": "5ca9492ec5f1d5aca61e1f5e0468f5dc5ccc981260a5a86dbe22f292436cbbd1",
+      "sha256": "63e711f1dd6d58bccdf33b7496bbf398d913290dcf3d5346489a492702e70caa",
+      "bytes": 17852
+    },
+    {
+      "path": "raid15/berserker-combat.cjs",
+      "new_file": false,
+      "before_sha256": "3efcdb9df3c9343970c90ae4dc7a821a8f4bd06497406e52ad5092ceb7898007",
+      "sha256": "079e8a49ffeb4fd40ecb983bf412645aed2d4e48fb16d2f50802bb55f1440d12",
+      "bytes": 19101
+    },
+    {
+      "path": "raid15/combat.cjs",
+      "new_file": false,
+      "before_sha256": "0562119673d4e5752721b9c107dbfb7c303533946c08f853dfd65fac41684de5",
+      "sha256": "a6049d08c1fd898f26916869293f8ebec6b1ea96a491f530f922dcfa8947299c",
+      "bytes": 9668
+    },
+    {
+      "path": "raid15/engine.cjs",
+      "new_file": false,
+      "before_sha256": "32aee5dd56bf00dcfbad924053711dc725a1217e2f43cfe8b2530d0f99f33eaf",
+      "sha256": "517ea08f3d3e5da623b7b9a301c2baf19fa27aab445dbb649f4aae34242f9f0a",
+      "bytes": 15721
+    },
+    {
+      "path": "raid15/last-turn.cjs",
+      "new_file": false,
+      "before_sha256": "68346cecd324289c7f04cacf080a794f0a1d599198805b480f8e47e6d3651926",
+      "sha256": "7ddc513771169ce01b77cb04aeb84aeb5235ad71833196cba4f6f84d254e131b",
+      "bytes": 19327
+    },
+    {
+      "path": "raid15/paladin-combat.cjs",
+      "new_file": false,
+      "before_sha256": "3e7fbe7154d5ec46c9b03a4817206379a82d223d5f43790976cc75a95c0875ec",
+      "sha256": "358a7d3f05ccbc99a5c42d978c3ade830a0b853dcd5a0f03f15448155b749edc",
+      "bytes": 15904
+    },
+    {
+      "path": "raid15/succubus-presentation.cjs",
+      "new_file": false,
+      "before_sha256": "f61a23a27e6eeb6493d8ac3113b54ececcc5154ce440b34712ca884e74362369",
+      "sha256": "bfbc5896dde345247bfa435ccffd58f4a0966143c16dad77738b7982df5388cf",
+      "bytes": 4421
+    },
+    {
+      "path": "raid15/view.cjs",
+      "new_file": false,
+      "before_sha256": "fff0570a325b1d379f06281437d5a5c035c44169b2ed0927343ba494795dc0ac",
+      "sha256": "87967222d9d329c68938edadb2c970b62c4130b9fa97324fe80e898fdc8dd856",
+      "bytes": 19919
+    }
+  ],
+  "required_unchanged_dependencies": [
+    {
+      "path": "raid15/rules.cjs",
+      "sha256": "07156eb16e1f4ec22c0cb79a5c0630de8176285a85ca8b9f03335d0715680aa5"
+    },
+    {
+      "path": "raid15/status-panels.cjs",
+      "sha256": "d2445ec890b91e8beef06bd4045ef2f006f3f8059f31509a507cda72b0d7a26b"
+    },
+    {
+      "path": "raid15/recipient-presentation.cjs",
+      "sha256": "d57ac1644d403e3cc5c4d672ade0bcf1f571b2f00dcab286616939db3845a570"
+    },
+    {
+      "path": "succubus-art-20261113/Status-Curse Icon Charm.png",
+      "sha256": "63713b277a5dfc80f37652ac63eacb9d108c666a2795b433aa0a617a5dc918e1"
+    },
+    {
+      "path": "raid15/assets/sharp-eye.png",
+      "sha256": "81e0f56b1607374bcf3b1b85689b9ca180ae43cf2cc9b2841582b8c186510df1",
+      "bytes": 3197
+    },
+    {
+      "path": "raid15/assets/sixth-sense.png",
+      "sha256": "d9420f6d55b03cba665399070d609ea2cba45ae0e07fdb47931155b2cfe8b546",
+      "bytes": 3711
+    },
+    {
+      "path": "raid15/assets/hone.png",
+      "sha256": "e92f8eaef26c6be4b64791f67a982bd57d9e49ad88709bfa580ac080f129c034",
+      "bytes": 3569
+    },
+    {
+      "path": "raid15/assets/defense-up.png",
+      "sha256": "dbe73554208cbb4abe045bc256b521e8a4e5a20e1a645a6aa9501a9455723543",
+      "bytes": 4344
+    },
+    {
+      "path": "raid15/assets/blade-trance.png",
+      "sha256": "aa9b5f521d89e4f15f44c9960ef7761363988cafad7caad33fdaa33707e3630e",
+      "bytes": 4288
+    },
+    {
+      "path": "raid-engine/paladin-source.cjs",
+      "sha256": "d365f9bba7072b4735545070b7857f69a7a08019e3f39752c1bae72fda97253e",
+      "bytes": 1903
+    },
+    {
+      "path": "raid-engine/berserker-source.cjs",
+      "sha256": "365f537bca21f10d295609140c2ac480731aae2d926ed3d2f4914810650734c3",
+      "bytes": 5475
+    },
+    {
+      "path": "raid-engine/critical-rules.cjs",
+      "sha256": "16af7726d5b22e6ac892b55f2598cd3ff4cae9cf4ba8df6672044736cda455e4",
+      "bytes": 873
+    },
+    {
+      "path": "raid-engine/progression-combat.cjs",
+      "sha256": "010c6bdde9d3a209deb5156575c3854411505d885c83079e5bec0574ba8aeb52",
+      "bytes": 4258
+    },
+    {
+      "path": "raid-test-build.js",
+      "sha256": "6c1173e8455f73e3912dea997a91ae48448b28edeb20d23a52b62a09f68b3b8e",
+      "bytes": 1173
+    },
+    {
+      "path": "voice-xp.js",
+      "sha256": "0dabc853d396ba8b5803c0cf74451cbdddf7f09e721041ff31bae29a2a1e1485",
+      "bytes": 1876
+    }
+  ],
+  "validation": {
+    "combined_offline_tests": 248,
+    "passed": 245,
+    "failed": 0,
+    "skipped": 3,
+    "skip_reasons": [
+      "Superseded 50:50 layout",
+      "Isolated Berserker unchanged-dependency parity superseded by approved cross-class overlays",
+      "Isolated other-class parity superseded by approved Paladin Energy change"
+    ],
+    "bundle_guard_checks_passed": 8,
+    "source_syntax_checks": 24,
+    "release_file_hash_matches": 29,
+    "live_discord_functional_tested": false,
+    "production_database_execution_tested": false,
+    "runtime_activation_verified": false,
+    "persistent_player_data_byte_compared": false,
+    "render_limits": "Guide QA uses archived portrait sources; Workshop rendering QA includes portrait/font test stubs"
+  },
+  "installation": {
+    "require_matching_predecessor_hashes": true,
+    "require_new_paths_absent": true,
+    "require_dependency_hashes": true,
+    "preserve_unlisted_files": true,
+    "runtime_activation_is_separate": true
+  }
+}
