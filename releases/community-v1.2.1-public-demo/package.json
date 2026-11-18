@@ -1,0 +1,12 @@
+{
+  "name": "community-public-utilities",
+  "version": "1.2.1",
+  "private": true,
+  "description": "Anonymous offline image integrity and cache utility subset",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test test.cjs"
+  }
+}
