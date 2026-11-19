@@ -1,0 +1,5 @@
+'use strict';
+const names={overheat:'Overheat',blood_absorb:'Blood Draw absorption',finisher_relic:'Warcrest recovery',shoulder_tackle:'Tackle',berserker_ultimate:'Ragnarok',slash:'Slash',hammer_refund:'Hammer refund',attack:'Attack',guard:'Guard',thrust:'Thrust',smash:'Smite',prayer:'Blessing',resonant_wave:'Ultimate',parry:'Parry',parry_refund:'Parry refund',perfect_parry:'Perfect parry',perfect_dodge:'Perfect dodge',divine_grace:'Divine Grace',turn_recovery:'Turn recovery',heal:'Heal',first_aid:'First aid',cleanse:'Cleanse',enchant:'Enchant',counter:'Counter',fortress:'Fortress',arcane_strike:'Arcane strike',barrier:'Barrier',blood:'Blood',signature:'Signature'};
+function entry(e){const name=names[e.reason]||e.reason;return name+' '+(e.applied<0?'-'+(-e.applied):e.applied===0&&e.requested>0?'+0 (full)':'+'+e.applied+(e.applied<e.requested?' of +'+e.requested+' (cap)':''));}
+function format(log){if(!Array.isArray(log?.energyEntries))return '';return 'Energy '+log.energyStart+' -> '+log.energyEnd+(log.energyEntries.length?' · '+log.energyEntries.map(entry).join(' · '):'');}
+module.exports={format,entry};
