@@ -1,0 +1,25 @@
+{
+ "core":[
+  ["Basic Attack","Free","Deal 100% ATK damage. On hit, gain Sixth Sense for 2 rounds."],
+  ["Slash","1 Energy","Deal 120% ATK damage. On hit, gain 1 Hone and 1 Focus. Interrupt curses and advance mechanics."],
+  ["Thrust","1 Energy\n0 during Trance","Deal 350% ATK damage and heal for 1% of damage dealt. Use it after a successful Parry until the end of your next attack turn. During Blade Trance, use it on any attack opportunity."],
+  ["Physical Parry","Free","Parry physical attacks only."],
+  ["Magic Parry","Free","Parry magic attacks only."],
+  ["Resonant Wave Slash (Ultimate)","1/battle","Deal 600% ATK damage. Cancel the current attack or mechanic."],
+  ["Emergency Evade","1/battle","Evade the current attack and mechanic failure damage. Prevent new curses this turn."]
+ ],
+ "parry":[
+  ["Successful Parry","Reduce direct damage by 60%. Gain 1 Hone. A multi-hit attack grants Hone only once per Parry action."],
+  ["Perfect Parry","Negate the hit, gain the successful Parry benefits, and gain Sharp Eye for 2 rounds. May trigger Blade Trance."],
+  ["Failed Parry","Lose 1 Energy per hit taken with the wrong parry type. Evaded hits cost no Energy."]
+ ],
+ "passives":[
+  ["Hone","Every 2 Hone adds 1% to Perfect Parry chance, up to 70%. Above 60 Hone, every 2 extra stacks reduce direct damage taken by an additional 1%, up to 30% additional reduction."],
+  ["Focus","Each Focus adds 1% to Blade Trance chance, up to 60%. Above 30 Focus, every 2 extra stacks add 1% critical damage."],
+  ["Sharp Eye","Thrust deals 20% more damage for 2 rounds. Reapplying refreshes the duration instead of stacking."],
+  ["Sixth Sense","Take 10% less direct damage for 2 rounds. Reapplying refreshes the duration instead of stacking."],
+  ["Blade Trance","Can trigger on a Perfect Parry. For 3 combat rounds, gain +20% critical chance, keep Thrust unlocked, and keep Sharp Eye and Sixth Sense active. Triggering Blade Trance again refreshes the duration."]
+ ]
+}
+
+
