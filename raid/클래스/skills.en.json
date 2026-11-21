@@ -1,0 +1,67 @@
+{
+  "baseVersion": "3.2",
+  "status": "prepared-not-applied",
+  "common": "Recover 1 Energy every 2 turns.",
+  "unlocks": [["LV 10", "Unlock your Ultimate: 1 use per battle."], ["LV 30", "Recover 2 Energy every 2 turns."], ["LV 50", "Last Stand: Survive a lethal hit with 1 HP once per battle. Disabled while passives are sealed."], ["LV 90", "Ultimate: 2 uses per battle."], ["LV 100", "Emergency Evade: 2 uses per battle."]],
+  "classes": {
+    "blader": {
+      "name": "Blader", "accent": "#8dceff",
+      "core": [
+        ["Basic Attack", "Free", "Deal 100% ATK damage. Gain 1 Hone stack on damage."],
+        ["Slash", "1 Energy", "Deal 140% ATK damage. Restore HP equal to 2% of damage dealt. Gain 1 Focus stack on damage. Interrupt curses and advance mechanics."],
+        ["Thrust", "1 Energy", "Deal 300% ATK damage. Available after a successful parry. Consume Sharp Eye and Sixth Sense. Interrupt curses and advance mechanics."],
+        ["Physical Parry", "Free", "Parry a physical attack to reduce its damage by 60%. Cannot parry magic attacks."],
+        ["Magic Parry", "Free", "Parry a magic attack to reduce its damage by 60%. Cannot parry physical attacks."],
+        ["Resonant Wave Slash", "1/battle", "Deal 600% ATK damage. Cancel the current attack or mechanic.", true],
+        ["Emergency Evade", "1/battle", "Evade the current attack and mechanic failure damage. Prevent new curses this turn."]
+      ],
+      "extra": [
+        ["Successful Parry", "Gain 1 Energy, 1 Sharp Eye stack, and one Thrust use."],
+        ["Perfect Parry", "Negate the incoming attack. Gain 1 Energy, 1 Sharp Eye stack, Sixth Sense, 1 Hone stack, and one Thrust use. May trigger Blade Trance."],
+        ["Failed Parry", "Lose 1 Energy per hit taken with the wrong parry type. Evaded hits cost no Energy."],
+        ["Sharp Eye", "Each stack gives your next Thrust +20% critical chance, up to +40%."],
+        ["Sixth Sense", "Thrust deals 20% more damage and restores HP equal to 1% of damage dealt."]
+      ],
+      "passives": [
+        ["Hone", "Gain 1 Hone when a basic attack deals damage or you land a Perfect Parry. Each stack adds +1% to your base 30% Perfect Parry chance. Max 40."],
+        ["Focus", "Gain 1 Focus when Slash deals damage. Each stack adds +1% to your Blade Trance chance. Max 20."],
+        ["Blade Trance", "Perfect Parry has a 30% chance to trigger Blade Trance for 4 turns. Focus raises this chance. While active, gain +10% critical chance and +10% critical damage. Thrust is free and unrestricted. Keep 2 Sharp Eye stacks and Sixth Sense. Triggering it again refreshes the duration."]
+      ]
+    },
+    "paladin": {
+      "name": "Paladin", "accent": "#efd084",
+      "core": [
+        ["Basic Attack", "Free", "Deal 100% ATK damage. Gain 1 Energy."],
+        ["Smite", "1 Energy", "Deal 220% ATK damage. Interrupt curses and advance mechanics."],
+        ["Physical Guard", "Free", "Reduce incoming physical damage by 50%. Gain 1 Energy on a successful guard."],
+        ["Magic Guard", "Free", "Reduce incoming magic damage by 50%. Gain 1 Energy on a successful guard."],
+        ["Blessing", "2 Energy", "Gain 1 Divine Punishment. For 3 turns, gain +40% DEF. Each Blessing stack also gives Smite +6% damage and +10% critical chance, up to 3 stacks."],
+        ["Heal", "2 Energy", "Restore HP equal to 70 + 30% of DEF, rounded down. Resolves before incoming damage on a defense turn."],
+        ["Purification", "3 Energy", "Cleanse debuffs and curses. Available when a removable effect is active."],
+        ["Judgement", "1/battle", "Deal 600% ATK damage. Cancel the current attack or mechanic.", true],
+        ["Emergency Evade", "1/battle", "Evade the current attack and mechanic failure damage. Prevent new curses this turn."]
+      ],
+      "extra": [
+        ["Divine Punishment", "Every 8 stacks grant +10% Smite damage, up to +40%. Lasts for the battle."],
+        ["Divine Smite", "At 16 Divine Punishment stacks, Smite becomes Divine Smite. It gains +10% critical chance and heals you for 1% of damage dealt."]
+      ],
+      "passives": [["Divine Grace", "After surviving direct damage, gain a 50% chance to restore HP equal to 20 + 40% of DEF, rounded down."]]
+    },
+    "berserker": {
+      "name": "Berserker", "accent": "#ed7485",
+      "core": [
+        ["Basic Attack", "Free", "Deal 100% ATK damage. Curse interruption and mechanic progress +1."],
+        ["Charge", "Free", "Gain 1 Charge level. Max 3 levels."],
+        ["Charged Attack · Level 1", "All Charge", "Deal 150% ATK damage. Gain 2 Energy. Curse interruption and mechanic progress +1."],
+        ["Charged Attack · Level 2", "All Charge", "Deal 250% ATK damage. Gain 1 Energy. Restore HP equal to 1% of damage dealt. Curse interruption and mechanic progress +2."],
+        ["Charged Attack · Level 3", "All Charge", "Deal 500% ATK damage. Restore HP equal to 4% of damage dealt. Curse interruption and mechanic progress +2."],
+        ["Tackle", "Free", "Reduce incoming physical and magic damage by 40%. Preserve Charge. Gain 1 Charge level after surviving a heavy attack."],
+        ["Blood Draw", "Up to 6 Energy", "Spend 25% of your current HP without dying. Gain 1 Charge per 3 Energy spent. Each Energy gives your next basic or charged attack +5% critical chance. The bonus stacks up to +50% and ends when you attack."],
+        ["Ragnarok", "1/battle", "Deal 550% ATK damage. Consume all Charge. Cancel the current attack, curse, or mechanic. On an attack turn, gain 2 bonus attacks on first use and 1 on reuse. Bonus attacks deal 50% more damage without a boss attack. No bonus attacks on a defense turn.", true],
+        ["Emergency Evade", "1/battle", "Evade the current attack and mechanic failure damage. Prevent new curses this turn. Preserve Charge."]
+      ],
+      "extra": [["Charge Rules", "Charged Attacks consume all Charge. Two consecutive unguarded normal hits, or an unguarded heavy or special hit, clear Charge. Tackle and Emergency Evade preserve Charge."]],
+      "passives": [["Enrage", "While HP is at or below min(60, 50 + DEF × 0.1)%: ATK +40% and direct damage taken reduced by 60%. Disabled while passives are sealed."]]
+    }
+  }
+}
