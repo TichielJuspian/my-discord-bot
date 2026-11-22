@@ -48,7 +48,7 @@ function create({root=runtimePaths.directory("."),combatRoot=runtimePaths.join(r
     const saved=engine.serialize();
     if(!Number.isSafeInteger(saved.state.totals.damage)||saved.state.totals.damage<0)throw Object.assign(Error('Combat damage exceeds the supported numeric range.'),{code:'BOOST_COMBAT_RANGE'});
     active.state=saved.state;active.v2.runtime=saved.runtime;
-    active.v2.frames=frames;active.v2.revision++;active.v2.ready=false;active.v2.accountingPending=true;
+    active.v2.frames=require("./흐름/raid-two-piece-model.cjs").annotate(frames,beforeState);active.v2.revision++;active.v2.ready=false;active.v2.accountingPending=true;
     return active.state;
   }
   function end(active){
@@ -93,7 +93,7 @@ function create({root=runtimePaths.directory("."),combatRoot=runtimePaths.join(r
     const receipt=mediaReceipts.get(active);
     let currentMessage=receipt?.uncertain?null:receipt&&receipt.memo===active.attachmentMemo&&receipt.message.id===active.displayMessageId&&(receipt.reply===i||i.message?.id===receipt.message.id)?receipt.message:i.message;
     // Repainting/resuming a completed publication never advances combat.
-    if(!queued.length&&active.v2.lastFrame)queued.push(active.v2.lastFrame);
+    if(!queued.length&&active.v2.lastFrame)queued.push({...active.v2.lastFrame,twoPieceReceipts:undefined});
     if(!queued.length)throw Error('Missing saved v2 frame');
     const cache=mediaCache();
     let ahead=first&&metadata.every(key=>first.shown.frame.state[key]===(active.state[key]??first.frame.state[key]))?first:null;
@@ -220,3 +220,4 @@ function create({root=runtimePaths.directory("."),combatRoot=runtimePaths.join(r
   return {is,eligible,initialize,step,end,flushAccounting,publish,reopen,primeFirst,revision:active=>is(active)?active.v2.revision:active.state.turn,actions:active=>load(active).actions(),presentation};
 }
 module.exports={create,holdControls};
+

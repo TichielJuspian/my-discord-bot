@@ -75,7 +75,7 @@ function display(a,p,boss,phase,initial){
  if(a.view==='skills')return require('../../클래스/raid-skill-guide.js').payload(a);
  const availableActions=R.actions(s);
  const btn=(action,label,style=2)=>({type:2,style,label,custom_id:'raidtest:'+a.id+':'+s.turn+':'+action,disabled:!!a.cutsceneResult||!!a.motionStage||!['skills','effects','menu','battle','motion','retreat'].includes(action)&&!action.startsWith('inspect_')&&!availableActions.includes(action)});
- const card=require('../../클래스/raid-card-motion.js').asset(a),battleFeed=require('./raid-battle-feed.js'),feed=battleFeed.asset(a);
+ const card=require('../../클래스/raid-card-motion.js').asset(a),battleFeed=require('./raid-battle-feed.js');
  const visible=require('./raid-visible-effects.js'),art=bossArt(s,!!a.cutsceneResult)[0];
  const source=runtimePaths.join(runtimePaths.directory('.'),art);
  const bossMedia=require('./raid-boss-art-v34.cjs').asset(require('node:fs').readFileSync(source),source,boss);
@@ -84,11 +84,15 @@ function display(a,p,boss,phase,initial){
  let actions=[];if(ended)actions=[row([btn('retreat','End battle',4)])];else if(s.config.job==='berserker')actions=require('../../클래스/광전사/berserker-ui.cjs').buttons(s,btn);else{actions=[row([btn('attack','Attack'),btn(paladin?'guard':'parry',paladin?'Phys. Guard':'Phys. Parry'),btn(paladin?'smash':'thrust',paladin?(require('../../클래스/성기사/paladin-rules.cjs').evolved(s)?'Divine Smash':'Smash')+' · -1E':((s.thrustCasts||0)>=require('../../클래스/검사/warrior-rules.cjs').threshold(s)?'Deep Thrust':'Thrust')+' · -'+R.resourceCost('thrust',s)+'E',1),btn(paladin?'prayer':'slash',paladin?'Blessing · -2E':'Slash · -1E',1)])];const specials=[],ultLeft=Math.max(0,(s.config.level>=90?2:1)-(s.ultimateUses??Number(!!s.ultimateUsed))),evadeLeft=Math.max(0,(s.config.level>=100?2:1)-(s.emergencyUses??Number(!!s.emergencyUsed)));if(s.config.level>=10)specials.push(btn('resonant_wave',ultLeft?(paladin?'Judgment':'Resonant Wave Slash')+' · '+ultLeft+' left':'Ultimate Used',3));specials.push(btn('emergency_evade',evadeLeft?'Evade · '+evadeLeft+' left':'Evade Used',3));if(availableActions.includes('purification'))specials.push(btn('purification','Purification · -3E',1));if(availableActions.includes('cleanse'))specials.push(btn('cleanse','Lift curse',3));specials.push(btn('menu','Menu'));actions.push(row(specials));}
  if(a.view==='menu'&&!ended){for(const row of actions)for(const b of row.components)if(b.custom_id.endsWith(':menu')){b.custom_id=b.custom_id.replace(/:menu$/,':battle');b.label='Close Menu';}actions.push(row([btn('skills','Skill guide'),btn('retreat','End battle',4)]));}
  actions.forEach(require('./raid-button-icons.js').decorate);
- const components=[gallery(bossMedia.name,boss),text(`### ${boss}`),gallery(feed.name,feed.description),profile,...actions],files=[bossMedia,feed,card];
+ const components=[gallery(bossMedia.name,boss),profile,...actions],files=[bossMedia,card];
  for(const item of statuses){if(item.content)components.push(text(item.content));else{components.push(gallery(item.name,item.description));files.push(item);}}
- return {flags:32768,attachments:[],components,files,allowedMentions:{parse:[]}};
+ const gauge=R.phase(s).startsWith("struggle")?{hits:s.struggleSkills||0,required:2}:null;
+ const overlay=require("./흐름/raid-two-piece-model.cjs").forLegacy(a,R.phase(s));
+ if(gauge)overlay.break=gauge;
+ return {flags:32768,attachments:[],components,files,allowedMentions:{parse:[]},twoPiece:{bossName:bossMedia.name,cardName:card.name,overlay}};
 }
 module.exports={requestedBossArt,display,bar,bossArt,combatResult,ASSETS,mechanicStatus,bossStatus};
+
 
 
 

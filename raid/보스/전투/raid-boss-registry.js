@@ -27,7 +27,7 @@ const bosses = deepFreeze([
     enabled: true, autoRotation: true, worldHP: 400000, legacyHP: 60000, storageSuffix: '-succubus',
     testCommand: {name:'succubus', description:'Reset all beta raids and create a fresh Succubus lobby'},
     artModule: './raid-succubus', readyArt: null,
-    lobbyArt: {entrance:'보스/서큐버스/이미지/succubus-top-leaderboard-opening-0a45b316.png', entranceUploadName:'succubus-top-leaderboard-opening-0a45b316.png', defeated:'succubus-art-20261113/Normal/13 Player Victory.jpg'},
+    lobbyArt: {entrance:'보스/서큐버스/이미지/succubus-boss-appears-706d08410e66.png', entranceUploadName:'succubus-boss-appears-706d08410e66.png', defeated:'succubus-art-20261113/Normal/13 Player Victory.jpg'},
     lobbyColors: {fog:'#801c3e', rune:'#da688b'},
   },
   {
