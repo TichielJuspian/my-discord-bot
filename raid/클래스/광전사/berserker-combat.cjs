@@ -45,6 +45,7 @@ function createBerserkerCombat({root = runtimePaths.join(runtimePaths.directory(
   const gimmickPhase = s => ['gimmick_a', 'gimmick_b'].includes(s.phase);
   const cursePhase = s => s.phase === 'defense' && s.pattern?.kind === 'C';
   const paidInterrupt = (s,action) => action==='attack'&&B.stage(s)===0&&(gimmickPhase(s)||cursePhase(s));
+   const interruptCost=s=>Offer.energyCost(s,1);
   function gimmickProgress(action, log) {
     if (action !== 'attack' || log.charmBlocked || !(log.damage > 0)) return 0;
     return log.berserker?.released >= 2 ? 2 : 1;
@@ -52,7 +53,7 @@ function createBerserkerCombat({root = runtimePaths.join(runtimePaths.directory(
   function available(s, action) {
     if (s.status !== 'active') return false;
     if (action === 'emergency_evade') return Math.max(0,(s.config.level>=100?2:1)-(s.emergencyUses??Number(!!s.emergencyUsed)))>0;
-    if (paidInterrupt(s, action) && s.energy < 1) return false;
+    if (paidInterrupt(s, action) && s.energy < interruptCost(s)) return false;
     return [...ATTACK_ACTIONS, 'shoulder_tackle'].includes(action) && B.actions(s).includes(native(action));
   }
   function syncSupport(s) {
@@ -91,13 +92,13 @@ function createBerserkerCombat({root = runtimePaths.join(runtimePaths.directory(
     if (!available(original, action)) throw new Error('Unavailable Berserker action');
     if (!['hit', 'guard', 'evade'].includes(reaction)) throw new Error('Invalid boss reaction');
     const interruptStrike = paidInterrupt(original, action, gimmick);
-    if (interruptStrike && original.energy < 1) throw new Error('Insufficient energy for Interrupt Strike');
+    if (interruptStrike && original.energy < interruptCost(original)) throw new Error('Insufficient energy for Interrupt Strike');
     const s = structuredClone(original), a = native(action), energyStart = s.energy;
     const support = syncSupport(s);
     return withPassives(s, () => {
       const charmed = s.roundCharm > 0 && offensive(action) && roll(s) < .3;
       // Ordinary Basic during Curse/Mechanic is a paid attempt, including Evade/Charm failures.
-      const actual = charmed ? 'charmed' : a, cost = interruptStrike ? 1 : Legacy.resourceCost(actual, s);
+      const actual = charmed ? 'charmed' : a, cost = interruptStrike ? interruptCost(s) : Offer.energyCost(s,Legacy.resourceCost(actual, s));
       reaction = ultimateReaction(reaction, actual === 'berserker_ultimate');
       s.energy -= cost;
       const event = B.begin(s, actual), energyEntries = cost ? [{reason: interruptStrike ? 'interrupt_strike' : actual, requested: -cost, applied: -cost}] : [];
@@ -109,11 +110,11 @@ function createBerserkerCombat({root = runtimePaths.join(runtimePaths.directory(
         event.energyGain=0;
         s.tackleRound = s.turn; s.tackleActive = true;
       }
-      let damage = ['attack', 'berserker_ultimate'].includes(actual) ? B.effectiveAttack(s) * B.attackMultiplier(s) : 0;
+      let damage = ['attack', 'berserker_ultimate'].includes(actual) ? B.effectiveAttack(s,Offer.stat(s,'attack')) * B.attackMultiplier(s) : 0;
       let crit = null;
       if (damage > 0) {
         if (s.holyTurns > 0) { damage += 20 + 3 * s.config.level; s.holyTurns--; }
-        damage += Math.floor(B.effectiveAttack(s) * support.attackBonus + (s.weaponTurns > 0 ? 50 : 0) * (1 + support.attackBonus));
+        damage += Math.floor(B.effectiveAttack(s,Offer.stat(s,'attack')) * support.attackBonus + (s.weaponTurns > 0 ? 50 : 0) * (1 + support.attackBonus));
         if (s.weaponTurns > 0) s.weaponTurns--;
         crit = Crit.roll(s.stats.crit + B.critBonus(s), (s.config.ruinPercentPerPoint || 0) * s.config.ruin + (s.stats.critDamagePercent || 0), () => roll(s));
         event.bloodCriticalProc = false; event.bloodCritChance = B.critBonus(s);
@@ -179,7 +180,7 @@ function createBerserkerCombat({root = runtimePaths.join(runtimePaths.directory(
         if (!(value > 0)) continue;
         if (tackle) resetStreak(s, 'tackle'); else if (kind !== 'N') resetStreak(s, 'other_attack');
         const scaled = secondNormalHitDamage(s, kind, hitIndex, mechanicHit ? value : Stages.scaleAttack(s, value));
-        const mitigated = mechanicHit ? value : Math.max(1, Math.floor(scaled * (1 - support.damageReduction) * 100 / (100 + Math.max(0, B.defense(s)))) - s.stats.mitigation);
+        const mitigated = mechanicHit ? value : Math.max(1, Math.floor(scaled * (1 - support.damageReduction) * 100 / (100 + Math.max(0, Offer.stat(s,'defense')))) - s.stats.mitigation);
         // Failed mechanics are unavoidable and bypass class/DEF mitigation in v1.4.
         if (!mechanicHit && roll(s) < s.stats.evasion / 100) { if(kind==='N')resetStreak(s,'evade'); evades++; hitResults.push({kind, type: hit.type, evaded: true, incoming: 0, tackle}); continue; }
         hits++;
@@ -261,8 +262,8 @@ function createBerserkerCombat({root = runtimePaths.join(runtimePaths.directory(
     onEmergencyEvade: s => { resetStreak(s, 'emergency_evade'); s.tackleActive = false; s.tackleRound = null; },
     gimmickProgress,
     actionLabel: (s, action) => paidInterrupt(s, action) ? 'Power Attack' : null,
-    disabledReason: (s, action) => paidInterrupt(s, action) && s.energy < 1 ? 'Insufficient Energy: requires 1 Energy' : null,
-    cost: (s, action) => paidInterrupt(s, action) ? 1 : action === 'blood_transfusion' ? B.bloodDrawEnergy(s) : B.cost(native(action), s),
+    disabledReason: (s, action) => paidInterrupt(s, action) && s.energy < interruptCost(s) ? 'Insufficient Energy: requires '+interruptCost(s)+' Energy' : null,
+    cost: (s, action) => paidInterrupt(s, action) ? interruptCost(s) : action === 'blood_transfusion' ? B.bloodDrawEnergy(s) : Offer.energyCost(s,B.cost(native(action),s)),
     create, attack, defense, available, resolveDefenseAction, beginRound, endRound, contract, roll,
     weights: s => Profiles.weights(s), cooldown: (s, key) => Profiles.cooldown(s, key), due: s => Stages.due(s), enter: s => Stages.enter(s), stage: s => Stages.level(s),
     unresolvedPolicies: []};

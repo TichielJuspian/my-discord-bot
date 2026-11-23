@@ -1,6 +1,10 @@
-# Gosu RAID v4.1.0: public battle and balance source
+# Gosu RAID v4.1.1: public battle and balance source
 
-A source-reading snapshot of Gosu RAID v4.1.0 for balance review. It includes the battle engine, class mechanics, boss patterns, scaling, buffs, equipment and Workshop formulas. It is not a deployable package or a live server status report.
+A source-reading snapshot of Gosu RAID v4.1.1 for balance review. It includes the battle engine, class mechanics, boss patterns, scaling, buffs, equipment and Workshop formulas. It is not a deployable package or a live server status report.
+
+## Devil’s Contract in v4.1.1
+
+The Succubus contract changes the acceptance/refusal outcome table, applies the listed ATK/DEF modifiers to combat calculations, and can double paid skill energy costs. One refusal outcome drains all remaining Energy, or removes 10% of maximum HP at zero Energy without dropping HP below 1. See the [resolver](raid/%EB%B3%B4%EC%8A%A4/%EC%A0%84%ED%88%AC/%EC%97%94%EC%A7%84/devil-offer.cjs), [display model](raid/%EB%B3%B4%EC%8A%A4/%EC%A0%84%ED%88%AC/%ED%9D%90%EB%A6%84/raid-two-piece-model.cjs) and [overlay](raid/%EB%B3%B4%EC%8A%A4/%EC%A0%84%ED%88%AC/%ED%9D%90%EB%A6%84/raid-two-piece-overlay.cjs). The older standalone offer view and all artwork remain outside this reading edition.
 
 ## Reading map
 
@@ -28,4 +32,4 @@ Artwork, editing assets, other bot code, credentials, deployment settings, servi
 - [워크샵/raid-test-gear.js](raid/%EC%9B%8C%ED%81%AC%EC%83%B5/raid-test-gear.js): Redacted the name of the test-only environment gate; conditional rules kept.
 - [file-map.json](raid/file-map.json): Filtered aliases to the published allowlist.
 
-The v4.1.0 display changes reconnect authorized raid members without requiring a fresh attempt, split some Skill Guide and growth pages, and refine battle status/HUD presentation. The public edition includes only source paths from the previously approved allowlist; it omits new artwork and some renderer dependencies. Existing battle formulas are not redefined by these display refinements. See [SOURCE-SHA256.txt](SOURCE-SHA256.txt) for the included verification inventory.
+The v4.1.1 display changes reconnect authorized raid members without requiring a fresh attempt, split some Skill Guide and growth pages, and refine battle status/HUD presentation. The public edition includes only source paths from the previously approved allowlist; it omits new artwork and some renderer dependencies. Existing battle formulas are not redefined by these display refinements. See [SOURCE-SHA256.txt](SOURCE-SHA256.txt) for the included verification inventory.

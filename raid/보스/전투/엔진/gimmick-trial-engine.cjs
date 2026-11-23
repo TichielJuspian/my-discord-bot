@@ -208,7 +208,7 @@ for(const [boss,first]of [['earth','normal'],['dark','normal'],['arcane','flurry
 R.BOSSES.nameless_succubus={...R.BOSSES.earth,name:'Nameless Succubus',patterns:[...R.BOSSES.earth.patterns]};
 const director=require('./pattern-director.cjs'),offer=require('./devil-offer.cjs');
 function create(config,seed){const s=R.create(config,seed);if(config.job==='spellblade')s.stats.evasion=Math.min(80,(config.baseEvasion??40)+(config.gearEvasion??20));if(config.disableEvasionForDiagnostic)s.stats.evasion=0;if(config.randomPatterns){director.init(s);offer.init(s);}if(['earth','nameless_succubus'].includes(s.config.boss)){s.bossMaxHP=require('../raid-boss-health.js').maximum(s.config.boss);s.bossHP=s.bossMaxHP;}return s;}
-function step(s,...args){if(offer.pending(s))return offer.resolve(s,...args);
+function step(s,...args){if(offer.pending(s))return offer.resolve(s,args[0],args[1],{legacy:true});
 // Restored pre-update battles may contain a retired third strike or an unprepared heavy.
 // Refresh its committed preview without spending the player's action or combat turn.
 if(args[0]!=='retreat'&&s.config.boss==='nameless_succubus'&&(require('./common-pattern-director.cjs').hasRetiredCombo(s)||require('./common-pattern-director.cjs').hasUnpreparedHeavy(s))){

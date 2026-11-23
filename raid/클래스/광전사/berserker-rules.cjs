@@ -57,7 +57,7 @@ function outgoing(s, damage) {
   return Math.floor(damage);
 }
 // Keep base ATK unchanged; round only when the existing damage pipeline does.
-function effectiveAttack(s) { return s.stats.attack * (enraged(s) ? ENRAGE_ATTACK_MULTIPLIER : 1); }
+function effectiveAttack(s,attack=s.stats.attack) { return attack * (enraged(s) ? ENRAGE_ATTACK_MULTIPLIER : 1); }
 function attackMultiplier(s) {
   const e = s.berserkerEvent;
   return e?.action === 'berserker_ultimate' ? 2.5 : MULTIPLIERS[e?.released || 0];

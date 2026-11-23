@@ -35,8 +35,11 @@ function contractProjection(frame){
  if(o.lifesteal)parts.push('Heal '+Math.round(o.lifesteal*100)+'% of damage dealt');
  if(o.healRate)parts.push('HP +'+number(o.heal));
  if(o.hpLoss)parts.push('HP -'+number(o.hpLoss));
- if(o.choice==='no'&&o.index===2)parts.push('Energy -'+number(o.energyCost));
+ if(o.energyCost>0)parts.push('Energy -'+number(o.energyCost));
  if(o.charm)parts.push('Cursed! (Charm)');
+ if(o.attack)parts.push('ATK '+(o.attack>0?'+':'')+Math.round(o.attack*100)+'%');
+ if(o.defense)parts.push('DEF '+(o.defense>0?'+':'')+Math.round(o.defense*100)+'%');
+ if(o.energyMultiplier>1)parts.push('Energy cost ×'+o.energyMultiplier);
  if(e?.newPenalty)parts.push('Damage taken +100%'+(s.turn<s.contractPenalty?.startTurn?' (pending)':''));
  const refusals=e?.refusals??frame.refusals??s.contractResultRefusals;
  return {own:'Debuff!',ownDetail:parts.join(' · ')||'No ongoing modifier',boss:"Devil's Bargain / "+(o.choice==='yes'?'Accepted':'Refused'),bossDetail:o.choice==='no'&&refusals!=null?'Refusals: '+refusals+'/3 · Refusing 3 times applies a powerful debuff.':'',incoming:0,outgoing:0,selfDamage:0,critical:false,log:l,event:'contract'};

@@ -199,8 +199,8 @@ function createRenderer({root=runtimePaths.join(runtimePaths.directory("raid15")
    const evadeLeft=Math.max(0,(s.config.level>=100?2:1)-(s.emergencyUses??Number(!!s.emergencyUsed)));
    const all=(frame.kind==='contract'?['offer_yes','offer_no']:frame.kind==='contract_result'?['offer_next']:['prep','gimmick_a','gimmick_b'].includes(frame.kind)?(engine.defenseActions||Rules.DEFENSE_ACTIONS):(engine.attackActions||Rules.ATTACK_ACTIONS)).filter(action=>action!=='purification'||require('../../../클래스/성기사/purification.cjs').removable(s));
    const available=engine.actions();
-   const actionLabel=action=>{if(action==='purification')return 'Purification';if(action==='smash'&&s.config.job==='paladin')return require('../../../클래스/성기사/paladin-rules.cjs').evolved(s)?'Divine Smash':'Smash';if(action==='attack'&&s.config.job==='berserker'){const B=require('../../../클래스/광전사/berserker-rules.cjs'),stage=B.stage(s);if(stage)return B.names[stage]+(['',' +2E',' +1E',''][stage]);return ['gimmick_a','gimmick_b'].includes(s.phase)||s.phase==='defense'&&s.pattern?.kind==='C'?'Power Attack':'Attack';}return LABEL[action]||action;};
-   const buttons=all.map(action=>{const info=action.startsWith('offer_')?{}:engine.actionInfo?.(action)||{};let label=action==='thrust'?(s.hone||0)>=require('../../../클래스/검사/warrior-rules.cjs').threshold(s)?'Deep Thrust':'Thrust':actionLabel(action);if(label==='Power Attack')label+=' -1E';else if(info.cost>0)label+=' · -'+info.cost+'E';if(action==='ultimate')label+=' · '+ultimateLeft+' left';if(action==='emergency_evade')label='Evade · '+evadeLeft+' left';return {type:2,style:action==='offer_yes'?1:action==='offer_no'?4:['ultimate','emergency_evade'].includes(action)?3:['thrust','slash','smash','charge','blood_transfusion','heal','blessing'].includes(action)?1:2,label,custom_id:`${namespace}:${id}:${revision}:${action}`,disabled:!available.includes(action)||(action==='ultimate'&&ultimateLeft===0)||(action==='emergency_evade'&&evadeLeft===0)};});
+   const actionLabel=action=>{if(action==='offer_yes')return 'YES';if(action==='offer_no')return 'NO';if(action==='purification')return 'Purification';if(action==='smash'&&s.config.job==='paladin')return require('../../../클래스/성기사/paladin-rules.cjs').evolved(s)?'Divine Smash':'Smash';if(action==='attack'&&s.config.job==='berserker'){const B=require('../../../클래스/광전사/berserker-rules.cjs'),stage=B.stage(s);if(stage)return B.names[stage]+(['',' +2E',' +1E',''][stage]);return ['gimmick_a','gimmick_b'].includes(s.phase)||s.phase==='defense'&&s.pattern?.kind==='C'?'Power Attack':'Attack';}return LABEL[action]||action;};
+   const buttons=all.map(action=>{const info=action.startsWith('offer_')?{}:engine.actionInfo?.(action)||{};let label=action==='thrust'?(s.hone||0)>=require('../../../클래스/검사/warrior-rules.cjs').threshold(s)?'Deep Thrust':'Thrust':actionLabel(action);if(label==='Power Attack')label+=' -'+(info.cost||1)+'E';else if(info.cost>0)label+=' · -'+info.cost+'E';if(action==='ultimate')label+=' · '+ultimateLeft+' left';if(action==='emergency_evade')label='Evade · '+evadeLeft+' left';return {type:2,style:action==='offer_yes'?1:action==='offer_no'?4:['ultimate','emergency_evade'].includes(action)?3:['thrust','slash','smash','charge','blood_transfusion','heal','blessing'].includes(action)?1:2,label,custom_id:`${namespace}:${id}:${revision}:${action}`,disabled:!available.includes(action)||(action==='ultimate'&&ultimateLeft===0)||(action==='emergency_evade'&&evadeLeft===0)};});
    const attackSet=new Set(engine.attackActions||Rules.ATTACK_ACTIONS);
    const utility=action=>action==='ultimate'||action==='emergency_evade';
    const groups=defenseLayout?[
@@ -214,8 +214,10 @@ function createRenderer({root=runtimePaths.join(runtimePaths.directory("raid15")
    }
    for(const group of groups)for(let n=0;n<group.length;n+=5)player.push({type:1,components:group.slice(n,n+5)});
   }
+  if(ready&&frame.kind==='contract')player.push(text("**Refuse 3 times in a row, you'll receive a powerful debuff**"));
   const menuOpen=activeSession?.view==='menu';
-  if(production&&namespace==='raidtest'&&ready){
+  if(frame.kind==='contract'){} // Choice only: the separate player row already holds YES/NO.
+  else if(production&&namespace==='raidtest'&&ready){
    const button=(action,label,style=2)=>({type:2,style,label,custom_id:`${namespace}:${id}:${revision}:${action}`});
    const toggle=button(menuOpen?'battle':'menu',menuOpen?'Close Menu':'Menu');
    // Menu has a dedicated row in both phases; a spent ultimate remains disabled.
@@ -237,6 +239,10 @@ function createRenderer({root=runtimePaths.join(runtimePaths.directory("raid15")
   if(s.charmTurns)statuses.push(`Charm: ${s.charmTurns} turn(s)`);
   if(s.config.job==='paladin'){const P=require(runtimePaths.join(root,'raid-engine/paladin-rules.cjs')),n=P.stacks(s);if(n)statuses.push(`Blessing: ${n}/${P.BLESSING_MAX_STACKS} stacks · Smash +${P.protectionBonus(s)}% / CRIT +${n*P.BLESSING_CRIT_PER_STACK}% · ${P.offensiveTurns(s)} turn(s)`);if(s.protectionTurns)statuses.push(`Blessing DEF +40%: ${s.protectionTurns} turn(s)`);}if(s.config.job==='paladin')statuses.push(`Blessing casts: ${s.paladinBlessing||0} · Divine Smash evolves at ${require('../../../클래스/성기사/paladin-rules.cjs').threshold(s)}`);if(s.config.job==='berserker')statuses.push(`Charge: ${s.berserkerCharge||0}/3 · Unguarded normal hits: ${s.unguardedNormalHits||s.berserkerUnguardedNormalHits||0}/2`);
   if(s.overheatTurns)statuses.push(`Blade Trance: ${s.overheatTurns} turn(s)`);
+  if(s.offerEffects?.remaining){const o=s.offerEffects,t=o.remaining+' turn(s)';
+   for(const [key,desc] of [['attack','ATK'],['defense','DEF']]){const n=o[key];if(Number.isFinite(n)&&n)statuses.push(desc+' '+(n>0?'+':'')+Math.round(n*100)+'% · '+t);}
+   if(o.energyMultiplier>1)statuses.push('Energy cost ×'+o.energyMultiplier+' · '+t);
+  }
   if(s.offerEffects?.remaining){const o=s.offerEffects;statuses.push(`Contract: ${o.remaining} turn(s)${o.incoming?' · Damage taken '+Math.round(o.incoming*100)+'%':''}${o.outgoing?' · Damage dealt '+Math.round(o.outgoing*100)+'%':''}`);}
   const statusCards=effectsCard?(Array.isArray(effectsCard)?effectsCard:[effectsCard]):[];
   // Keep detailed effects after the character card and controls.

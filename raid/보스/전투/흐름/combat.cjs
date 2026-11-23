@@ -22,8 +22,8 @@ function createCombat({root=runtimePaths.join(runtimePaths.directory("raid15"),'
   s.offer=null;s.offerEffects=null;s.raidId='raid15-isolated';s.buffs=[];
   return W.normalize(s);
  }
- const cost=(s,a)=>['parry','magic_parry'].includes(a)?0:a==='thrust'?W.thrustCost(s,bladerPolicy):Legacy.resourceCost(native(a),s);
- const available=(s,a)=>a==='thrust'?W.canThrust(s)&&s.energy>=cost(s,a):['parry','magic_parry'].includes(a)?true:a==='emergency_evade'?Math.max(0,(s.config.level>=100?2:1)-(s.emergencyUses??Number(!!s.emergencyUsed)))>0:Legacy.actions(s).includes(native(a));
+ const cost=(s,a)=>Offer.energyCost(s,['parry','magic_parry'].includes(a)?0:a==='thrust'?W.thrustCost(s,bladerPolicy):Legacy.resourceCost(native(a),s));
+ const available=(s,a)=>a==='thrust'?W.canThrust(s)&&s.energy>=cost(s,a):['parry','magic_parry'].includes(a)?true:a==='emergency_evade'?Math.max(0,(s.config.level>=100?2:1)-(s.emergencyUses??Number(!!s.emergencyUsed)))>0:s.energy>=cost(s,a)&&Legacy.actions(s).includes(native(a));
  function prepare(s){W.normalize(s);if(!s.bladerRound)W.beginRound(s);s.thrustDefense=0;s.thrustDefenseTurns=0;return s;}
  function finish(s,details={}){
   const l=s.log.at(-1);
@@ -39,11 +39,12 @@ function createCombat({root=runtimePaths.join(runtimePaths.directory("raid15"),'
   // The attack phase is spent even if Charm prevents the chosen action.
   if(['idle','ultimate_bonus','stagger_a','stagger_b'].includes(s.phase))W.closeThrustWindow(s);
   if(actual==='resonant_wave'){s.ultimateUses=(s.ultimateUses||0)+1;s.ultimateUsed=s.ultimateUses>=(s.config.level>=90?2:1);}
-  let damage=actual==='attack'?s.stats.attack:actual==='slash'?s.stats.attack*W.SLASH_MULTIPLIER:actual==='thrust'?W.thrust(s):actual==='resonant_wave'?Math.floor(s.stats.attack*6):0;
+  const atk=Offer.stat(s,'attack');
+   let damage=actual==='attack'?atk:actual==='slash'?atk*W.SLASH_MULTIPLIER:actual==='thrust'?W.thrust(s,atk):actual==='resonant_wave'?Math.floor(atk*6):0;
   let crit=null;
   if(damage>0){
    // v1.4 floors the attack component's flat support adjustment before criticals.
-   damage+=Math.floor(s.stats.attack)-s.stats.attack;
+   damage+=Math.floor(atk)-atk;
    crit=Crit.roll(s.stats.crit+(W.tranceRemaining(s)>0?W.TRANCE_CRIT_CHANCE:0),(s.config.ruinPercentPerPoint||0)*s.config.ruin+(s.stats.critDamagePercent||0)+W.focusCritDamage(s,bladerPolicy),()=>roll(s));
    if(crit.critical)damage=Math.floor(damage*crit.damageMultiplier)+s.stats.critFlat;
   }
@@ -69,7 +70,7 @@ function createCombat({root=runtimePaths.join(runtimePaths.directory("raid15"),'
   const count=pattern.kind==='N'?pattern.hits:raw>0?1:0;
   for(let n=0;n<count;n++){
    const scaled=secondNormalHitDamage(s,pattern.kind,n,pattern.kind==='G'?raw:Stages.scaleAttack(s,raw));
-   const damage=Math.max(1,Math.floor(scaled*100/(100+Math.max(0,s.stats.defense)))-s.stats.mitigation);
+   const damage=Math.max(1,Math.floor(scaled*100/(100+Math.max(0,Offer.stat(s,'defense'))))-s.stats.mitigation);
    const evaded=roll(s)<s.stats.evasion/100;
    const hitParry=matched?(roll(s)<W.perfectChance(s)?'perfect':'success'):['parry','magic_parry'].includes(action)?'failed':null;
    parryResult=hitParry;

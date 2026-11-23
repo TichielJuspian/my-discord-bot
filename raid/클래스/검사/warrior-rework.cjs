@@ -21,7 +21,7 @@ const sharpEyeRemaining=s=>Math.max(stack(s.sharpEyeTurns),tranceRemaining(s));
 const sixthSenseRemaining=s=>Math.max(stack(s.sixthSenseTurns),tranceRemaining(s));
 const isSharpEye=s=>sharpEyeRemaining(s)>0,hasSixthSense=s=>sixthSenseRemaining(s)>0;
 const canThrust=s=>tranceRemaining(s)>0||!!s.parryAttackReady;
-const thrust=s=>s.stats.attack*THRUST_MULTIPLIER*(isSharpEye(s)?SHARP_EYE_MULTIPLIER:1);
+const thrust=(s,attack=s.stats.attack)=>attack*THRUST_MULTIPLIER*(isSharpEye(s)?SHARP_EYE_MULTIPLIER:1);
 function alias(s){if(!active(s))return s;s.sharpEye=isSharpEye(s)?1:0;s.sixthSense=hasSixthSense(s);return s;}
 function normalize(s){
  if(!active(s)||s.bladerRulesVersion===1)return s;

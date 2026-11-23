@@ -42,7 +42,7 @@ function createPaladinCombat({ root = runtimePaths.join(runtimePaths.directory("
   const Mechanic = load('raid-engine/mechanic-rules.cjs');
   const common = createCombat({ root, random });
   const roll = common.roll;
-  const cost = (s, action) => action === 'purification' ? 3 : action === 'heal' ? 2 : Legacy.resourceCost(action === 'magic_guard' ? 'guard' : nativeAction(action), s);
+  const cost = (s, action) => Offer.energyCost(s,action === 'purification' ? 3 : action === 'heal' ? 2 : Legacy.resourceCost(action === 'magic_guard' ? 'guard' : nativeAction(action), s));
 
   function create({ level = 40, enhancement = 0, seed = 1 } = {}) {
     const s = Legacy.create(Build.config('paladin', level, enhancement, 'nameless_succubus'), seed);
@@ -70,18 +70,18 @@ function createPaladinCombat({ root = runtimePaths.join(runtimePaths.directory("
       const key = action === 'guard' ? 'guardPhysicalReduction' : 'guardMagicReduction';
       return settings[key] === null ? 'Guard rate awaiting approval' : null;
     }
-    if(action==='purification')return !defensePhase(s)?'Defense turn only':s.energy<3?'Needs 3 Energy':require('./purification.cjs').removable(s)?null:'No removable debuffs';
+    if(action==='purification')return !defensePhase(s)?'Defense turn only':s.energy<cost(s,action)?'Needs '+cost(s,action)+' Energy':require('./purification.cjs').removable(s)?null:'No removable debuffs';
     if (action === 'heal') {
       if (!defensePhase(s)) return 'Defense turn only';
       if (settings.healTiming === null) return 'Heal timing awaiting approval';
-      return s.energy < 2 ? 'Needs 2 energy' : null;
+      return s.energy < cost(s,action) ? 'Needs '+cost(s,action)+' energy' : null;
     }
     if (action === 'ultimate') {
       if (s.config.level < 10) return 'Unlocks at level 10';
       if ((s.ultimateUses ?? Number(!!s.ultimateUsed)) >= (s.config.level >= 90 ? 2 : 1)) return 'No Ultimate uses remaining';
     }
-    const cost = Legacy.resourceCost(nativeAction(action), s);
-    if (s.energy < cost) return 'Needs ' + cost + ' energy';
+    const need = cost(s,action);
+    if (s.energy < need) return 'Needs ' + need + ' energy';
     return Legacy.actions(s).includes(nativeAction(action)) ? null : 'Skill is unavailable';
   }
   const available = (s, action) => disabledReason(s, action) === null;
@@ -118,20 +118,21 @@ function createPaladinCombat({ root = runtimePaths.join(runtimePaths.directory("
     const beforePassives = s.config.disableClassPassives;
     if (s.roundCharm > 0) s.config.disableClassPassives = true;
     const energyStart = s.energy;
-    const cost = Legacy.resourceCost(actual, s);
-    s.energy -= cost;
+    const spent = cost(s,actual);
+    s.energy -= spent;
     begin(s, actual);
     if (actual === 'resonant_wave') {
       s.ultimateUses = (s.ultimateUses ?? Number(!!s.ultimateUsed)) + 1;
       s.ultimateUsed = s.ultimateUses >= (s.config.level >= 90 ? 2 : 1);
     }
-    let damage = actual === 'attack' ? s.stats.attack
-      : actual === 'smash' ? Math.floor(s.stats.attack * 2.2 * (1 + P.blessingBonus(s) / 100) * (1 + P.protectionBonus(s) / 100))
-      : actual === 'resonant_wave' ? Math.floor(s.stats.attack * 6) : 0;
+    const atk=Offer.stat(s,'attack');
+    let damage = actual === 'attack' ? atk
+      : actual === 'smash' ? Math.floor(atk * 2.2 * (1 + P.blessingBonus(s) / 100) * (1 + P.protectionBonus(s) / 100))
+      : actual === 'resonant_wave' ? Math.floor(atk * 6) : 0;
     let crit = null;
     if (damage > 0) {
       // Preserve the v1.4 floor of the flat attack component before criticals.
-      damage += Math.floor(s.stats.attack) - s.stats.attack;
+      damage += Math.floor(atk) - atk;
       crit = Crit.roll(s.stats.crit + (actual === 'smash' ? P.smiteCrit(s) : 0),
         (s.config.ruinPercentPerPoint || 0) * s.config.ruin + (s.stats.critDamagePercent || 0), () => roll(s));
       if (crit.critical) damage = Math.floor(damage * crit.damageMultiplier) + s.stats.critFlat;
@@ -148,7 +149,7 @@ function createPaladinCombat({ root = runtimePaths.join(runtimePaths.directory("
     s.totals.healing += offerHeal;
     s.bossHP -= damage;
     s.totals.damage += damage;
-    const energyEntries = cost ? [{ reason: requested, requested: -cost, applied: -cost }] : [];
+    const energyEntries = spent ? [{ reason: requested, requested: -spent, applied: -spent }] : [];
     if (s.paladinEvent.refund) energyEntries.push({ reason: 'hammer_refund', requested: 1, applied: s.paladinEvent.refund });
     if (actual === 'attack') {
       const before = s.energy;
@@ -176,15 +177,15 @@ function createPaladinCombat({ root = runtimePaths.join(runtimePaths.directory("
     const energyStart = s.energy;
     const energyEntries = [];
     const actual = action === 'blessing' ? 'prayer' : action === 'heal' ? 'heal' : action === 'guard' || action === 'magic_guard' ? 'guard' : 'wait';
+    const spent=cost(s,action);
     const purified=action==='purification'?require('./purification.cjs').apply(s):[];
     const beforePassives = s.config.disableClassPassives;
     if (s.roundCharm > 0) s.config.disableClassPassives = true;
-    const cost = action === 'purification' ? 3 : action === 'heal' ? 2 : action === 'blessing' ? Legacy.resourceCost('prayer', s) : 0;
-    s.energy -= cost;
-    if (cost) energyEntries.push({ reason: action, requested: -cost, applied: -cost });
+    s.energy -= spent;
+    if (spent) energyEntries.push({ reason: action, requested: -spent, applied: -spent });
     begin(s, actual);
     s.divineGraceProc = false;
-    const effectiveDefense = s.stats.defense;
+    const baseDefense=s.stats.defense,effectiveDefense=Offer.stat(s,'defense');
     let healed = 0;
     let requestedHeal = 0;
     const applyHeal = () => {
@@ -245,7 +246,9 @@ function createPaladinCombat({ root = runtimePaths.join(runtimePaths.directory("
     if(matched&&count>0)energyEntries.push({reason:'guard',requested:1,applied:guardEnergy});
     // Divine Grace triggers once after surviving direct damage, never the
     // legacy mechanic-failure damage or a non-damaging curse/support choice.
+    s.stats.defense=effectiveDefense;
     P.struck(s, pattern.kind === 'G' ? 0 : incoming, () => roll(s));
+    s.stats.defense=baseDefense;
     s.totals.evades += evades;
     s.totals.blocked += blocked;
     s.log.push({ turn: s.turn, phase: s.phase, action: nativeAction(action), requestedAction: nativeAction(action),
