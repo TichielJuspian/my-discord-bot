@@ -181,10 +181,10 @@ function create({root=runtimePaths.directory("."),combatRoot=runtimePaths.join(r
       const ultimate=(frame.kind==='ultimate_hit'||frame.kind==='cancelled')&&frame.log?.ultimate===true;
       const ragnarokHit=frame.state.config.job==='berserker'&&frame.kind==='reaction'&&frame.reaction==='hit'&&['ragnarok_a','ragnarok_defense_a'].includes(frame.state.phase);
       const bossDodge=frame.state.config.boss==='nameless_succubus'&&frame.kind==='reaction'&&frame.reaction==='evade'&&frame.log?.reaction==='evade'&&frame.log.damage===0&&frame.log.charmBlocked!==true;
-      const minDwell=ultimate||ragnarokHit?500:bossDodge?320:0;
+      const minDwell=ultimate?800:ragnarokHit?500:bossDodge?320:0;
       if(queued.length&&minDwell){
-        // Keep the acknowledged boss Dodge readable before a following cut replaces it.
-        // This is post-edit only; initial response, unrelated cuts and existing ult timing stay unchanged.
+        // Keep an acknowledged cinematic or boss Dodge readable before the next cut.
+        // This is post-edit only; initial response and unrelated cuts stay unchanged.
         const remaining=minDwell-(performance.now()-uploaded);
         if(remaining>0)await wait(Math.ceil(remaining));
         timing.dwellMs=Math.round(performance.now()-uploaded);

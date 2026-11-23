@@ -1,6 +1,10 @@
-# Gosu RAID v4.1.1: public battle and balance source
+# Gosu RAID v4.1.2: public battle and balance source
 
-A source-reading snapshot of Gosu RAID v4.1.1 for balance review. It includes the battle engine, class mechanics, boss patterns, scaling, buffs, equipment and Workshop formulas. It is not a deployable package or a live server status report.
+A source-reading snapshot of Gosu RAID v4.1.2 for balance review. It includes the battle engine, class mechanics, boss patterns, scaling, buffs, equipment and Workshop formulas. It is not a deployable package or a live server status report.
+
+## Changes in v4.1.2
+
+Acknowledged Ultimate scenes now stay visible for at least 800 ms before the next queued cut. The separate Ragnarok follow-up hit stays at 500 ms, and the Succubus dodge cut stays at 320 ms. Timing does not change the attack, damage, Energy or turn rules. In the full runtime, private character selection and inactive battles also close after five minutes; production-specific message and lobby handlers are outside this public source-reading edition. The snapshot does not indicate live deployment status.
 
 ## Devil’s Contract in v4.1.1
 
