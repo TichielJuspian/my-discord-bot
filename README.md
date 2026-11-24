@@ -1,6 +1,12 @@
-# Gosu RAID v4.4.0: public battle and balance source
+# Gosu RAID v4.4.1: public battle and balance source
 
-A source-reading snapshot of Gosu RAID v4.4.0 for balance and Workshop UI review. It contains the battle engine, class mechanics, boss patterns, scaling, buffs, equipment and Workshop enhancement formulas. It is neither deployable nor a live-server status report.
+A source-reading snapshot of Gosu RAID v4.4.1 for balance and Workshop UI review. It contains the battle engine, class mechanics, boss patterns, scaling, buffs, equipment and Workshop enhancement formulas. It is neither deployable nor a live-server status report.
+
+## Changes in v4.4.1
+
+In the complete runtime, the raid owner can explicitly move a verified, unscheduled test lobby to another channel without resetting its HP, rankings, or active battles. The destination lobby is verified and its new location saved before the original message is deleted. Older unverified lobbies and regular or scheduled raids are not eligible. The existing fresh-test commands still reset the raid when explicitly invoked.
+
+The operational lobby and command handlers remain outside this public source-reading edition. The curated balance and Workshop source, and its checksum inventory, are unchanged from v4.4.0.
 
 ## Changes through v4.4.0
 
