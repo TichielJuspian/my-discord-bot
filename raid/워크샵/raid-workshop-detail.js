@@ -20,14 +20,45 @@ function slot(x,y,id,level=0,size=136){
  return '<g transform="translate('+x+' '+y+')"><rect width="'+size+'" height="'+size+'" rx="12" fill="url(#slot)"/>'+(border?rect(2,color,12,.08)+rect(2,color,7,.16)+rect(2,color,2.5,.95)+rect(7,color,1,.4):'')+(id?'<image href="'+image(id)+'" x="14" y="14" width="'+(size-28)+'" height="'+(size-28)+'" preserveAspectRatio="xMidYMid meet"/>':center(size/2,size/2+9,'+',35,'#445870'))+'<rect x="'+(size-46)+'" y="8" width="36" height="24" rx="5" fill="#0a1424" stroke="'+(border?color:'#526984')+'"/>'+center(size-28,26,'+'+level,15,color)+'</g>';
 }
 
-function svg({account:a,level,boostCount=0,boostUnavailable=false,draft,view,pending,potionResult}){
+ const statKeys=[['attack','ATK',''],['hp','HP',''],['defense','DEF',''],['evasion','EVASION','%'],['damagePercent','DMG','%'],['crit','CRIT RATE','%'],['critDamagePercent','CRIT DMG','%']];
+ const statRows=stats=>statKeys.filter(([key])=>Number.isFinite(stats[key])&&stats[key]!==0).map(([key,label,unit])=>({key,label,value:stats[key],unit}));
+ const statText=({label,value,unit})=>label+' '+(value>0?'+':'')+value+unit;
+ function equipmentOverview(head,a,selection,pending,boostUnavailable){
+  let v=head.replace('height="440"','height="580"').replace('<rect width="1000" height="440"','<rect width="1000" height="580"');
+  const C=require('./raid-item-catalog.js'),selected=pending?.action==='equip'?pending.value:Object.values(a.equipped).includes(selection)?selection:null,gear=M.ITEMS[selected];
+  for(const [i,k]of M.SLOTS.entries()){const x=28+i*320,id=a.equipped[k],owned=Object.keys(a.inventory).find(id=>M.ITEMS[id]?.slot===k&&a.inventory[id]>0);
+   v+='<rect x="'+x+'" y="82" width="304" height="304" rx="12" fill="url(#panel)" stroke="#344860"/>'+center(x+152,113,names[k],21,'#91b0ca')+slot(x+84,128,id,a.slots[k])+center(x+152,297,id?require('./raid-item-catalog.js').displayName(M.ITEMS[id],{compact:true}):'Empty Slot',22,id?itemColor(id):'#8b9caf',id&&require('./raid-item-catalog.js').displayName(M.ITEMS[id],{compact:true}).length>22?'textLength="276" lengthAdjust="spacingAndGlyphs"':'');
+   const item=id&&M.itemStats(id,a.job),bonus=item?[item.damagePercent?'DMG +'+item.damagePercent+'%':'',item.evasion?'EVASION +'+item.evasion+'%':'',item.attack?'ATK +'+item.attack:'',item.hp?'HP +'+item.hp:'',item.defense?'DEF +'+item.defense:'',item.crit?'CRIT +'+item.crit+'%':'',item.critDamagePercent?'CRIT DMG +'+item.critDamagePercent+'%':''].filter(Boolean).join('  /  '):owned?'Item available in inventory':'Find equipment to fill this slot';
+   const gear=id&&M.ITEMS[id],quality=gear?(Number.isInteger(gear.roll)?'Quality '+gear.roll+'/100 · '+gear.quality:'Fixed stats'):'Not equipped';
+   v+=center(x+152,330,bonus,19,'#a6deca',bonus.length>25?'textLength="280" lengthAdjust="spacingAndGlyphs"':'')+center(x+152,367,quality,20,id?itemColor(id):'#91a4bb');}
+  v+='<rect x="28" y="404" width="944" height="167" rx="12" fill="#142033" stroke="#465c77"/><path d="M46 448H954" stroke="#34465e"/>';
+  const headerStroke='stroke="#101a28" stroke-width="0.8" paint-order="stroke fill" letter-spacing="0"';
+  if(gear){
+   const stats=statRows(M.itemStats(selected,a.job)),quality=Number.isInteger(gear.roll),fixed=!quality&&gear.rarity!=='Legendary'&&stats.some(s=>s.key!=='damagePercent'),name=C.displayName(gear,{compact:true});
+   v+=t(48,436,name.toUpperCase(),22,itemColor(selected),headerStroke+(name.length>28?' textLength="530" lengthAdjust="spacingAndGlyphs"':''));
+   if(quality)v+=t(954,436,'QUALITY 50 = 100%',18,'#b8ccdf','text-anchor="end"')+t(48,480,'QUALITY '+gear.roll+'/100 '+gear.quality.toUpperCase(),23,'#FFFFFF');
+   else if(fixed)v+=t(48,480,'FIXED',23,'#FFFFFF');
+   const line=stats.map(statText).join(' / ');
+   v+=t(48,517,line||'No inherent stats',23,line?'#a6deca':'#91a4bb',line.length>66?'textLength="900" lengthAdjust="spacingAndGlyphs"':'');
+  }else{
+   v+=t(48,436,'ENHANCEMENT BONUSES',22,'#e4c98b',headerStroke);
+   for(const [i,k] of M.SLOTS.entries()){const y=480+i*37,stage=a.slots[k]||0,stats=statRows(P.bonuses({[k]:stage})),line=stats.map(statText).join(' / ');v+=t(48,y,names[k]+' +'+stage,23,'#a4b8d0')+t(310,y,line||'No enhancement bonuses',23,line?'#a6deca':'#91a4bb');}
+  }
+  const E=require('./raid-item-effect-card.js'),effect=E.sections(a,gear&&pending?.action==='equip'?pending:null).find(x=>x.title==='DAMAGE BONUS')||E.sections(a,null).find(x=>x.title==='DAMAGE BONUS');
+  if(effect)v+=t(48,571,effect.title,13,effect.color)+t(169,571,effect.lines[0],14,'#edf4ff')+t(491,571,effect.lines[1],14,'#b8ccdf');
+  if(boostUnavailable)v+=t(28,399,'Boost count unavailable; showing attack without boost.',14,'#ffd08a');
+  return v+'</svg>';
+ }
+function svg({account:a,level,boostCount=0,boostUnavailable=false,draft,view,pending,potionResult,equipmentDetailId}){
  if(potionResult)return potionResultCard(a,potionResult);
  const boost={boostCount,boostUnavailable};
  const shown={...a,allocation:draft||a.allocation};
  let v='<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="440">'+require('./raid-workshop-finish.js').defs+'<defs><linearGradient id="slot" x2="0.8" y2="1"><stop stop-color="#304766"/><stop offset=".5" stop-color="#152237"/><stop offset="1" stop-color="#080f1b"/></linearGradient><linearGradient id="panel"><stop stop-color="#162338"/><stop offset="1" stop-color="#0c1727"/></linearGradient></defs><rect width="1000" height="440" rx="16" fill="#0b1423"/>';
  const headings={home:'Your Equipment',equipment:'Equipment',enhance:'Slot Enhancement',stats:'Attributes'};
  const title=pending?({equip:'Equip Item',unequip:'Remove Item',enhance:'Enhance Slot',allocate:'Confirm Investment',reset:'Reset Attributes',testkit:'Starter Equipment',job:'Change Class',sell:'Sell Item'}[pending.action]):headings[view]||'Workshop';
- v+=t(28,42,title,27,'#ffe0a2')+t(972,40,view==='stats'?M.remaining(shown,level)+' points available':'WORKSHOP','15','#8ca6be','text-anchor="end"')+'<path d="M28 59H972" stroke="#34465e"/>';
+ const combined=view==='equipment'&&(!pending||pending.action==='equip');
+ v+=(combined?t(500,42,title,27,'#ffe0a2','text-anchor="middle"'):t(28,42,title,27,'#ffe0a2')+t(972,40,view==='stats'?M.remaining(shown,level)+' points available':'WORKSHOP','15','#8ca6be','text-anchor="end"'))+'<path d="M28 59H972" stroke="#34465e"/>';
+ if(view==='equipment'&&(!pending||pending.action==='equip'))return equipmentOverview(v,a,equipmentDetailId,pending,boostUnavailable);
  if(pending?.action==='sell'){const item=M.ITEMS[pending.value];return v+slot(48,92,pending.value,0,166)+t(260,140,item.name,29,itemColor(pending.value))+t(260,184,'Selling is not available yet.',22)+t(260,220,'Your item and points will not be changed.',17,'#90adc6')+t(260,276,'SELLING LOCKED',18,'#c7a2e9')+'</svg>';}
  if(pending){
   const next=structuredClone(a),action=pending.action;

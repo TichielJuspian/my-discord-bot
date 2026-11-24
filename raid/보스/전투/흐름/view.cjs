@@ -153,6 +153,7 @@ function createRenderer({root=runtimePaths.join(runtimePaths.directory("raid15")
   if(!['raid15','raidtest'].includes(namespace))throw new Error('Unknown battle control namespace');
   const s=frame.state,files=[],components=[],session=displaySession(id,frame,{playerName,activeSession});
   const twoPiece=presentationLayout!=="legacy";
+ const presentation=twoPiece?require("./raid-two-piece-model.cjs"):null;
   session.panelRefs=twoPiece?undefined:panelRefs;
   const showGuide = /^(skills|guide_(core|growth|passives))$/.test(activeSession?.view || '');
   let checkedBytes;
@@ -175,7 +176,7 @@ function createRenderer({root=runtimePaths.join(runtimePaths.directory("raid15")
   try{if(!twoPiece)feedCard=timed('log',()=>providers.feed?.(session,frame));}catch(error){console.warn('[RAID PANEL FEED]',error.code||error.name,error.message);throw error;}
   try{if(!showGuide)effectsCard=timed('effects',()=>providers.effects?.(session,frame));}catch(error){console.warn('[RAID PANEL EFFECTS]',error.code||error.name,error.message);}
   if(frame.kind==='boss_attack')console.warn('[RAID PANEL CPU]',JSON.stringify({job:s.config.job,turn:s.turn,hit:frame.hitIndex,...metrics,characterPose:characterCard?.description}));
-   const dialogue=twoPiece?require('./raid-two-piece-model.cjs').contractDisplay(frame):null;
+   const dialogue=presentation?.contractDisplay(frame)??null;
   const dialogueAlt=dialogue?require('./raid-two-piece-model.cjs').contractDescription(dialogue):null;
   if(bossArt){files.push(dialogueAlt?{...bossArt,description:dialogueAlt}:bossArt);components.push(gallery(bossArt.name,dialogueAlt||bossName));}
   const result=[];
@@ -192,7 +193,7 @@ function createRenderer({root=runtimePaths.join(runtimePaths.directory("raid15")
   if(fallback)result.push('Cutscene fallback active.');
   if(result.length)components.push(text(result.join('\n')));
   const player=[],defenseMenu=[],defenseLayout=['prep','gimmick_a','gimmick_b'].includes(frame.kind);
-  if(characterCard){files.push(characterCard);player.push(gallery(characterCard.name,(UltimateArt.isActivation(frame)&&s.config.job!=='paladin'?className(s)+' Ultimate':className(s)+' status')));}
+  if(characterCard){files.push(characterCard);player.push(gallery(characterCard.name,(characterCard.ultimateArt===true||UltimateArt.isActivation(frame)?className(s)+' Ultimate':className(s)+' status')));}
   else player.push(text(`**${s.config.job==='paladin'?'Paladin':s.config.job==='berserker'?'Berserker':'Blader'} · Level ${s.config.level}**\nHP ${s.hp} / ${s.stats.hp} · Energy ${s.energy} / ${s.maxEnergy}`));
   if(ready){
    const ultimateLeft=Math.max(0,(s.config.level>=90?2:1)-(s.ultimateUses??Number(!!s.ultimateUsed)));
@@ -233,7 +234,7 @@ function createRenderer({root=runtimePaths.join(runtimePaths.directory("raid15")
    }]});
    files.push(...guide.files);
    components.push(...guide.components);
-   return {flags:32768,attachments:[],files,components,allowedMentions:{parse:[]},...(twoPiece?{twoPiece:{bossName:bossArt?.name,cardName:characterCard?.name,overlay:require("./raid-two-piece-model.cjs").overlayFor(frame,{gauge:gimmickModel(frame),cinematic:characterCard?.ultimateArt===true})}}:{})};
+   return {flags:32768,attachments:[],files,components,allowedMentions:{parse:[]},...(twoPiece?{twoPiece:presentation.twoPieceDescriptor(bossArt,characterCard,presentation.overlayFor(frame,{gauge:gimmickModel(frame),cinematic:characterCard?.ultimateArt===true}))}:{})};
   }
   const statuses=[];
   if(s.charmTurns)statuses.push(`Charm: ${s.charmTurns} turn(s)`);
@@ -255,7 +256,7 @@ function createRenderer({root=runtimePaths.join(runtimePaths.directory("raid15")
    if(statuses.length)components.push({type:14,divider:true,spacing:1},{type:17,components:StatusPanels.formatBattleStatusRows([statuses]).map(card=>text(card.content))});
   }
   if(!production)components.push(text('-# Isolated v2.0 Playtest · No XP, points, items, rankings, or saved profile changes.'));
-  return {flags:32768,attachments:[],files,components,allowedMentions:{parse:[]},...(twoPiece?{twoPiece:{bossName:bossArt?.name,cardName:characterCard?.name,overlay:require("./raid-two-piece-model.cjs").overlayFor(frame,{gauge:gimmickModel(frame),cinematic:characterCard?.ultimateArt===true})}}:{})};
+  return {flags:32768,attachments:[],files,components,allowedMentions:{parse:[]},...(twoPiece?{twoPiece:presentation.twoPieceDescriptor(bossArt,characterCard,presentation.overlayFor(frame,{gauge:gimmickModel(frame),cinematic:characterCard?.ultimateArt===true}))}:{})};
  }
   return {render,scene};
 }

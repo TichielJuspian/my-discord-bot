@@ -51,20 +51,24 @@ function contractDisplay(frame){
  if(frame.kind==='contract')return {speaker:'Succubus',line:CONTRACT_COPY.offer,effects:[]};
  const e=frame.lastTurn||{},c=e.contract;
  if(frame.kind!=='contract_result'||e.event!=='contract'||!c)return null;
- const choice=frame.choice??c.choice,refusals=amount(frame.refusals??e.refusals),instant=[],buff=[],debuff=[];
- const add=(dst,kind,text)=>dst.push({kind,text});
- const duration=amount(c.remaining), turns=count=>count?' · '+count+' turns':'';
- if(amount(c.heal))add(instant,'benefit','HP +'+amount(c.heal));
- if(amount(c.hpLoss))add(instant,'harm','HP -'+amount(c.hpLoss));
- if(amount(c.energyCost))add(instant,'harm','Energy -'+amount(c.energyCost));
- const timed=(label,value,good)=>{if(duration&&Number.isFinite(value)&&value!==0)add(good?buff:debuff,good?'benefit':'harm',label+' '+signedPct(value)+turns(duration));};
- timed('ATK',c.attack,c.attack>0);timed('DEF',c.defense,c.defense>0);
- timed('Damage dealt',c.outgoing,c.outgoing>0);timed('Damage taken',c.incoming,c.incoming<0);timed('Lifesteal',c.lifesteal,c.lifesteal>0);
- if(duration&&Number.isFinite(c.energyMultiplier)&&c.energyMultiplier>1)add(debuff,'harm','Energy cost ×'+c.energyMultiplier+turns(duration));
- if(amount(c.charm))add(debuff,'harm','Charm'+turns(amount(c.charm)));
- const pen=frame.state?.contractPenalty;
- if(e.newPenalty&&pen?.multiplier>1){const when=pen.startTurn>frame.state.turn?' from next turn':'';add(debuff,'harm','Damage taken '+signedPct(pen.multiplier-1)+turns(amount(pen.turns))+when);}
- return {speaker:'Succubus',line:choice==='yes'?CONTRACT_COPY.signed:refusals===3?CONTRACT_COPY.third:CONTRACT_COPY.refused,...(choice==='no'?{refusals}:{}),effects:[...instant,...buff,...debuff]};
+ const choice=frame.choice??c.choice,refusals=amount(frame.refusals??e.refusals),instant=[],timed=[],kind=choice==='yes'?'benefit':'harm';
+ const add=(dst,text)=>dst.push({kind,text}),turns=count=>count?' · '+count+' turns':'';
+ if(choice==='no'&&refusals===3){
+  const penalty=frame.state?.contractPenalty;
+  const effects=[];
+  if(penalty?.multiplier>1)add(effects,'DMG Taken '+signedPct(penalty.multiplier-1)+turns(amount(penalty.turns)));
+  return {speaker:'Succubus',line:CONTRACT_COPY.third,refusals,effects};
+ }
+ if(amount(c.heal))add(instant,'HP +'+amount(c.heal));
+ if(amount(c.hpLoss))add(instant,'HP -'+amount(c.hpLoss));
+ if(amount(c.energyCost))add(instant,'Energy -'+amount(c.energyCost));
+ const duration=amount(c.remaining), modifier=(label,value)=>{if(duration&&Number.isFinite(value)&&value!==0)add(timed,label+' '+signedPct(value));};
+ modifier('ATK',c.attack);modifier('DEF',c.defense);modifier('Damage dealt',c.outgoing);modifier('Damage taken',c.incoming);modifier('Lifesteal',c.lifesteal);
+ if(duration&&Number.isFinite(c.energyMultiplier)&&c.energyMultiplier>1)add(timed,'Energy cost x'+c.energyMultiplier);
+ if(amount(c.charm))add(timed,'Charm');
+ const tail=timed.at(-1);
+ if(tail)tail.text+=turns(duration||amount(c.charm));
+ return {speaker:'Succubus',line:choice==='yes'?CONTRACT_COPY.signed:CONTRACT_COPY.refused,...(choice==='no'?{refusals}:{}),effects:[...instant,...timed]};
 }
 function contractDescription(c){return c?[c.speaker+': '+c.line,...c.effects.map(e=>e.text),c.refusals!==undefined?'Refusal: '+c.refusals+'/3':null].filter(Boolean).join('\n'):null;}
 function overlayFor(frame,{gauge,cinematic=false}={}){
@@ -119,6 +123,7 @@ function forLegacy(a,phase,cinematic=false){
  }
  return out;
 }
-module.exports={annotate,overlayFor,forLegacy,contractDisplay,contractDescription};
+function twoPieceDescriptor(boss,card,overlay){return {bossName:boss?.name,cardName:card?.name,overlay};}
+module.exports={annotate,overlayFor,forLegacy,contractDisplay,contractDescription,twoPieceDescriptor};
 
 

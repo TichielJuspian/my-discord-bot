@@ -1,61 +1,86 @@
-const runtimePaths = require("../runtime-paths.cjs");
 'use strict';
-const fs=require('fs'),path=require('path'),P=require('../보스/전투/엔진/slot-progression.cjs');
-const art={},D=require('./raid-workshop-odds-display.js');
-const t=(x,y,v,size=22,color='#e9f2ff')=>`<text x="${x}" y="${y}" font-family="Rajdhani" font-weight="600" font-size="${size}" fill="${color}">${v}</text>`;
+const fs=require('node:fs'),path=require('node:path');
+const P=require('../보스/전투/엔진/slot-progression.cjs'),{fmt,guideSVG,GUIDE_HEIGHT}=require('./raid-workshop-odds-display.js');
+const ASSET=path.join(__dirname,'이미지');
+const names={normal:'forge-v440-normal.png',failure:'forge-v440-failure.png',bubble:'forge-v440-bronze.png',coin:'forge-v440-coin.png'};
+const art=new Map();
+function ref(key){if(!art.has(key)){const b=fs.readFileSync(path.join(ASSET,names[key]));const mime=b[0]===0xff&&b[1]===0xd8?'image/jpeg':'image/png';art.set(key,'data:'+mime+';base64,'+b.toString('base64'));}return art.get(key);}
+const escape=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+const nfmt=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:2});
+const displaySlot={weapon:'Weapon',armor:'Armor',accessory:'Accessory'};
+const increase={weapon:'Each upgrade: ATK +2',armor:'Each upgrade: DEF +1',accessory:'Each upgrade: EVASION +0.5%'};
+const effectNames={attack:'ATK',hp:'MAX HP',defense:'DEF',crit:'CRIT',critDamagePercent:'CRIT DMG',evasion:'EVASION'};
+const percent=new Set(['crit','critDamagePercent','evasion']);
+const tx=(x,y,value,size,color,{weight=600,align='start',stroke,width=1,family='Rajdhani'}={})=>'<text x="'+x+'" y="'+y+'" font-family="'+family+'" font-weight="'+weight+'" font-size="'+size+'" text-anchor="'+align+'" fill="'+color+'"'+(stroke?' stroke="'+stroke+'" stroke-width="'+width+'" paint-order="stroke fill" stroke-linejoin="round"':'')+'>'+escape(value)+'</text>';
+const icon=(key,x,y,w,h)=>'<image x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" preserveAspectRatio="xMidYMid meet" href="'+ref(key)+'"/>';
+const line=(a,b,y,alpha=.52)=>'<path d="M'+a+' '+y+'H'+b+'" stroke="#aa8958" stroke-opacity="'+alpha+'" stroke-width="1"/>';
+const gradient=(id,colors)=>'<linearGradient id="'+id+'" x2="0%" y2="100%">'+colors.map(([offset,color])=>'<stop offset="'+offset+'" stop-color="'+color+'"/>').join('')+'</linearGradient>';
+const fade='<linearGradient id="forge-fade" gradientUnits="userSpaceOnUse" x1="390" y1="0" x2="435" y2="0">'+Array.from({length:17},(_,i)=>{const p=i/16;return '<stop offset="'+p+'" stop-color="#0e1624" stop-opacity="'+(.85*p*p*(3-2*p)).toFixed(6)+'"/>';}).join('')+'</linearGradient>';
+const defs='<defs>'+fade+
+ gradient('points',[[0,'#fff'],[.58,'#f4f6ff'],[1,'#c8d0e1']])+
+ gradient('attempt',[[0,'#fbfbff'],[.45,'#dce5f5'],[1,'#8997b3']])+
+ gradient('mint',[[0,'#d5ffdf'],[.50,'#8ef3b8'],[1,'#3fb477']])+
+ gradient('fail',[[0,'#ffd0c6'],[.50,'#ff8b85'],[1,'#e54c57']])+
+ gradient('gold',[[0,'#fff1a9'],[.53,'#ffd565'],[1,'#c2893b']])+
+ gradient('navy',[[0,'#172237'],[1,'#111b2c']])+'</defs>';
+function status(s){const r=s.enhancementResult;return !r?'idle':r.success?'success':r.mode==='gauge'?'progress':'failure';}
+function milestoneTable(slot,s){
+ let v='<rect x="418.75" y="383.75" width="667.25" height="242.25" rx="12" fill="url(#navy)" stroke="#ad8b57" stroke-width=".5"/>';
+ v+=tx(434,409,slot?displaySlot[slot].toUpperCase()+' MILESTONE BONUSES':'CURRENT ENHANCEMENT LEVELS',29,'#ead29b',{stroke:'#172033',width:2});
+ v+=line(434,1070,419.5);
+ if(slot){Object.entries(P.MILESTONES[slot]).forEach(([level,stats],i)=>{
+   const y=443+i*34, parts=Object.entries(stats).map(([key,value])=>effectNames[key]+' +'+fmt(value)+(percent.has(key)?'%':'')).join(' / ');
+   v+=tx(434,y,'+'+level,25,'#f4d18d',{weight:700})+tx(508,y,parts,24,'#e9f2ff');
+   if(i!==5)v+=line(434,1070,y+10.5);
+ });}
+ else {
+  P.SLOTS.forEach((k,i)=>{const y=444+i*45;v+=tx(434,y,displaySlot[k]+' +'+s.account.slots[k],26,'#f4d18d',{weight:700})+tx(682,y,increase[k],24,'#a6deca');if(i<2)v+=line(434,1070,y+12.5);});
+  v+=tx(434,592,'NO DOWNGRADE OR DESTRUCTION ON FAILURE',24,'#c7a2e9');
+ }
+ return v;
+}
 function svg(s){
- const failed=s.enhancementResult?.success===false&&s.enhancementResult?.mode!=='gauge';const file=failed?'workshop-blacksmith-failure.png':'workshop-blacksmith.png';art[file]??=fs.readFileSync(runtimePaths.join(runtimePaths.directory("."),file)).toString('base64');
- const r=s.enhancementResult,p=s.pending,slot=p?.value||r?.slot;
- const target=p?s.account.slots[slot]+1:r?.target;
- const known=Number.isSafeInteger(s.pointsBalance)&&s.pointsBalance>=0,balance=known?s.pointsBalance.toLocaleString('en-US')+' P':'UNAVAILABLE';
- const q=slot&&s.account.slots[slot]<P.MAX?P.quote(s.account.slots[slot]+1,s.account.enhancementFailures?.[slot]||0,!!p?.useScroll):null;
- let v=`<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="900"><defs><clipPath id="portrait"><rect x="0" y="0" width="400" height="640" rx="16"/></clipPath></defs><rect width="1100" height="900" rx="16" fill="#0b1423"/><image href="data:image/png;base64,${art[file]}" width="400" height="640" preserveAspectRatio="xMidYMid slice" clip-path="url(#portrait)"/>`;
- v+=t(430,46,'YOUR POINTS',27,'#f4d18d')+t(430,103,balance,balance.length>18?40:52,known?'#ffffff':'#ffaaa7');
- v+='<path d="M452 124H1050Q1072 124 1072 146V284Q1072 306 1050 306H452Q432 306 432 286V234L412 216L432 198V146Q432 124 452 124Z" fill="#203149" stroke="#8c7753"/>';
- if(q){
-  v+=t(458,169,'COST PER ATTEMPT: '+q.cost+' P',34,'#fff0cf');
-  v+=t(458,211,q.mode==='gauge'?'Each action adds 1 progress.':q.cost?'Points are spent on every attempt.':'This attempt is free.',26,q.cost?'#ffcc9f':'#a6deca');
-  const after=!known?'Points unavailable. Try again shortly.':s.pointsBalance<q.cost?'Not enough points for this attempt.':'BALANCE AFTER: '+(s.pointsBalance-q.cost).toLocaleString('en-US')+' P';
-  v+=t(458,254,after,27,!known||s.pointsBalance<q.cost?'#ffaaa7':'#b4c8dd');
- }else{
-  v+=t(458,169,slot?'MAX ENHANCEMENT REACHED':'SELECT AN EQUIPMENT SLOT',31,'#fff0cf');
-  v+=t(458,211,'+1-3 FREE / +4-20: 100 P',27,'#ffcc9f');
-  v+=t(458,254,'+21-30: 200 P / +31-40: 300 P',26,'#b4c8dd');
+ const r=s.enhancementResult,p=s.pending,k=p?.value||r?.slot,slot=P.SLOTS.includes(k)?k:null;
+ const current=slot?s.account.slots[slot]:null,failures=slot?s.account.enhancementFailures?.[slot]||0:0;
+ const q=slot&&current<P.MAX?P.quote(current+1,failures,!!p?.useScroll):null;
+ const outcome=status(s),known=Number.isSafeInteger(s.pointsBalance)&&s.pointsBalance>=0,balance=known?nfmt(s.pointsBalance):'UNAVAILABLE';
+ const ptsSize=Math.min(55,Math.floor(338/(Math.max(1,balance.length)*.58)));
+ let v='<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="640">'+defs+icon(outcome==='failure'?'failure':'normal',0,0,1100,640)+'<rect x="390" y="0" width="710" height="640" fill="url(#forge-fade)"/>';
+ v+=icon('coin',430,11,88,58)+tx(516,54,balance,ptsSize,known?'url(#points)':'#ffaaa7',{weight:700,stroke:'#131a2c',width:2});
+ if(r){const a='ATTEMPT #'+nfmt(r.attempt||1);v+=tx(1082,54,a,Math.min(42,Math.floor(295/(a.length*.56))),'url(#attempt)',{weight:700,align:'end',stroke:'#30374a',width:2.6});}
+ v+=icon('bubble',407,67,680,159);
+ if(r&&slot){
+  const fail=outcome==='failure',progress=outcome==='progress',label=(fail?'FAILED +':progress?'PROGRESS +':'SUCCESS +')+current;
+  v+=tx(765,154,label,81,fail?'url(#fail)':progress?'#ffaaa7':'url(#mint)',{weight:700,align:'middle',stroke:fail?'#351217':'#173c2a',width:3});
+  v+=tx(765,192,increase[slot],32,fail?'#eca29e':'#a6deca',{align:'middle'});
+ }else if(slot){
+  v+=tx(765,151,displaySlot[slot].toUpperCase(),51,'#fff0cf',{weight:700,align:'middle',stroke:'#382c21',width:2});
+  v+=tx(765,192,increase[slot],32,'#a6deca',{align:'middle'});
+ }else {
+  v+=tx(765,138,'SELECT AN EQUIPMENT SLOT',43,'#fff0cf',{weight:700,align:'middle'});
+  v+=tx(765,173,'PER UPGRADE: WEAPON ATK +2 / ARMOR DEF +1',25,'#a6deca',{align:'middle'});
+  v+=tx(765,201,'ACCESSORY: EVASION +0.5%',25,'#a6deca',{align:'middle'});
  }
- if(r)v+=t(458,289,'LAST ATTEMPT: '+(r.cost?'-'+r.cost+' P':'FREE (0 P)'),23,'#f4d18d');
- if(slot){
-  const current=s.account.slots[slot];
-  v+=t(432,350,slot.toUpperCase(),32,'#9eb7cf');
-  if(r){
-   v+=t(838,350,'ATTEMPT #'+(r.attempt||1),26,'#9eb7cf');
-   v+=t(430,438,(r.success?'SUCCESS +':r.mode==='gauge'?'PROGRESS +':'FAILED +')+current,66,r.success?'#91e9b0':'#ffaaa7');
-  }else v+=t(430,430,current>=P.MAX?'+40  MAX':'+'+current+'  &#8594;  +'+target,76,'#f4d18d');
-  v+=t(432,477,{weapon:'Each upgrade: ATK +2',armor:'Each upgrade: DEF +1',accessory:'Each upgrade: EVASION +0.5%'}[slot],25,'#a6deca');
-  v+='<path d="M432 501H1068" stroke="#35495f" stroke-width="2"/>';
-  if(current>=P.MAX)v+=t(432,566,'MAX ENHANCEMENT  +40',40,'#f4d18d');
-  else{
-   v+=t(432,540,q.mode==='gauge'?'ENHANCEMENT PROGRESS':r?'NEXT ENHANCEMENT':'ENHANCEMENT CHANCE',24,'#9eb7cf');
-   if(q.mode==='gauge'){const n=s.account.enhancementFailures?.[slot]||0;v+=t(432,589,n+' / '+q.required+'  (next: '+q.progress+')',37)+'<rect x="432" y="601" width="628" height="10" rx="5" fill="#28394e"/><rect x="432" y="601" width="'+(628*Math.min(n/q.required,1))+'" height="10" rx="5" fill="#a788ff"/>';} else {
-   if(r)v+=t(432,580,'+'+current+'  &#8594;  +'+(current+1),48,'#f4d18d')+t(790,578,q.chance+'% chance',36);
-   else v+=t(432,586,q.chance+'% Success chance',49);}
-  }
- }else{
-  v+=t(432,366,'Attack +'+s.account.slots.weapon,32,'#f4d18d')+t(432,416,'Armor +'+s.account.slots.armor,32,'#f4d18d')+t(432,466,'Accessory +'+s.account.slots.accessory,32,'#f4d18d');
+ v+=line(419,1086,242.5,.72);
+ if(!slot)v+=tx(430,291,'WEAPON  ·  ARMOR  ·  ACCESSORY',37,'#c9d7e8',{weight:700});
+ else if(!q)v+=tx(430,324,'MAX ENHANCEMENT  +'+P.MAX,54,'url(#gold)',{weight:700,stroke:'#4a371d',width:2.8});
+ else if(q.mode==='gauge'){
+  v+=tx(431,285,'ENHANCEMENT PROGRESS',34,'#9eb7cf',{stroke:'#26364d',width:2.4});
+  v+=tx(426,352,failures+' / '+q.required+'  (next: '+q.progress+')',50,'url(#gold)',{weight:700,stroke:'#4a371d',width:2.4});
+  v+='<rect x="431" y="362" width="638" height="10" rx="5" fill="#28394e"/><rect x="431" y="362" width="'+638*Math.min(failures/q.required,1)+'" height="10" rx="5" fill="#a788ff"/>';
+ }else {
+  v+=tx(431,285,r?'NEXT ENHANCEMENT':'ENHANCEMENT CHANCE',34,'#9eb7cf',{stroke:'#26364d',width:2.4});
+  const odds='BASE '+fmt(q.baseChance)+'% / PITY +'+fmt(q.pity)+' pp'+(q.scroll?' / SCROLL +'+fmt(q.scroll)+' pp':'');
+  v+=tx(1082,285,odds,q.scroll?20:25,'#c7a2e9',{align:'end'});
+  const start='+'+current,end='+'+q.target, size=77;
+  const xArrow=current<10?510:546.55,xEnd=current<10?560:598;
+  v+=tx(426,356,start,size,'url(#gold)',{weight:700,stroke:'#4a371d',width:2.8});
+  v+=tx(xArrow,346.29,'→',48,'url(#gold)',{family:'Noto Sans',weight:700,stroke:'#4a371d',width:2});
+  v+=tx(xEnd,356,end,size,'url(#gold)',{weight:700,stroke:'#4a371d',width:2.8});
+  const chance=fmt(q.chance)+'% Chance';
+  v+=tx(1082,356,chance,Math.min(56,Math.floor(306/(chance.length*.50))),'#e9f2ff',{align:'end'});
  }
- if(!slot)v+=t(432,522,'PER UPGRADE: ATK +2 / DEF +1',24,'#a6deca')+t(432,555,'ACCESSORY: EVASION +0.5%',24,'#a6deca');
- if(q?.mode==='chance'){
-  v+=t(432,610,'BASE '+D.fmt(q.baseChance)+'% / PITY +'+D.fmt(q.pity)+' pp / SCROLL +'+D.fmt(q.scroll||0)+' pp',20,'#c7a2e9');
-
- }else v+=t(432,628,q?'NO RANDOM FAILURE / PROGRESS IS SAVED':'NO DOWNGRADE OR DESTRUCTION ON FAILURE',20,'#c7a2e9');
-
- return v+'</svg>';
+ return v+milestoneTable(slot,s)+'</svg>';
 }
-function footer(slot){let v='';
- const labels={attack:'ATK',hp:'MAX HP',defense:'DEF',crit:'CRIT',critDamagePercent:'CRIT DMG',evasion:'EVASION'};
- if(slot)v+='<rect x="420" y="646" width="650" height="244" rx="12" fill="#192a40"/>';
- if(slot){v+=t(435,675,slot.toUpperCase()+' MILESTONE BONUSES',29,'#e4c98b');Object.entries(P.MILESTONES[slot]).forEach(([level,stats],i)=>{const line='+'+level+'  '+Object.entries(stats).map(([k,n])=>labels[k]+' +'+n+(['crit','critDamagePercent','evasion'].includes(k)?'%':'')).join(' / ');v+=t(435,710+i*34,line,28);});}
-
- return v+D.guideSVG(slot?910:650);
-}
-function footerSVG(s){const slot=s.pending?.value||s.enhancementResult?.slot,height=(slot?910:650)+D.GUIDE_HEIGHT+10;return '<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="'+height+'"><rect width="1100" height="900" rx="16" fill="#0b1423"/>'+footer(s.pending?.value||s.enhancementResult?.slot)+'</svg>';}
+function footerSVG(){return '<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="'+(650+GUIDE_HEIGHT+10)+'">'+guideSVG(650)+'</svg>';}
 module.exports={svg,footerSVG};

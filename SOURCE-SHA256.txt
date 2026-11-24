@@ -1,4 +1,4 @@
-8eb12f61ab9cb5ffde734062268e805af598211918df119a8f3cfaf24808e276  raid/file-map.json
+a175f00a9b332fac012f10d8d9cf5c38862693e8e4e468e2d8ee62d60b7c8866  raid/file-map.json
 9df69214816e08cc8a75a3326406b1695165e98985f345e47ebd1ac46ad61ea7  raid/runtime-paths.cjs
 810e84eb7a0f687636f6668c8925e083256dfc61af1deead6f0bc67d7d43451b  raid/보스/서큐버스/succubus-presentation.cjs
 ef774e7cc175b3edf67ad5411ba5e1dfdec59a1c13d3472cf24574f75e2cf0ed  raid/보스/서큐버스/succubus-second-hit.cjs
@@ -13,7 +13,7 @@ a9a941a589dc64439970edd84867178d156d77ab99718dd1a8dc7824fbb364fc  raid/보스/�
 468eb50a189d0ac981f14444144bec148fff6daa76baea2130423ffa70750480  raid/보스/전투/raid-combat-copy.js
 3b1d651e885ee8709f3e061d62478a19383726237720e40308f31714adbb32dd  raid/보스/전투/raid-compact-effects.js
 737b850c33e0758c0505e2673977d7dcf128a94132757385a1c100de1ecda09e  raid/보스/전투/raid-energy-log.js
-0619293a30053a5fd3d549b32d2a182a81f654832edff4987ef64d23373108da  raid/보스/전투/raid-panels.js
+76df8eb21c3b4e5ef9fb5b02cd084f7fa2d17027a828b132d079eb4f78cf6647  raid/보스/전투/raid-panels.js
 af4a92937fc670990130a4f7e23a79b1a3782cfabb5babfcfb18af5e5661e932  raid/보스/전투/raid-shared-buffs.js
 440d2deee28044703919c0cae63202712b34c19acca20d7abfc155d52779c1e2  raid/보스/전투/raid-test-build.js
 b970d9af24714de95664efb44b63fa9e91264f222f7f454ad7558acae6d927e3  raid/보스/전투/raid-v2-session.js
@@ -21,7 +21,7 @@ c9a2ada4847ff8cc8a374d2de3c712b176c7ee688cb9e65772127c3e43c9a3e5  raid/보스/�
 841f13a34932ddf42a3d686486e135693e32a6068155da01cf9fd84299cc5755  raid/보스/전투/엔진/common-pattern-director.cjs
 ff72dd6d1c9213e0b05e5d41e523adc09322023942bcb605ac92ec03226b0b6d  raid/보스/전투/엔진/cooperation.js
 241c731e78f7436cad5b931ce7d4bd69600e326fbb321bd27de4204129a176ff  raid/보스/전투/엔진/critical-rules.cjs
-2e8d99c19aeed4858d63919c4d1da6f48201453301cfb0ec714149664b758c70  raid/보스/전투/엔진/devil-offer.cjs
+7ccf2b9cdc6b81b296e5ef2da685b86662b89229b52bc2ab9c5e4270f7ebf890  raid/보스/전투/엔진/devil-offer.cjs
 89bb4eecc8d44fde26e6d7a61e498cd272108f2c2ef9d1f3b1f97e70c7d3871e  raid/보스/전투/엔진/enrage-stages.cjs
 fd68fb5846dfc3d222bab8a52368589087a7754df8766dc410e33dd9604196ed  raid/보스/전투/엔진/gimmick-trial-engine.cjs
 dcd4029f699d4c81714a117646830fe4ca45dd38d2bb6af3ca84f4207f43692c  raid/보스/전투/엔진/mechanic-rules.cjs
@@ -35,13 +35,13 @@ e5b7c0e15e9ca6b9f51ebe24a48ef4bd3b79901e4a2862d8a87e868d354ee710  raid/보스/�
 26af5169f49dce0f517826121a8d77d8320fdb2359428b07318e31ebb908e3a0  raid/보스/전투/흐름/engine.cjs
 4ed71f1f1f36e71e78f564f3ab6ebdc843533f9192a04f0cc35a3a00dd9babf1  raid/보스/전투/흐름/last-turn.cjs
 f48610a43f8194add42426f7686313fa27b3b51875eb05718383eaf57d327720  raid/보스/전투/흐름/log-outcomes.cjs
-39456cc3110e0098d63a26cde1395181d8eaa92cbc6bcd2b509273b1df8e328e  raid/보스/전투/흐름/raid-two-piece-model.cjs
-6574368547eae473b263cfb2a53e0c8886fbdf157a5f2c7daaddfc2aca5c9ca6  raid/보스/전투/흐름/raid-two-piece-overlay.cjs
+e1ea5edc7b28e5d7e03043476f058168d713c3e6b56c55df8849ada902fae5e2  raid/보스/전투/흐름/raid-two-piece-model.cjs
+afcbb0cde7cebbda72ee7ccb744c464ae8ef73331d0636c2160e979e2e95c92c  raid/보스/전투/흐름/raid-two-piece-overlay.cjs
 05e7e0eb0def626f7a46347c93dd1176da5dfa9fddfbcdae64344322b914d6a6  raid/보스/전투/흐름/rules.cjs
 ca3ee13f77e914cc93191cfd519f7f3df8b38c815a38d26ac161573fc1805a89  raid/보스/전투/흐름/stamp-log-render.cjs
 9fe4abfcc9ef9bed272f66f194b494ff4db1a018a6336aea48c44d439784917f  raid/보스/전투/흐름/state-runtime.cjs
 1ed76e85cd7a19ae38c7fd706c9b15b1247caa06cf27420bec0818bd7d8ee156  raid/보스/전투/흐름/status-panels.cjs
-f6c54283ab0c938f1cf95cb5331681df28f03197ec1b161d51fddee9910093fb  raid/보스/전투/흐름/view.cjs
+df5d8b0cdf64fbfa0bbac0ea9d0ed11daa6282c7cd62c2eb76b096bcc130e005  raid/보스/전투/흐름/view.cjs
 921008eaa741ffa8d42fbcadb723a3aa1e2f010e88f1fe139231cd3325cebb95  raid/보스/콜로서스/colossus-pattern-director.cjs
 a57735d45e96b0528bb5a9b460dc685ec2c411ce23f5ac07ac83597d7f878276  raid/워크샵/raid-equipment.js
 d61c75fe45b3d7c357798a536db76761fdb4ff4ac81a8f7fd62be3d578e28831  raid/워크샵/raid-gear-policy.js
@@ -49,8 +49,8 @@ d61c75fe45b3d7c357798a536db76761fdb4ff4ac81a8f7fd62be3d578e28831  raid/워크샵
 4eb66481fb7a032be58ae9db2651773db6da05673becadd8d91b5e235eda6022  raid/워크샵/raid-test-gear.js
 23af30618d8c77739a01a256db6d88e462c4f4ee06be943a512f32a71f728bc2  raid/워크샵/raid-workshop-boost.js
 2e6ef2757727a108fc05cd1f9cb58b05ca8a3f6637f71b17d9865b07f77790e3  raid/워크샵/raid-workshop-class.js
-6b4051d09e614348fe5bf4a9357149c1ecdccf8816c636e7090daf7ed315c989  raid/워크샵/raid-workshop-detail.js
-14624767bbc791d20a140edf4654103879db997e13163fc8070201f4418a0ca4  raid/워크샵/raid-workshop-forge.js
+8fd5f2690a0ded48fd02574d4e4cb9981a9f34d05324e16711b5d3a4e5312d76  raid/워크샵/raid-workshop-detail.js
+5600b8f4a06f40b1eca2f49945f8ec8cd402004941ba334239faa64a3474130a  raid/워크샵/raid-workshop-forge.js
 16bebf40178f26cf2035fe88123a2c9fca05ceecd76eede7e418877193724afa  raid/워크샵/raid-workshop-guide.js
 0868167c289f31a29c8e2542e394a0cc0475cb41384032dc09143bae8adbccef  raid/워크샵/raid-workshop-inventory.js
 05b6699ce85d810bee3a8f183d6ad82e07dc766603fba166d8ae9faccd58af33  raid/워크샵/raid-workshop-model.js
@@ -59,7 +59,7 @@ e5e7e4fd706087f5c0f92c218f8e0b884fac6392c6e86a715818fea5eb1e1394  raid/워크샵
 2fcdc1da8f944006423d075518e6cabc513b76f3dd589da7824c3f8a64f2e266  raid/클래스/card-v23/battle-hud-v351.cjs
 7ea361affbd217f3d24d417ef1c79baa529945aabe412e87a50bbb2767532313  raid/클래스/card-v23/berserker-pose.cjs
 5e7a545c3f41961db6fcde5d116117448a7eac2af34f765b7710d737493c153b  raid/클래스/card-v23/pose.cjs
-d6ff42bcc7e758ca42be0c3786b0af39265e0dd60b92cbb35b812ca4e28427bb  raid/클래스/card-v23/renderer.cjs
+6998ec1f24b819097e87ac7c966e8235f8ba8a0883b3983ebfb195331eb56417  raid/클래스/card-v23/renderer.cjs
 6c64d62de25442e8a3f8e968dea6c01a7bbfc60b6d38edcd4b5025fcbd274b6e  raid/클래스/choice-index-l.json
 1bd4fa1c84d4df4a07b08f5296ad2c3f657eb8d9288b26480174e27e44dbc1d6  raid/클래스/raid-last-stand.js
 9fa735c726ff574243709a4e86701ab51a2ba30adcdf231b9eb1fd430d3d7cf5  raid/클래스/raid-skill-guide.js
@@ -77,3 +77,8 @@ d187a90f9726db2d0d9895a4bfdf26dfe6cd9830494837f45673c1ad11fc47e2  raid/클래스
 0097f57ba7fc4ad289d75cc30057aecc0d74109e0f37bfbe0cbc3bafa437599a  raid/클래스/성기사/paladin-rules.cjs
 32721cde08bde5e73c613c8601604f287a404299a253468828e4f5dcb21444a4  raid/클래스/성기사/paladin-source.cjs
 7a828f6abb889e9ae38528b0e74d670c3632f08591045f3d87b467216ef5594e  raid/클래스/성기사/purification.cjs
+72a75e24b770fba6de0c0e82012c6fd088b5da8f571e2551c6f767747a4466ba  raid/워크샵/raid-workshop-fonts.js
+85b6d5c6f975ac6921008b135471634327aa9637a2ba6a723668bf31a2d73bcc  raid/워크샵/raid-workshop-render.js
+4ac32782409ea51c33ea80394bd23003bb474e2be5c75f6a0f19939e3e9c09ca  raid/워크샵/raid-workshop-view.js
+d6df6bb4ca14366fece91d9b99552d77f999e8b9bcf27c3efc156320f67d48b3  raid/워크샵/raid-workshop-visuals.js
+76d2e915a4553b847598b58403f756aeb3bb675a3bcaaf22d59f023651a6baaf  raid/클래스/raid-selection-assets.js

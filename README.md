@@ -1,8 +1,18 @@
-# Gosu RAID v4.1.2: public battle and balance source
+# Gosu RAID v4.4.0: public battle and balance source
 
-A source-reading snapshot of Gosu RAID v4.1.2 for balance review. It includes the battle engine, class mechanics, boss patterns, scaling, buffs, equipment and Workshop formulas. It is not a deployable package or a live server status report.
+A source-reading snapshot of Gosu RAID v4.4.0 for balance and Workshop UI review. It contains the battle engine, class mechanics, boss patterns, scaling, buffs, equipment and Workshop enhancement formulas. It is neither deployable nor a live-server status report.
 
-## Changes in v4.1.2
+## Changes through v4.4.0
+
+Workshop equipment keeps existing slot visuals with a fixed enhancement summary or selected-item detail region and one placement for Unequip. The Workshop profile uses the current shared idle artwork resolver and larger gold level numerals without changing battle-card rendering. Enhance renders real points, outcomes, next chance and milestones from the unchanged rules, and has one separate probability guide. Slot and enhance/scroll controls retain their existing behavior. The separate Workshop banner remains unchanged. User artwork, fonts and guide images are intentionally omitted here.
+
+- [Workshop component layout](raid/%EC%9B%8C%ED%81%AC%EC%83%B5/raid-workshop-view.js)
+- [Dynamic Enhance view](raid/%EC%9B%8C%ED%81%AC%EC%83%B5/raid-workshop-forge.js)
+- [Authoritative enhancement and milestone rules](raid/%EB%B3%B4%EC%8A%A4/%EC%A0%84%ED%88%AC/%EC%97%94%EC%A7%84/slot-progression.cjs)
+- [Workshop gear and inventory rendering](raid/%EC%9B%8C%ED%81%AC%EC%83%B5/raid-workshop-detail.js) / [image rendering and cache](raid/%EC%9B%8C%ED%81%AC%EC%83%B5/raid-workshop-render.js)
+- [Shared selection art resolver](raid/%ED%81%B4%EB%9E%98%EC%8A%A4/raid-selection-assets.js) (source only)
+
+## Earlier changes in v4.1.2
 
 Acknowledged Ultimate scenes now stay visible for at least 800 ms before the next queued cut. The separate Ragnarok follow-up hit stays at 500 ms, and the Succubus dodge cut stays at 320 ms. Timing does not change the attack, damage, Energy or turn rules. In the full runtime, private character selection and inactive battles also close after five minutes; production-specific message and lobby handlers are outside this public source-reading edition. The snapshot does not indicate live deployment status.
 
@@ -31,9 +41,9 @@ Analyze Succubus V2 and legacy Colossus separately. Follow the action through it
 
 Artwork, editing assets, other bot code, credentials, deployment settings, service addresses, operational IDs, user records, logs, dependencies, backup data and repository history are excluded. References to omitted inputs or integrations can remain because this is a reading edition.
 
-74 source files are exact; three have narrow public-edition transformations without changing damage, resource, phase or stat formulas:
+81 source files are exact; three have narrow public-edition transformations without changing damage, resource, phase or stat formulas:
 - [보스/서큐버스/succubus-presentation.cjs](raid/%EB%B3%B4%EC%8A%A4/%EC%84%9C%ED%81%90%EB%B2%84%EC%8A%A4/succubus-presentation.cjs): Removed the instance-specific status emoji bindings; render fallback remains.
 - [워크샵/raid-test-gear.js](raid/%EC%9B%8C%ED%81%AC%EC%83%B5/raid-test-gear.js): Redacted the name of the test-only environment gate; conditional rules kept.
 - [file-map.json](raid/file-map.json): Filtered aliases to the published allowlist.
 
-The v4.1.1 display changes reconnect authorized raid members without requiring a fresh attempt, split some Skill Guide and growth pages, and refine battle status/HUD presentation. The public edition includes only source paths from the previously approved allowlist; it omits new artwork and some renderer dependencies. Existing battle formulas are not redefined by these display refinements. See [SOURCE-SHA256.txt](SOURCE-SHA256.txt) for the included verification inventory.
+The v4.1.1 display changes reconnect authorized raid members without requiring a fresh attempt, split some Skill Guide and growth pages, and refine battle status/HUD presentation. This edition retains the previously approved balance/source paths and adds the presentation-only Workshop and selection sources above; it omits artwork and operational integration. Existing battle formulas are not redefined by these display refinements. See [SOURCE-SHA256.txt](SOURCE-SHA256.txt) for the included verification inventory.

@@ -60,7 +60,16 @@ function resolve(original,action,expectedTurn=original.turn,{legacy=false}={}){i
  if(action==='retreat'){s.status='retreated';return s;}
  if(action==='offer_continue'){s.offer.screen='choice';return s;}
  if(action==='offer_next'){s.offer.screen='active';require('./common-pattern-director.cjs').afterOffer(s);return s;}
- const choice=action==='offer_yes'?'yes':'no',result=pick(choice,roll(s),legacy?legacyOutcomes:outcomes);
+ const choice=action==='offer_yes'?'yes':'no';
+ // V2 third refusal is a contract-penalty receipt, not a normal NO outcome.
+ // Preserve a prior ongoing modifier untouched; the engine owns the separate penalty.
+ if(!legacy&&choice==='no'&&(s.contractRefusals||0)>=2){
+  const scene={};for(const key of ['stage','guaranteed'])if(Object.hasOwn(s.offer,key))scene[key]=s.offer[key];
+  s.offer={...scene,screen:'result',choice,thirdRefusal:true,remaining:0};
+  log(s,action);
+  return s;
+ }
+ const result=pick(choice,roll(s),legacy?legacyOutcomes:outcomes);
  const energyStart=s.energy,energyCost=legacy?Math.min(energyStart,result.energyCost||0):result.drainEnergy?energyStart:0,hpLoss=legacy?Math.floor(s.hp*(result.hpCost||0)):result.drainEnergy&&energyStart===0?Math.min(Math.max(0,s.hp-1),Math.floor(s.stats.hp*.1)):0;
  s.energy-=energyCost;s.hp-=hpLoss;
  const heal=Math.min(require('../../../클래스/광전사/berserker-rules.cjs').healCapacity(s),Math.floor(s.stats.hp*(result.healRate||0)));s.hp+=heal;s.totals.healing+=heal;

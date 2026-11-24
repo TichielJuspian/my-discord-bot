@@ -221,8 +221,9 @@ function dialogueRows(words,limit,size,italic){
 function contractFooter(c){
  const left=15, right=565, nameSize=21, bodySize=17.3, effectSize=15, speaker=c.speaker+':';
  const anchor=left+visibleTextWidth(speaker,nameSize)+9, width=right-anchor;
+ const offer=c.refusals===undefined&&!c.effects.length;
  let fitted=bodySize, lines=dialogueRows(c.line,width,fitted,true);
- for(const size of [16.8,16.4,16]){if(lines.length<=2)break;fitted=size;lines=dialogueRows(c.line,width,fitted,true);}
+ for(const size of [16.8,16.4,16,15.6,15.2,14.8]){if(lines.length<=2)break;fitted=size;lines=dialogueRows(c.line,width,fitted,true);}
  const rows=lines.map(value=>({text:value,size:fitted,step:21,italic:true}));
  const refusal=c.refusals!==undefined?'Refusal: '+c.refusals+'/3':null;
  const refusalEdge=refusal?right-visibleTextWidth(refusal,effectSize)-18:right;
@@ -238,15 +239,17 @@ function contractFooter(c){
  if(refusal&&!effectRows.length&&anchor+visibleTextWidth(rows.at(-1)?.text||'',fitted,true)>refusalEdge){
   const last=rows.pop();rows.push(...dialogueRows(last.text,refusalEdge-anchor,fitted,true).map(value=>({...last,text:value})));
  }
- const height=7+rows.length*21+effectRows.length*19,top=290-height;
+ const height=7+rows.length*21+effectRows.length*19,top=(offer?282:290)-height;
  let y=top+21;const label=stroke(left,y,speaker,contractStyle(nameSize,'#F4CC8B'));
  const copy=rows.map(r=>{const line=stroke(anchor,y,r.text,contractStyle(r.size,'#F2E9F8',r.italic));y+=r.step;return line;}).join('');
  let effect='';for(const e of effectRows){effect+=e.map(x=>stroke(x.x,y,x.text,contractStyle(effectSize,x.fill))).join('');y+=19;}
  const badge=refusal?stroke(right,y-(effectRows.length?19:21),refusal,{...contractStyle(effectSize,'#FFC3DA'),anchor:'end'}):'';
- return '<rect y="'+top+'" width="580" height="'+height+'" fill="#000" fill-opacity=".78"/><path d="M0 '+(top+.5)+'H580" stroke="#8A698E" stroke-opacity=".6"/>'+label+copy+effect+badge;
+ return '<rect y="'+top+'" width="580" height="'+height+'" fill="#000" fill-opacity="'+(offer?'.64':'.78')+'"/><path d="M0 '+(top+.5)+'H580" stroke="#8A698E" stroke-opacity=".6"/>'+label+copy+effect+badge;
 }
-const castingCurse=()=>'<defs><linearGradient id="curse-cast-ink" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#FFE8FF"/><stop offset="1" stop-color="#BB74DA"/></linearGradient></defs>'+
- stroke(554,199,'CASTING CURSE',{size:21,anchor:'end',font:'Raid Latin, Noto Sans KR',italic:true,fill:'url(#curse-cast-ink)',edge:'#230E38',sw:2.4});
+async function castingCurse(){
+ const art=await remember('owner:casting-curse:preserve-anchor',()=>toAsset(fs.readFileSync(path.join(ROOT,'casting-curse.png')),{width:176,height:30,fit:'inside'},{crop:'visible'}));
+ return img(art,554-art.r,201-art.b);
+}
 async function bossMarkup(o) {
  if(o.contract)return contractFooter(o.contract);
  const b=await badge(o.phase),turn=await turnLabel(o.turn);
@@ -276,7 +279,7 @@ async function bossMarkup(o) {
   const tag=await owner('curse',112);
   body+=img(tag,554-tag.r,Math.round(198-tag.h/2));
  }
- else if(o.casting||curse.casting)body+=castingCurse();
+ else if(o.casting||curse.casting)body+=await castingCurse();
  if(count(o.gain)&&!count(o.heal))body+=await gainArt(o.gain);
  if(o.bossDebuffs?.length)body+=await effectArt(o.bossDebuffs,{end:554,top:219,isBuff:false,max:2});
  else body+=await effectArt(o.buffs,{end:554,top:219,isBuff:true,max:3});

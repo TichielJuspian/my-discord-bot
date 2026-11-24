@@ -87,9 +87,10 @@ function display(a,p,boss,phase,initial){
  const components=[gallery(bossMedia.name,boss),profile,...actions],files=[bossMedia,card];
  for(const item of statuses){if(item.content)components.push(text(item.content));else{components.push(gallery(item.name,item.description));files.push(item);}}
  const gauge=R.phase(s).startsWith("struggle")?{hits:s.struggleSkills||0,required:2}:null;
- const overlay=require("./흐름/raid-two-piece-model.cjs").forLegacy(a,R.phase(s));
+ const presentation=require("./흐름/raid-two-piece-model.cjs");
+ const overlay=presentation.forLegacy(a,R.phase(s));
  if(gauge)overlay.break=gauge;
- return {flags:32768,attachments:[],components,files,allowedMentions:{parse:[]},twoPiece:{bossName:bossMedia.name,cardName:card.name,overlay}};
+ return {flags:32768,attachments:[],components,files,allowedMentions:{parse:[]},twoPiece:presentation.twoPieceDescriptor(bossMedia,card,overlay)};
 }
 module.exports={requestedBossArt,display,bar,bossArt,combatResult,ASSETS,mechanicStatus,bossStatus};
 

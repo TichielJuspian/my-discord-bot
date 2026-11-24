@@ -19,8 +19,10 @@ const crcTable=Uint32Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++
 function chunk(type,data){const h=Buffer.alloc(8),end=Buffer.alloc(4);h.writeUInt32BE(data.length);h.write(type,4);let c=0xffffffff;for(const b of h.subarray(4))c=crcTable[(c^b)&255]^(c>>>8);for(const b of data)c=crcTable[(c^b)&255]^(c>>>8);end.writeUInt32BE((c^0xffffffff)>>>0);return Buffer.concat([h,data,end]);}
 function locate(job,pose){const key=job+':'+pose,file=manifest.cards[key];return v35.resolve(key)||(file?{key,pose,file}:null);}
 function idle(job){return locate(job,'idle');}
+function workshopIdle(job){const key=job+':idle',file=manifest.cards[key];return job==='paladin'&&file?{key:key+':workshop',pose:'idle',file}:idle(job);}
 function resolve(a){
  const s=a.state,job=s.config.job;let selected=pose.select(a);
+ if(job==='paladin')selected=require('./paladin-pose.cjs').select(a,selected);
  if(job==='berserker')selected=require('./berserker-pose.cjs').select(a,selected);
  const alt=({thrust:'thrust_a',deep_thrust:'thrust_b'})[selected];
  const newRageHit=job==='berserker'&&['hit','heavy_hit'].includes(selected)&&require('../광전사/berserker-rules.cjs').enraged(s)?v35.resolve(job+':enrage_hit'):null;
@@ -67,16 +69,38 @@ function indexedCounterPalette(raw,b){
  return {palette,alpha};
 }
 function paintText(raw,b,x,y,value,size,width,align='right',tint){const glyphs=[...String(value)].map(c=>c===' '?{advance:Math.round(size*.32)}:prepared.glyphs[size+':'+c]).filter(Boolean),length=glyphs.reduce((n,g)=>n+g.advance,0),scale=Math.min(1,width/Math.max(1,length));let left=align==='left'?x:x-length*scale;for(const g of glyphs){if(g.rgba){if(scale===1)blendOn(raw,b,g.rgba,g.w,g.h,Math.round(left),y+g.top,tint);else{const w=Math.max(1,Math.round(g.w*scale)),rgba=Buffer.alloc(w*g.h*4);for(let yy=0;yy<g.h;yy++)for(let xx=0;xx<w;xx++)g.rgba.copy(rgba,(yy*w+xx)*4,(yy*g.w+Math.min(g.w-1,Math.floor(xx/scale)))*4,(yy*g.w+Math.min(g.w-1,Math.floor(xx/scale)))*4+4);blendOn(raw,b,rgba,w,g.h,Math.round(left),y+g.top,tint);}}left+=g.advance*scale;}}
-function paintDynamic(raw,b,a,effects,layout,battle){const s=a.state,st=s.stats,crit=Math.round((1.2+(s.config.ruinPercentPerPoint??0)*(s.config.ruin||0)/100+((st.critDamagePercent??0)+Math.max(0,st.crit-100))/100)*100),hp=Math.max(0,Math.min(1,num(s.hp)/Math.max(1,num(st.hp))));
+// Only the Workshop top card requests this larger number; its label is baked art.
+const workshopLevelGlyphs=Object.create(null);
+function workshopLevel(raw,b,value,t){
+ const GOLD=[255,220,65],scale=37/29;
+ const glyphs=[...String(value)].map(c=>workshopLevelGlyphs[c]??=(()=>{
+  const g=prepared.glyphs['29:'+c];if(!g)return null;
+  const w=Math.ceil(g.w*scale)+1,h=Math.round(g.h*scale),rgba=Buffer.alloc(w*h*4);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+   const row=Math.min(g.h-1,Math.max(0,(y+.5)/scale-.5)),col=(x+.5)/scale-.5;
+   const sample=(dx)=>{const c=col+dx,u=Math.floor(c),v=Math.floor(row),cx=c-u,cy=row-v;
+    const at=(x,y)=>x>=0&&x<g.w?g.rgba[(y*g.w+x)*4+3]:0;
+    return (at(u,v)*(1-cx)+at(u+1,v)*cx)*(1-cy)+(at(u,Math.min(g.h-1,v+1))*(1-cx)+at(u+1,Math.min(g.h-1,v+1))*cx)*cy;
+   };
+   rgba[(y*w+x)*4+3]=Math.round(Math.max(sample(0),sample(-.65)));
+  }
+  return {w,h,rgba,advance:Math.round(g.advance*scale),top:-h};
+ })()).filter(Boolean);
+ const width=glyphs.reduce((n,g)=>n+g.advance,0);
+ if(!glyphs.length||width>t.width){paintText(raw,b,t.x,t.y,value,29,t.width,t.align,GOLD);return;}
+ const center=37; let x=t.align==='left'?t.x:t.x-width;
+ for(const g of glyphs){blendOn(raw,b,g.rgba,g.w,g.h,x,Math.round(center-(g.h-1)/2),GOLD);x+=g.advance;}
+}
+function paintDynamic(raw,b,a,effects,layout,battle,workshop){const s=a.state,st=s.stats,crit=Math.round((1.2+(s.config.ruinPercentPerPoint??0)*(s.config.ruin||0)/100+((st.critDamagePercent??0)+Math.max(0,st.crit-100))/100)*100),hp=Math.max(0,Math.min(1,num(s.hp)/Math.max(1,num(st.hp))));
  if(layout){
   const values=[s.config.level,fmt(s.hp)+' / '+fmt(st.hp),num(s.energy)+' / '+num(s.maxEnergy),fmt(st.attack),fmt(st.defense),Math.min(100,num(st.crit))+'%',num(st.evasion)+'%',crit+'%'];
   const level=()=>hud.paintLevel(s.config.level,prepared.glyphs,(...args)=>blendOn(raw,b,...args),!!b.rgb);
-  v35.fields.forEach((k,i)=>{if(battle&&k==='level')return;const t=layout.text[k];paintText(raw,b,t.x,t.y+(battle&&k==='energy'?2:0),values[i],t.size,t.width,t.align,t.color);});
+  v35.fields.forEach((k,i)=>{if(workshop&&k==='level'){workshopLevel(raw,b,values[i],layout.text.level);return;}if(battle&&k==='level'&&!layout.nativeBattle)return;const t=layout.text[k], y=t.y+(battle&&k==='energy'?2:0);if(battle&&layout.nativeBattle){for(const [dx,dy] of [[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[-1,1],[1,-1],[1,1]])paintText(raw,b,t.x+dx,y+dy,values[i],t.size,t.width,t.align,[20,12,14]);}paintText(raw,b,t.x,y,values[i],t.size,t.width,t.align,t.color);});
   v35.hpFill(raw,layout.hp,hp);
-  if(battle)level();
-  paintBadges(raw,b,effects,battle?hud.badgeLayout(true):layout.badges);return;
+  if(battle&&!layout.nativeBattle)level();
+  paintBadges(raw,b,effects,battle?(layout.nativeBattle?{...layout.badges,large:true}:hud.badgeLayout(true)):layout.badges);return;
  }
- for(const args of [[910,44,s.config.level,29,100,'left'],[656,98,fmt(s.hp)+' / '+fmt(st.hp),26,159],[657,139+(battle?2:0),num(s.energy)+' / '+num(s.maxEnergy),22,95],[707,195,fmt(st.attack),26,137],[1010,195,fmt(st.defense),26,133],[707,239,Math.min(100,num(st.crit))+'%',26,137],[1010,239,num(st.evasion)+'%',26,110],[707,282,crit+'%',24,94]])if(!battle||args[0]!==910)paintText(raw,b,...args);
+ for(const args of [[910,44,s.config.level,29,100,'left'],[656,98,fmt(s.hp)+' / '+fmt(st.hp),26,159],[657,139+(battle?2:0),num(s.energy)+' / '+num(s.maxEnergy),22,95],[707,195,fmt(st.attack),26,137],[1010,195,fmt(st.defense),26,133],[707,239,Math.min(100,num(st.crit))+'%',26,137],[1010,239,num(st.evasion)+'%',26,110],[707,282,crit+'%',24,94]])if(workshop&&args[0]===910)workshopLevel(raw,b,s.config.level,{x:910,y:44,width:100,align:'left'});else if(!battle||args[0]!==910)paintText(raw,b,...args);
  if(battle)hud.paintLevel(s.config.level,prepared.glyphs,(...args)=>blendOn(raw,b,...args),!!b.rgb);
  const length=Math.round(342*hp);for(let y=0;y<15;y++)for(let x=0;x<length;x++){const edgeX=Math.min(x,length-1-x),edgeY=Math.min(y,14-y);if(edgeX<5&&edgeY<5&&(edgeX-5)**2+(edgeY-5)**2>25)continue;const t=y/14,c=hp>.25?[Math.round(197-143*t),Math.round(255-115*t),Math.round(138-106*t)]:[255-Math.round(75*t),82-Math.round(50*t),82-Math.round(32*t)];raw[(y+83)*W+x+676]=b.lookup[((c[0]>>3)<<10)|((c[1]>>3)<<5)|(c[2]>>3)];}
  paintBadges(raw,b,effects,battle?hud.badgeLayout(false):{x:752,y:260,step:37,overflowX:1009,overflowY:317});
@@ -91,22 +115,23 @@ function paintBadges(raw,b,effects,layout){effects.slice(0,7).forEach((e,i)=>{co
 function asset(a){return render(a,resolve(a),true);}
 // A retained legacy caller gets the exact current full-card pose, not retired portraits.
 function frenzyReleasedStageOneAsset(a){return render(a,v35.resolve('berserker:enrage_charged_attack_1')||locate('berserker','enrage_idle')||idle('berserker'),true);}
-function idleAsset(a){return render(a,idle(a.state.config.job));}
-function render(a,image,battle=false){
+function idleAsset(a){return render(a,workshopIdle(a.state.config.job));}
+function workshopProfileAsset(a){return render(a,idle(a.state.config.job),false,true);}
+function render(a,image,battle=false,workshop=false){
  if(!image)return null;
  const s=a.state,stats=s.stats,effects=status(s,battle);
  const badges=effects.slice(0,7).map(e=>[e.iconKey,e.group,e.turns,e.count]);
- const key=JSON.stringify([battle,image.revision||image.key,s.hp,s.energy,s.maxEnergy,s.config.level,s.config.ruin,
+ const key=JSON.stringify([workshop?'workshop-profile':battle,image.revision||image.key,s.hp,s.energy,s.maxEnergy,s.config.level,s.config.ruin,
   s.config.ruinPercentPerPoint,stats.hp,stats.attack,stats.defense,stats.crit,stats.evasion,
   stats.critDamagePercent,effects.length,badges]);
  const description=s.config.job+' / '+image.pose+' / Level '+s.config.level+' / HP '+s.hp+' / '+stats.hp;
- return renderPanel(a.panelRefs,'character',key,()=>renderCard(a,image,key,effects,description,battle),description);
+ return renderPanel(a.panelRefs,'character',key,()=>renderCard(a,image,key,effects,description,battle,workshop),description);
 }
-function renderCard(a,image,key,effects,description,battle){
+function renderCard(a,image,key,effects,description,battle,workshop){
  const s=a.state;
  if(cards.has(key)){hits++;return cards.get(key);}
  misses++;
- const cached=base(image),b=battle&&!cached.rgb&&effects.some(e=>e.turns!=null||e.count!=null)?{...cached,counterPixels:new Map()}:cached,raw=Buffer.from(b.rgb||b.indices);paintDynamic(raw,b,a,effects,image.layout,battle);
+ const cached=base(image),b=battle&&!cached.rgb&&effects.some(e=>e.turns!=null||e.count!=null)?{...cached,counterPixels:new Map()}:cached,raw=Buffer.from(b.rgb||b.indices);paintDynamic(raw,b,a,effects,image.layout,battle,workshop);
  const g=image.layout?.gems||{x:686,y:114,step:46};
  const filled=Math.max(0,Math.min(7,num(s.energy)));
  for(let i=0;i<7;i++)blendOn(raw,b,i<filled?(battle?battleEnergyGem:gems.full):gems.empty,36,36,g.x+i*g.step,g.y);
@@ -124,5 +149,5 @@ function warmDefense(state){
  const image=locate(job,pose);
  if(image&&!bases.has(image.key))base(image);
 }
-module.exports={asset,idleAsset,frenzyReleasedStageOneAsset,resolve,warmAttack,warmDefense,stats:()=>({hits,misses,baseBytes,cardBytes:bytes}),clear:()=>{bases.clear();cards.clear();bytes=0;baseBytes=0;hits=0;misses=0;}};
+module.exports={asset,idleAsset,workshopProfileAsset,frenzyReleasedStageOneAsset,resolve,warmAttack,warmDefense,stats:()=>({hits,misses,baseBytes,cardBytes:bytes}),clear:()=>{bases.clear();cards.clear();bytes=0;baseBytes=0;hits=0;misses=0;}};
 
