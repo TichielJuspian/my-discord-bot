@@ -1,10 +1,11 @@
-# Gen Bot v3.2: Private raid notices
+# Gen Bot v3.2: Private raid reward receipts
 
-This public source patch adds 10-second cleanup to explicitly selected, one-time private raid notices, including `Test closed.` from `/closetest` and `Test ended.` after leaving a test battle. It does not start a global timer for private Discord messages. Public lobby messages, logs, and active battle, tutorial, shop, and workshop panels are outside the cleanup.
+- The existing **Reward** button shows each raid participant their own confirmed point payout. Looking up a payout never credits the participant again. Nonparticipants can still claim 100 P once.
+- Selected private raid notices, including the Reward response and `Test closed.`, are set to dismiss after 10 seconds. Public lobbies, raid logs, and active battle, tutorial, shop, and workshop screens are unchanged.
+- Removed `/level` and its help entry. `/setlevel`, automatic XP, and existing player data are unchanged.
 
-- `gen-raid-notices.patch`: Gen Bot v3.1.1 → v3.2 raid notice changes.
-- `gosu-raid-notices.patch`: companion changes against the Gosu Raid v5.0.2 runtime.
-- `private-text-notice.cjs`: shared helper. Place it beside the patched modules on each bot. Apply each patch from its matching source directory with `git apply --unidiff-zero <patch-path>`. An initialized Git repository is not needed to apply the patch.
-- `node private-text-notice.test.cjs`: tests the 10-second delay, private target selection, and safeguards against deleting public or interactive panels.
+This revision is for **Gen Bot only**. It does not require a Gosu Raid or Pella update.
 
-This is the source patch, not a complete deployment or database backup. Hosting configuration, integrity manifests, runtime data, credentials, and production assets are intentionally excluded.
+Apply `gen-raid-notices.patch` from the Gen Bot v3.1.1 source root with `git apply --unidiff-zero <patch-path>`, then copy `private-text-notice.cjs` to that root. Run `node private-text-notice.test.cjs` with the test beside the helper to check the 10-second cleanup and protected message types.
+
+This is a source patch, not a production deployment package. Hosting configuration, integrity manifests, runtime data, credentials, and production assets are excluded.
