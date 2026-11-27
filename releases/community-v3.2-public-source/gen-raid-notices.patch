@@ -1,4 +1,5 @@
 diff --git a/gen-raid-commands.cjs b/gen-raid-commands.cjs
+index f7f95fe..aa36fff 100644
 --- a/gen-raid-commands.cjs
 +++ b/gen-raid-commands.cjs
 @@ -1,0 +2 @@
@@ -39,6 +40,7 @@ diff --git a/gen-raid-commands.cjs b/gen-raid-commands.cjs
 -  await i.editReply(replaced?'Previous raid closed. New raid lobby opened.':'Raid lobby opened.');
 +  await editNotice(i,replaced?'Previous raid closed. New raid lobby opened.':'Raid lobby opened.');
 diff --git a/gen-raid-join.cjs b/gen-raid-join.cjs
+index 32de280..54f46da 100644
 --- a/gen-raid-join.cjs
 +++ b/gen-raid-join.cjs
 @@ -1,0 +2 @@
@@ -59,6 +61,7 @@ diff --git a/gen-raid-join.cjs b/gen-raid-join.cjs
 -  await i.editReply({content:startMessage,allowedMentions:clean});
 +  await editNotice(i,{content:startMessage,allowedMentions:clean});
 diff --git a/gen-raid-reward.cjs b/gen-raid-reward.cjs
+index e137904..36c1dda 100644
 --- a/gen-raid-reward.cjs
 +++ b/gen-raid-reward.cjs
 @@ -1,0 +2 @@
@@ -85,6 +88,7 @@ diff --git a/gen-raid-reward.cjs b/gen-raid-reward.cjs
 +  const content=status?.status==='participant_paid'?'Raid rewards deposited: '+status.points.toLocaleString('en-US')+' P':replies[status];
 +  await editNotice(i,{content,allowedMentions:{parse:[]}});
 diff --git a/운영/command-directory.js b/운영/command-directory.js
+index 1e2b82c..762c69e 100644
 --- a/운영/command-directory.js
 +++ b/운영/command-directory.js
 @@ -4 +4 @@ const command=data=>({toJSON:()=>({...data,dm_permission:false})});
@@ -97,3 +101,24 @@ diff --git a/운영/command-directory.js b/운영/command-directory.js
 @@ -52 +51 @@ async function set({userId,level,actor,reason}){if(!Number.isInteger(level)||lev
 -async function handle(i){const chat=i.isChatInputCommand?.();if(!(chat&&['help','level','setlevel'].includes(i.commandName))&&i.customId!=='community:guide')return false;const reply=content=>i.reply({content,flags:64,allowedMentions:{parse:[]}});if(i.guildId!==guildId){await reply('Use this command in the server.');return true;}if(i.commandName==='help'||i.customId==='community:guide'){await i.reply(helpPayload(catalog(),i,{operatorId,adminRole,modRole}));return true;}if(i.commandName==='setlevel'&&i.user.id!==operatorId){await reply('Only the bot developer can use /setlevel.');return true;}await i.deferReply({flags:64});const user=i.options.getUser('user')||i.user;try{if(user.bot)throw Error('Select a member account.');await i.guild.members.fetch(user.id);if(i.commandName==='level'){const d=await xp.findOne({guildId,userId:user.id});await i.editReply({content:`${user.username} / Level **${d?.level||0}** / ${(d?.xp||0).toLocaleString('en-US')} total XP\nNext level: ${progress(d).current.toLocaleString('en-US')} / ${progress(d).required.toLocaleString('en-US')} XP`,allowedMentions:{parse:[]}});}else{const d=await set({userId:user.id,level:i.options.getInteger('level'),actor:i.user.id,reason:i.options.getString('reason')||'Developer correction'});await i.editReply({content:`Level updated: ${user.id} → **${d.level}** / ${d.xp.toLocaleString('en-US')} XP`,allowedMentions:{parse:[]}});}}catch(e){console.error('[LEVEL COMMAND]',e.name,e.code||'');await i.editReply({content:'Could not complete the level request. Check the member and try again.'});}return true;}
 +async function handle(i){const chat=i.isChatInputCommand?.();if(!(chat&&['help','setlevel'].includes(i.commandName))&&i.customId!=='community:guide')return false;const reply=content=>i.reply({content,flags:64,allowedMentions:{parse:[]}});if(i.guildId!==guildId){await reply('Use this command in the server.');return true;}if(i.commandName==='help'||i.customId==='community:guide'){await i.reply(helpPayload(catalog(),i,{operatorId,adminRole,modRole}));return true;}if(i.commandName==='setlevel'&&i.user.id!==operatorId){await reply('Only the bot developer can use /setlevel.');return true;}await i.deferReply({flags:64});const user=i.options.getUser('user');try{if(user.bot)throw Error('Select a member account.');await i.guild.members.fetch(user.id);const d=await set({userId:user.id,level:i.options.getInteger('level'),actor:i.user.id,reason:i.options.getString('reason')||'Developer correction'});await i.editReply({content:`Level updated: ${user.id} → **${d.level}** / ${d.xp.toLocaleString('en-US')} XP`,allowedMentions:{parse:[]}});}catch(e){console.error('[LEVEL COMMAND]',e.name,e.code||'');await i.editReply({content:'Could not update this member’s level. Check the member and try again.'});}return true;}
+diff --git a/운영/gift-entry.js b/운영/gift-entry.js
+index c8c9897..b012e82 100644
+--- a/운영/gift-entry.js
++++ b/운영/gift-entry.js
+@@ -161,0 +162,7 @@ client.once('ready', async () => {
++        if(!registeredCommands.some(c=>c.type===1&&c.name==='level')){
++          const levels=global.filter(c=>c.application_id===client.user.id&&c.type===1&&c.name==='level'&&!c.guild_id&&/^\d{17,20}$/.test(c.id));
++          if(levels.length===1){
++            try{await rest.delete(Routes.applicationCommand(client.user.id,levels[0].id));console.log('[LEVEL COMMAND] Legacy Gen Bot global /level removed');}
++            catch(e){console.warn('[LEVEL COMMAND] Global cleanup not confirmed:',e?.code||e?.name||'Error');}
++          }else console.log('[LEVEL COMMAND] '+(levels.length?'Ambiguous global match; nothing removed':'No Gen Bot global /level found'));
++        }
+diff --git a/raid-v5-assets/보스/전투/raid-entry-flow.js b/raid-v5-assets/보스/전투/raid-entry-flow.js
+index 550d161..c72e015 100644
+--- a/raid-v5-assets/보스/전투/raid-entry-flow.js
++++ b/raid-v5-assets/보스/전투/raid-entry-flow.js
+@@ -2,0 +3 @@ const runtimePaths = require("../../runtime-paths.cjs");
++const {editNotice}=require("../../../private-text-notice.cjs");
+@@ -95 +96 @@ function create({characters,workshop,readLevel,start,valid,clock=Date.now,render
+-   if(action==='cancel'){remove(f);await i.update({flags:32768,components:[{type:10,content:'Entry cancelled.'}],attachments:[]});return true;}
++   if(action==='cancel'){const original={i:remove(f),id:f.messageId};await i.deferUpdate();await editNotice(i,{flags:32768,components:[{type:10,content:'Entry cancelled.'}],attachments:[]},{component:true,original});return true;}
