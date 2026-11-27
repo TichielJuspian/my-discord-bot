@@ -1,0 +1,70 @@
+diff --git a/gen-raid-commands.cjs b/gen-raid-commands.cjs
+--- a/gen-raid-commands.cjs
++++ b/gen-raid-commands.cjs
+@@ -1,0 +2 @@
++const {editNotice,replyNotice}=require('./private-text-notice.cjs');
+@@ -57 +58 @@ function createGenRaidCommands({db,mongo,readBosses,buildOriginalLobby,verifyPri
+-   else await i.reply(privateReply('Only the raid administrator role can use this command.'));
++   else await replyNotice(i,privateReply('Only the raid administrator role can use this command.'));
+@@ -72,2 +73,2 @@ function createGenRaidCommands({db,mongo,readBosses,buildOriginalLobby,verifyPri
+-   catch(e){report(e);await i.editReply('Could not confirm test closure.');return true;}
+-   if(!closed){await i.editReply('No open test lobby in this channel.');return true;}
++   catch(e){report(e);await editNotice(i,'Could not confirm test closure.');return true;}
++   if(!closed){await editNotice(i,'No open test lobby in this channel.');return true;}
+@@ -75,2 +76,2 @@ function createGenRaidCommands({db,mongo,readBosses,buildOriginalLobby,verifyPri
+-   catch(e){report(e);await i.editReply('Test closed. The lobby message could not be removed yet.');return true;}
+-   await i.editReply('Test closed.');return true;
++   catch(e){report(e);await editNotice(i,'Test closed. The lobby message could not be removed yet.');return true;}
++   await editNotice(i,'Test closed.');return true;
+@@ -81,2 +82,2 @@ function createGenRaidCommands({db,mongo,readBosses,buildOriginalLobby,verifyPri
+-   catch(e){report(e);await i.editReply('Could not confirm raid closure.');return true;}
+-   if(!cancelled){await i.editReply('No open raid can be cancelled here. A raid with a finalized result cannot be force-closed.');return true;}
++   catch(e){report(e);await editNotice(i,'Could not confirm raid closure.');return true;}
++   if(!cancelled){await editNotice(i,'No open raid can be cancelled here. A raid with a finalized result cannot be force-closed.');return true;}
+@@ -84,2 +85,2 @@ function createGenRaidCommands({db,mongo,readBosses,buildOriginalLobby,verifyPri
+-   catch(e){report(e);await i.editReply('Raid cancelled. The lobby message is queued for removal. No rewards or settlement will be issued.');return true;}
+-   await i.editReply('Raid closed. No rewards or settlement will be issued.');return true;
++   catch(e){report(e);await editNotice(i,'Raid cancelled. The lobby message is queued for removal. No rewards or settlement will be issued.');return true;}
++   await editNotice(i,'Raid closed. No rewards or settlement will be issued.');return true;
+@@ -97 +98 @@ function createGenRaidCommands({db,mongo,readBosses,buildOriginalLobby,verifyPri
+-  if(resetting.has(_id)){await i.editReply('A raid lobby update is already in progress.');return true;}
++  if(resetting.has(_id)){await editNotice(i,'A raid lobby update is already in progress.');return true;}
+@@ -103 +104 @@ function createGenRaidCommands({db,mongo,readBosses,buildOriginalLobby,verifyPri
+-   if(!boss){await i.editReply('Choose an available boss for this test.');return true;}
++   if(!boss){await editNotice(i,'Choose an available boss for this test.');return true;}
+@@ -136 +137 @@ function createGenRaidCommands({db,mongo,readBosses,buildOriginalLobby,verifyPri
+-   await i.editReply(replaced?'The previous raid was closed, but the new lobby could not be opened. Please retry shortly.':e.code===11000?'This channel already has a raid lobby.':'The lobby could not be opened.');
++   await editNotice(i,replaced?'The previous raid was closed, but the new lobby could not be opened. Please retry shortly.':e.code===11000?'This channel already has a raid lobby.':'The lobby could not be opened.');
+@@ -139 +140 @@ function createGenRaidCommands({db,mongo,readBosses,buildOriginalLobby,verifyPri
+-  await i.editReply(replaced?'Previous raid closed. New raid lobby opened.':'Raid lobby opened.');
++  await editNotice(i,replaced?'Previous raid closed. New raid lobby opened.':'Raid lobby opened.');
+diff --git a/gen-raid-join.cjs b/gen-raid-join.cjs
+--- a/gen-raid-join.cjs
++++ b/gen-raid-join.cjs
+@@ -1,0 +2 @@
++const {editNotice}=require('./private-text-notice.cjs');
+@@ -48 +49 @@ function createGenRaidJoin({db,clock=Date.now,createPreparation,saveClass}){
+-   await i.editReply({flags:32768,components:[{type:10,content:startMessage}],attachments:[],files:[],allowedMentions:clean});
++   await editNotice(i,{flags:32768,components:[{type:10,content:startMessage}],attachments:[],files:[],allowedMentions:clean},{component:true});
+@@ -62 +63 @@ function createGenRaidJoin({db,clock=Date.now,createPreparation,saveClass}){
+-   await i.editReply({content:'This raid lobby is closed to new entries.',allowedMentions:clean});return true;
++   await editNotice(i,{content:'This raid lobby is closed to new entries.',allowedMentions:clean});return true;
+@@ -67 +68 @@ function createGenRaidJoin({db,clock=Date.now,createPreparation,saveClass}){
+-    await i.editReply({content:'This raid lobby is closed to new entries.',allowedMentions:clean});return true;
++    await editNotice(i,{content:'This raid lobby is closed to new entries.',allowedMentions:clean});return true;
+@@ -70 +71 @@ function createGenRaidJoin({db,clock=Date.now,createPreparation,saveClass}){
+-    if(!round){await i.editReply({content:'This raid lobby is not ready. Try again shortly.',allowedMentions:clean});return true;}
++    if(!round){await editNotice(i,{content:'This raid lobby is not ready. Try again shortly.',allowedMentions:clean});return true;}
+@@ -75 +76 @@ function createGenRaidJoin({db,clock=Date.now,createPreparation,saveClass}){
+-  await i.editReply({content:startMessage,allowedMentions:clean});
++  await editNotice(i,{content:startMessage,allowedMentions:clean});
+diff --git a/gen-raid-reward.cjs b/gen-raid-reward.cjs
+--- a/gen-raid-reward.cjs
++++ b/gen-raid-reward.cjs
+@@ -1,0 +2 @@
++const {editNotice}=require('./private-text-notice.cjs');
+@@ -66,2 +67,2 @@ function createSpectatorRewards({db,mongo,credit,clock=Date.now,report=()=>{}}){
+-  catch(e){report(e);await i.editReply({content:'The reward could not be confirmed. Try again.',allowedMentions:{parse:[]}});return true;}
+-  await i.editReply({content:replies[status],allowedMentions:{parse:[]}});
++  catch(e){report(e);await editNotice(i,{content:'The reward could not be confirmed. Try again.',allowedMentions:{parse:[]}});return true;}
++  await editNotice(i,{content:replies[status],allowedMentions:{parse:[]}});
