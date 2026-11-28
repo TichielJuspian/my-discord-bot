@@ -1,0 +1,25 @@
+diff --git a/release-manifest.json b/release-manifest.json
+index 64c3a2f..97e31c7 100644
+--- a/release-manifest.json
++++ b/release-manifest.json
+@@ -1,6 +1,6 @@
+ {
+   "role": "community",
+-  "version": "3.3.2",
++  "version": "3.4.0",
+   "files": [
+     {
+       "path": "bootstrap.js",
+diff --git a/index.js b/index.js
+index 678a681..cc39e0e 100644
+--- a/index.js
++++ b/index.js
+@@ -9 +9 @@ if(hash(fs.readFileSync(path.join(root,'bootstrap.js')))!=='bb53dc61f0d3752c5006
+-if(hash(fs.readFileSync(path.join(root,'release-manifest.json')))!=='d45eb9f85797b3c2f23ce4277507725f406903a4850e89a243ee617e8c14ea8c')throw Error('MANIFEST_INTEGRITY');
++if(hash(fs.readFileSync(path.join(root,'release-manifest.json')))!=='2a731bc3af0fa2871297d61b89a357ee9c7e5f1eb388926a0ef3111be442da7f')throw Error('MANIFEST_INTEGRITY');
+@@ -11 +11 @@ const m=JSON.parse(fs.readFileSync(path.join(root,'release-manifest.json'),'utf8
+-if(m.role!=='community'||m.version!=='3.3.2'||m.files.length!==788)throw Error('MANIFEST');
++if(m.role!=='community'||m.version!=='3.4.0'||m.files.length!==788)throw Error('MANIFEST');
+@@ -14 +14 @@ if(process.argv.includes('--prepare-only'))throw Error('UNEXPECTED_MODE');
+-console.log('[SPARKED COMMUNITY VERIFIED] 3.3.2 788 files; Tutorial update; XP leaderboard idle timeout 20s; Raid leaderboard paging and private notices; Raid 5.1 companion; VC cleanup safeguard and action logs; expected identity and gosuBot configured');
++console.log('[SPARKED COMMUNITY VERIFIED] 3.4.0 788 files; Tutorial update; XP leaderboard idle timeout 20s; Raid leaderboard paging and private notices; Raid 5.1 companion; VC cleanup safeguard and action logs; expected identity and gosuBot configured');
