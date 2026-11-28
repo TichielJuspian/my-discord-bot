@@ -1,0 +1,145 @@
+diff --git a/raid-pilot-image-battle.cjs b/raid-pilot-image-battle.cjs
+index 6c779dd..dd5c8eb 100644
+--- a/raid-pilot-image-battle.cjs
++++ b/raid-pilot-image-battle.cjs
+@@ -13,6 +13,34 @@ const phases = {
+ const privately = content => ({content, flags:64, allowedMentions:{parse:[]}});
+ const panel = content => ({flags:32768, components:[{type:10, content}], attachments:[], allowedMentions:{parse:[]}});
+ 
++const dismissPrefix = 'raidclosed:';
++const knownGone = error => [10008,10015].includes(Number(error?.code));
++async function showClosed(i,session,result){
++  const copy=result==='clear'?'**Boss defeated!**\nYour battle has ended.':result==='failure'?'**Time’s up!**\nYour results at the cutoff will count.':null;
++  if(!copy||!/^\d{17,20}$/.test(session.userId)||!session.displayMessageId)return false;
++  const message=i.message?.id===session.displayMessageId?i.message:await i.fetchReply?.();
++  if(message?.id!==session.displayMessageId||!message.flags?.has(64))return false;
++  const rows=(message.components||[]).map(c=>typeof c.toJSON==='function'?c.toJSON():c);
++  const next=[];
++  let added=false;
++  const controls=[{type:10,content:copy},{type:1,components:[{type:2,style:4,label:'End Battle',custom_id:dismissPrefix+session.userId+':'+message.id}]}];
++  for(const row of rows){
++    if(row.type===1){if(!added){next.push(...controls);added=true;}}
++    else next.push(row);
++  }
++  if(!added)next.push(...controls);
++  await i.editReply({flags:32768,components:next,allowedMentions:{parse:[]}});
++  return true;
++}
++async function dismissClosed(i){
++  if(!i.isButton?.()||!i.customId?.startsWith(dismissPrefix))return false;
++  const [,uid,mid]=i.customId.split(':');
++  if(uid!==i.user?.id||mid!==i.message?.id||!i.message?.flags?.has(64))return true;
++  try{await i.deferUpdate();await i.deleteReply();}
++  catch(error){if(!knownGone(error))throw error;}
++  return true;
++}
++
+ function createImageBattle({registry, engine, builds, items, v2, renderer, cache, slotProgression, regularFight, privateNotices, verifyTestLobby, clock = Date.now, randomSeed = () => randomInt(1, 0x7fffffff)}) {
+   let active = null;
+   let busy = false;
+@@ -80,7 +108,7 @@ function createImageBattle({registry, engine, builds, items, v2, renderer, cache
+       busy=true;
+       try{
+         if(result==='cancelled')await interaction.deleteReply();
+-        else await interaction.editReply(panel(notice));
++        else if(!await showClosed(interaction,session,result))await interaction.editReply(panel(notice));
+         release(session);
+         return true;
+       }catch(error){
+@@ -176,7 +204,7 @@ function createImageBattle({registry, engine, builds, items, v2, renderer, cache
+         if(result.status==='closed'){
+           release(session);
+           if(result.cancelled)await i.deleteReply().catch(error=>{if(![10008,10015].includes(Number(error?.code)))throw error;});
+-          else await i.editReply(panel(result.notice||(result.accepted?'The boss has been defeated.':'This raid has ended.')));
++          else if(!await showClosed(i,session,result.result))await i.editReply(panel(result.notice||(result.accepted?'The boss has been defeated.':'This raid has ended.')));
+           return true;
+         }
+         if(result.status!=='committed'){
+@@ -244,7 +272,7 @@ async function prepareRaidHost({client, db, guildId, release, sequence, runtime}
+   };
+ }
+ 
+-module.exports = {createImageBattle, prepareRaidHost};
++module.exports = {createImageBattle, prepareRaidHost, dismissClosed};
+ 
+ 
+ 
+diff --git a/raid-regular-fight.cjs b/raid-regular-fight.cjs
+index d1a035a..0045277 100644
+--- a/raid-regular-fight.cjs
++++ b/raid-regular-fight.cjs
+@@ -70,7 +70,7 @@ function createRegularFight({journal,engine,v2,applyWorldBuffs=state=>state,cloc
+  }
+  function stopped(round,id){
+   const ended=round?.stoppedAttempts?.find(x=>x.attemptId===id);
+-  return {status:'closed',cancelled:round?.result==='cancelled',notice:ended?.notice??(round?.result==='failure'?notices.deadline:null)};
++  return {status:'closed',result:round?.result,cancelled:round?.result==='cancelled',notice:ended?.notice??(round?.result==='failure'?notices.deadline:null)};
+  }
+  return {admit,act};
+ }
+diff --git a/raid-combat-flow.cjs b/raid-combat-flow.cjs
+index 3211270..609b142 100644
+--- a/raid-combat-flow.cjs
++++ b/raid-combat-flow.cjs
+@@ -1,7 +1,7 @@
+ 'use strict';
+ const {COLLECTION,createRaidEntry,key,raidCommands}=require('./raid-gen-ownership.cjs');
+ const {createTestSetup}=require('./raid-test-setup.cjs');
+-const {createImageBattle}=require('./raid-pilot-image-battle.cjs');
++const {createImageBattle,dismissClosed}=require('./raid-pilot-image-battle.cjs');
+ const {createRoundJournal}=require('./raid-round-journal.cjs');
+ const {createRegularFight}=require('./raid-regular-fight.cjs');
+ function createRaidCombatFlow({db,workshop,handleWorkshop,runtime,readRegularAdmission,startRegular,loadRegularState,applyWorldBuffs,readStartButton,clock=Date.now}){
+@@ -39,6 +39,7 @@ function createRaidCombatFlow({db,workshop,handleWorkshop,runtime,readRegularAdm
+   if(await handleWorkshop(i))return true;
+   if(await setup.handle(i))return true;
+   if(i.isButton?.()&&i.guildId&&i.channelId&&i.user?.id){
++   if(await dismissClosed(i))return true;
+    const battle=fights.get(player(i));
+    if(battle?.owns(i))return battle.click(i,true);
+   }
+diff --git a/release-manifest.json b/release-manifest.json
+index b59a145..e3febae 100644
+--- a/release-manifest.json
++++ b/release-manifest.json
+@@ -1,6 +1,6 @@
+ {
+   "role": "raid",
+-  "version": "5.1.1",
++  "version": "5.2.0",
+   "files": [
+     {
+       "path": "bootstrap.js",
+@@ -3209,8 +3209,8 @@
+     },
+     {
+       "path": "raid-pilot-image-battle.cjs",
+-      "size": 12072,
+-      "sha256": "fdbfa1dafe33226befd3de164b6efbf25b454782f525212860c449ac1ed101e7"
++      "size": 13648,
++      "sha256": "b2e80c554abc32ac2b48810af365a1cda883d18c5563e66021dc3db3c73f6db7"
+     },
+     {
+       "path": "pella-v5-runtime.cjs",
+@@ -3219,8 +3219,8 @@
+     },
+     {
+       "path": "raid-combat-flow.cjs",
+-      "size": 2853,
+-      "sha256": "ba2708f2759080eb725246289577804109817326c2724181f325fca8a932cf31"
++      "size": 2909,
++      "sha256": "5375e02b575725c8af9e86386a01cf2ae876ec3d6d7eb84b9e1e3006b37f3e47"
+     },
+     {
+       "path": "raid-gen-ownership.cjs",
+@@ -3244,8 +3244,8 @@
+     },
+     {
+       "path": "raid-regular-fight.cjs",
+-      "size": 3874,
+-      "sha256": "a29c4a2850b1dc2d1e5f170557db9b0b63bb4e671f899eedac88176163a2a93d"
++      "size": 3895,
++      "sha256": "e239cadcca7999621adadb60b6db4a54cb122f068ce1297c5a76813b723b53d9"
+     },
+     {
+       "path": "raid-regular-loadout.cjs",
